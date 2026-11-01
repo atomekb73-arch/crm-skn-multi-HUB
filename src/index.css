@@ -1,0 +1,289 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Comfortaa', sans-serif;
+}
+
+/* ── Tenant Dynamic Branding System (CSS Variables & Transitions) ── */
+:root {
+  --tenant-primary: #4f46e5;
+  --tenant-primary-hover: #4338ca;
+  --tenant-primary-light: #eef2ff;
+  --tenant-primary-border: #c7d2fe;
+  --tenant-accent: #0284c7;
+  --tenant-backdrop-from: #f8fafc;
+  --tenant-backdrop-via: #f0f9ff;
+  --tenant-backdrop-to: #eef2ff;
+}
+
+[data-tenant="uzaleznienia"],
+[data-tenant="sknu"] {
+  --tenant-primary: #0d9488;
+  --tenant-primary-hover: #0f766e;
+  --tenant-primary-light: #f0fdfa;
+  --tenant-primary-border: #99f6e4;
+  --tenant-accent: #059669;
+  --tenant-backdrop-from: #f8fafc;
+  --tenant-backdrop-via: #ecfdf5;
+  --tenant-backdrop-to: #f0fdfa;
+}
+
+/* Płynne przejście motywów tenantów na elementach zewnętrznych */
+.tenant-backdrop {
+  transition: background-color 0.4s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+html,
+body,
+input,
+button,
+select,
+table,
+textarea,
+p,
+span,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+div {
+  font-family: 'Comfortaa', sans-serif;
+}
+
+/* Force sans-serif on inputs, buttons and tables */
+body, input, button, select, table, textarea {
+  font-family: 'Comfortaa', sans-serif !important;
+}
+
+/* Smooth scrollbar hiding for tab bar */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Unified styling for Select & Dropdown elements ── */
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.8' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.65rem center;
+  background-repeat: no-repeat;
+  background-size: 1.15em 1.15em;
+  padding-right: 2.25rem !important;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+select:focus {
+  outline: none;
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+}
+
+select option {
+  background-color: #ffffff;
+  color: #1e293b;
+  padding: 8px 12px;
+  font-weight: 500;
+}
+
+select option:hover,
+select option:focus,
+select option:checked {
+  background-color: #eef2ff !important;
+  color: #4338ca !important;
+}
+
+/* ── Hard rules for A4 Document & Table Printing (@media print) ── */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 10mm 12mm 10mm;
+  }
+
+  /* Ukryj elementy interfejsu nienadające się do druku */
+  nav, header, aside, .no-print, .print\:hidden, button, input, .tabs-container {
+    display: none !important;
+  }
+
+  /* Resetuj ograniczenia wysokości, szerokości i overflow dla drukowanego kontenera */
+  body, html, #root, main {
+    overflow: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* Kontenery arkusza dokumentu A4 */
+  .doc-a4-sheet {
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 260mm !important;
+    max-height: 272mm !important;
+    height: auto !important;
+    margin: 0 auto !important;
+    padding: 10mm 10mm !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    position: relative !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  /* Kontener arkusza dla dokumentów i tabel wielostronicowych */
+  .doc-a4-sheet.doc-a4-multipage,
+  .doc-a4-multipage {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    min-height: 255mm !important;
+    max-height: none !important;
+    height: auto !important;
+    padding: 6mm 4mm !important;
+    page-break-after: auto !important;
+    break-after: auto !important;
+  }
+
+  .signature-block,
+  .signatures-block {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-top: auto !important;
+  }
+
+  /* Ozdobne ramki certyfikatów i dyplomów – bezpiecznie wewnątrz marginesu kartki */
+  .cert-frame-outer {
+    position: absolute !important;
+    inset: 4mm !important;
+    pointer-events: none !important;
+  }
+
+  .cert-frame-inner {
+    position: absolute !important;
+    inset: 6mm !important;
+    pointer-events: none !important;
+  }
+
+  /* Elastyczne boksy statystyk i metryk */
+  .metric-box-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Bloki podpisów chronione przed podziałem między strony */
+  .signature-block,
+  .signatures-block,
+  [data-signature-block] {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    break-after: auto !important;
+    page-break-after: auto !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Wymuś widoczność tabeli i elementów w obszarze drukowania */
+  .printable-area,
+  #reports-print-container,
+  #print-document-container {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  table,
+  .print-table {
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto;
+    break-inside: auto;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  th, td {
+    border: 1px solid #d1d5db !important;
+    padding: 4px 6px !important;
+    font-size: 8pt !important;
+    color: #111827 !important;
+    min-width: 0 !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+
+  .print-table th {
+    font-size: 8pt !important;
+    padding: 4px 6px !important;
+    text-transform: uppercase !important;
+    background-color: #f3f4f6 !important;
+    border-bottom: 1.5px solid #374151 !important;
+    color: #111827 !important;
+  }
+
+  .print-table td {
+    font-size: 8pt !important;
+    padding: 4px 6px !important;
+    line-height: 1.25 !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    border-bottom: 1px solid #e5e7eb !important;
+    color: #111827 !important;
+  }
+
+  /* Druga linijka tekstu (e-mail, rok/specjalność pod kierunkiem) */
+  .print-subtext {
+    font-size: 7pt !important;
+    line-height: 1.2 !important;
+    color: #4b5563 !important;
+    margin-top: 1px !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+  }
+
+  /* Zachowaj kolory tła i obramowania */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .break-after-page {
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .break-before-page {
+    page-break-before: always;
+    break-before: page;
+  }
+}
