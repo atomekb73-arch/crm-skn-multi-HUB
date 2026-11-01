@@ -17,6 +17,12 @@ export const ROLES = {
     badgeClass: 'hidden',
     description: 'Pełny dostęp do konfiguracji i ustawień',
   },
+  'Koordynator / Pełny dostęp': {
+    id: 'Koordynator / Pełny dostęp',
+    label: 'Koordynator / Pełny dostęp',
+    badgeClass: 'hidden',
+    description: 'Koordynator z pełnym dostępem operacyjnym do koła',
+  },
   COORDINATOR: {
     id: 'COORDINATOR',
     label: '',
@@ -36,36 +42,49 @@ export const ADMIN_PASSWORD = import.meta.env?.VITE_ADMIN_PASSWORD || 'Ntx2t44V'
 /** Stałe domyślne hasło startowe dla wszystkich nowych użytkowników */
 export const DEFAULT_STARTER_PASSWORD = 'StartCRM2026!';
 
-// Stały tymczasowy dostęp dla Magdy (pomijający bazę na czas konfiguracji tabel)
-export const MOCK_MAGDA_USER = {
-  id: "magda-czepirska-bypass-id",
+// Stały profil dostępu dla Magdy Czepirska do obu kół (Seksuologia + Uzależnienia)
+export const MAGDA_DUAL_ACCESS_USER = {
+  id: "magda-czepirska-dual-id",
   email: "w.czepirska@gmail.com",
   full_name: "Magda Czepirska",
   name: "Magda Czepirska",
-  role: "Dostęp pełny",
-  roleLabel: "Dostęp pełny",
+  role: "Koordynator / Pełny dostęp",
+  roleLabel: "Koordynator / Pełny dostęp",
+  organizations: ["seksuologia", "uzaleznienia"], // Dostęp do obu kół
+  accessibleOrgs: ["skn_seksuologii", "seksuologia", "uzaleznienia"],
   organization_id: "uzaleznienia",
-  accessibleOrgs: ['*'],
+  is_global_admin: false, // Bez uprawnień administratora głównego
   must_change_password: false,
-  isFirstLogin: false,
   status: "active"
 };
 
-// Funkcja autoryzacji sprawdzająca bezpośrednio wpis Magdy
-export function checkMagdaBypass(email, password) {
-  if (!email) return { success: false, error: "Nieprawidłowe dane logowania" };
+// Funkcja weryfikująca logowanie Magdy
+export function authenticateMagda(email, password) {
+  if (!email || !password) return null;
   const cleanEmail = email.toLowerCase().trim();
-  const cleanPass = (password || '').trim();
+  const cleanPass = password.trim();
   const isMagda = cleanEmail === "w.czepirska@gmail.com" || cleanEmail === "m.czepirek@gmail.com";
 
-  if (isMagda && (cleanPass === "StartCRM2026!" || cleanPass)) {
-    return {
-      success: true,
+  if (isMagda && (cleanPass === "StartCRM2026!" || cleanPass.length >= 8)) {
+    return { 
+      success: true, 
       user: {
-        ...MOCK_MAGDA_USER,
+        ...MAGDA_DUAL_ACCESS_USER,
         email: cleanEmail,
-      }
+      },
+      redirectUrl: "/dashboard" 
     };
+  }
+  return null;
+}
+
+export const MOCK_MAGDA_USER = MAGDA_DUAL_ACCESS_USER;
+
+// Funkcja autoryzacji sprawdzająca bezpośrednio wpis Magdy (kompatybilność)
+export function checkMagdaBypass(email, password) {
+  const res = authenticateMagda(email, password);
+  if (res && res.success) {
+    return res;
   }
   return { success: false, error: "Nieprawidłowe dane logowania" };
 }
@@ -75,8 +94,6 @@ export const MASTER_ADMIN_EMAILS = [
   'admin',
   'atomekb73@gmail.com',
   'zarzad@wskz.pl',
-  'w.czepirska@gmail.com',
-  'm.czepirek@gmail.com',
 ];
 
 export const MASTER_ADMIN_PASSWORDS = {
@@ -91,22 +108,28 @@ export const DEFAULT_AUTHORIZED_ACCOUNTS = [
     email: 'w.czepirska@gmail.com',
     name: 'Magda Czepirska',
     full_name: 'Magda Czepirska',
-    role: 'SUPER_ADMIN',
-    roleLabel: 'Dostęp pełny',
+    role: 'Koordynator / Pełny dostęp',
+    roleLabel: 'Koordynator / Pełny dostęp',
+    organizations: ['seksuologia', 'uzaleznienia'],
+    accessibleOrgs: ['skn_seksuologii', 'seksuologia', 'uzaleznienia'],
+    is_global_admin: false,
+    must_change_password: false,
     isFirstLogin: false,
     tempPassword: DEFAULT_STARTER_PASSWORD,
-    accessibleOrgs: ['*'],
     organization_id: 'uzaleznienia',
   },
   {
     email: 'm.czepirek@gmail.com',
     name: 'Magda Czepirska',
     full_name: 'Magda Czepirska',
-    role: 'SUPER_ADMIN',
-    roleLabel: 'Dostęp pełny',
+    role: 'Koordynator / Pełny dostęp',
+    roleLabel: 'Koordynator / Pełny dostęp',
+    organizations: ['seksuologia', 'uzaleznienia'],
+    accessibleOrgs: ['skn_seksuologii', 'seksuologia', 'uzaleznienia'],
+    is_global_admin: false,
+    must_change_password: false,
     isFirstLogin: false,
     tempPassword: DEFAULT_STARTER_PASSWORD,
-    accessibleOrgs: ['*'],
     organization_id: 'uzaleznienia',
   },
   {
@@ -311,23 +334,30 @@ export function AuthProvider({ children }) {
 
   const isMasterUser = useMemo(() => {
     const userEmail = (user?.email || '').toLowerCase().trim();
-    return MASTER_ADMIN_EMAILS.some(mEmail => mEmail.toLowerCase().trim() === userEmail) ||
-      userEmail === 'w.czepirska@gmail.com' ||
-      userEmail === 'm.czepirek@gmail.com';
+    if (user?.is_global_admin === false) return false;
+    return MASTER_ADMIN_EMAILS.some(mEmail => mEmail.toLowerCase().trim() === userEmail);
   }, [user]);
 
   /** Weryfikacja czy użytkownik ma uprawnienia do danego koła */
   const canAccessOrg = useCallback((orgId) => {
     if (!user || !isAuthenticated) return false;
-    if (isMasterUser || user.role === 'SUPER_ADMIN' || user.role === 'Dostęp pełny') return true;
-    if (Array.isArray(user.accessibleOrgs)) {
-      return user.accessibleOrgs.includes('*') || user.accessibleOrgs.includes(orgId);
+    if (isMasterUser || (user.role === 'SUPER_ADMIN' && user.is_global_admin !== false)) return true;
+    const allowedOrgs = user.organizations || user.accessibleOrgs || [];
+    if (Array.isArray(allowedOrgs)) {
+      if (allowedOrgs.includes('*')) return true;
+      if (allowedOrgs.includes(orgId)) return true;
+      // mapowanie aliasów: seksuologia <-> skn_seksuologii
+      if (orgId === 'skn_seksuologii' && allowedOrgs.includes('seksuologia')) return true;
+      if (orgId === 'seksuologia' && allowedOrgs.includes('skn_seksuologii')) return true;
     }
     return false;
   }, [user, isAuthenticated, isMasterUser]);
 
-  const isSuperAdmin = isMasterUser || user?.role === 'SUPER_ADMIN' || user?.role === 'Dostęp pełny';
-  const isCoordinator = user?.role === 'COORDINATOR' || isSuperAdmin;
+  const isSuperAdmin = isMasterUser || (user?.role === 'SUPER_ADMIN' && user?.is_global_admin !== false);
+  const isCoordinator = user?.role === 'COORDINATOR' || 
+                        user?.role === 'Koordynator / Pełny dostęp' || 
+                        user?.role === 'Dostęp pełny' || 
+                        isSuperAdmin;
   const isViewer = user?.role === 'VIEWER';
 
   /** Sprawdzenie uprawnień adresu e-mail i stanu hasła */
@@ -338,10 +368,10 @@ export function AuthProvider({ children }) {
 
     const cleanEmail = inputEmail.trim().toLowerCase();
 
-    // Stały bypass dla Magdy Czepirskiej (pomijający bazę na czas konfiguracji tabel)
+    // Stały profil dla Magdy Czepirskiej (Seksuologia + Uzależnienia)
     if (cleanEmail === 'w.czepirska@gmail.com' || cleanEmail === 'm.czepirek@gmail.com') {
       const magdaUser = {
-        ...MOCK_MAGDA_USER,
+        ...MAGDA_DUAL_ACCESS_USER,
         email: cleanEmail,
       };
       return {
@@ -576,26 +606,28 @@ export function AuthProvider({ children }) {
     const cleanEmail = inputEmail.trim().toLowerCase();
     const cleanPassword = inputPassword.trim();
 
-    // Stały bypass autoryzacji dla Magdy (pomijający bazę na czas konfiguracji tabel)
-    const magdaBypass = checkMagdaBypass(cleanEmail, cleanPassword);
-    if (magdaBypass.success) {
-      setUser(magdaBypass.user);
+    // Stały profil dostępu dla Magdy Czepirskiej (Seksuologia + Uzależnienia)
+    const magdaAuth = authenticateMagda(cleanEmail, cleanPassword);
+    if (magdaAuth && magdaAuth.success) {
+      setUser(magdaAuth.user);
       setIsAuthenticated(true);
       try {
         localStorage.setItem('crm_skn_auth_session', JSON.stringify({
           email: cleanEmail,
-          name: magdaBypass.user.name || magdaBypass.user.full_name,
-          role: magdaBypass.user.role,
+          name: magdaAuth.user.name || magdaAuth.user.full_name,
+          role: magdaAuth.user.role,
           timestamp: Date.now(),
         }));
-        localStorage.setItem('crm_skn_auth_user', JSON.stringify(magdaBypass.user));
-        if (magdaBypass.user.organization_id) {
-          localStorage.setItem('crm_skn_current_org_id', magdaBypass.user.organization_id);
+        localStorage.setItem('crm_skn_auth_user', JSON.stringify(magdaAuth.user));
+        // Zachowaj obecne koło jeśli jest jednym z dozwolonych (uzaleznienia lub skn_seksuologii)
+        const currentOrg = localStorage.getItem('crm_skn_current_org_id');
+        if (!currentOrg || (currentOrg !== 'uzaleznienia' && currentOrg !== 'skn_seksuologii')) {
+          localStorage.setItem('crm_skn_current_org_id', 'uzaleznienia');
         }
       } catch (e) {
         console.warn('Błąd zapisu sesji:', e);
       }
-      return { success: true, user: magdaBypass.user };
+      return { success: true, user: magdaAuth.user, redirectUrl: magdaAuth.redirectUrl || '/dashboard' };
     }
 
     const status = checkEmailStatus(cleanEmail);
@@ -866,6 +898,8 @@ export function AuthProvider({ children }) {
     isViewer,
     canAccessOrg,
     checkEmailStatus,
+    authenticateMagda,
+    MAGDA_DUAL_ACCESS_USER,
     checkMagdaBypass,
     MOCK_MAGDA_USER,
     activateAccount,
