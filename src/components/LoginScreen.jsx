@@ -8,6 +8,7 @@ import {
   EyeOff,
   ArrowRight,
   AlertCircle,
+  AlertTriangle,
   Sparkles,
   CheckCircle2,
   Key,
@@ -15,7 +16,7 @@ import {
   UserCheck,
   GraduationCap,
 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, DEFAULT_STARTER_PASSWORD } from '../context/AuthContext';
 
 export default function LoginScreen({ onOpenPublicForm }) {
   const { checkEmailStatus, activateAccount, loginWithPassword } = useAuth();
@@ -42,7 +43,8 @@ export default function LoginScreen({ onOpenPublicForm }) {
   // Validation rules for new password during first-time activation
   const hasMinLength = newPassword.length >= 8;
   const passwordsMatch = newPassword.length > 0 && newPassword === confirmPassword;
-  const isActivationValid = hasMinLength && passwordsMatch;
+  const isNotStarterPassword = newPassword !== DEFAULT_STARTER_PASSWORD && newPassword !== 'Start2026!';
+  const isActivationValid = hasMinLength && passwordsMatch && isNotStarterPassword;
 
   // STEP 1: Verify Email
   const handleEmailSubmit = (e) => {
@@ -67,16 +69,9 @@ export default function LoginScreen({ onOpenPublicForm }) {
 
       setVerifiedUser(res.user);
 
-      if (res.isFirstLogin || !res.hasPassword) {
-        // First login: No password set yet -> Activation form
-        setStep('activate');
-        setNewPassword('');
-        setConfirmPassword('');
-      } else {
-        // Returning user: Password already set -> Standard password prompt
-        setStep('password');
-        setPassword('');
-      }
+      // Przejdź do kroku hasła dostępowego (użytkownik podaje hasło startowe StartCRM2026! lub swoje hasło stałe)
+      setStep('password');
+      setPassword('');
     } catch (err) {
       setError('Wystąpił nieoczekiwany błąd podczas sprawdzania adresu e-mail.');
     } finally {
@@ -276,9 +271,14 @@ export default function LoginScreen({ onOpenPublicForm }) {
 
               {/* Password field */}
               <div className="space-y-1.5">
-                <label htmlFor="app_access_code" className="block text-xs font-bold text-slate-700">
-                  Kod dostępu
-                </label>
+                <div className="flex items-center justify-between">
+                  <label htmlFor="app_access_code" className="block text-xs font-bold text-slate-700">
+                    Hasło dostępu
+                  </label>
+                  <span className="text-[10px] text-indigo-600 font-medium bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
+                    Startowe: StartCRM2026!
+                  </span>
+                </div>
                 <div className="relative">
                   <KeyRound size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
@@ -292,8 +292,8 @@ export default function LoginScreen({ onOpenPublicForm }) {
                     spellCheck="false"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Wprowadź kod dostępu..."
-                    className="w-full pl-10 pr-10 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none transition font-medium text-slate-800 font-mono"
+                    placeholder="Wpisz hasło stałe lub startowe (StartCRM2026!)..."
+                    className="w-full pl-10 pr-10 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 outline-none transition font-medium text-slate-800 font-mono"
                   />
                   <button
                     type="button"
@@ -304,6 +304,9 @@ export default function LoginScreen({ onOpenPublicForm }) {
                     {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
                 </div>
+                <p className="text-[10px] text-slate-400">
+                  Przy pierwszym logowaniu hasłem startowym system poprosi o nadanie własnego hasła stałego.
+                </p>
               </div>
 
               {/* Submit Button */}
@@ -338,32 +341,48 @@ export default function LoginScreen({ onOpenPublicForm }) {
             <form onSubmit={handleActivationSubmit} autoComplete="off" className="space-y-4">
               
               {/* Account welcome banner */}
-              <div className="p-3.5 bg-amber-50/80 border border-amber-200/80 rounded-2xl space-y-1.5">
+              <div className="p-3.5 bg-indigo-50/90 border border-indigo-200 rounded-2xl space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-amber-900 uppercase tracking-wider">
-                    <Sparkles size={13} strokeWidth={2.2} className="text-amber-600 shrink-0" />
-                    <span>Pierwsze logowanie do koła</span>
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-indigo-900 uppercase tracking-wider">
+                    <Sparkles size={13} strokeWidth={2.2} className="text-indigo-600 shrink-0" />
+                    <span>Weryfikacja pierwszego logowania</span>
                   </span>
                   <button
                     type="button"
                     onClick={handleResetToEmail}
-                    className="text-[10px] font-semibold text-amber-800 hover:text-amber-950 underline cursor-pointer"
+                    className="text-[10px] font-semibold text-indigo-800 hover:text-indigo-950 underline cursor-pointer"
                   >
                     Zmień e-mail
                   </button>
                 </div>
-                <p className="text-xs font-bold text-amber-950">
+                <p className="text-xs font-bold text-indigo-950">
                   Witaj, {verifiedUser?.name || 'Użytkowniku'}!
                 </p>
-                <p className="text-[11px] text-amber-800/90 leading-relaxed">
-                  Twoje konto zostało dodane przez Zarząd. Ustaw swój własny, unikalny kod dostępu, aby wejść do CRM.
+                <p className="text-[11px] text-indigo-900/80 leading-relaxed">
+                  Podano prawidłowe hasło startowe (<span className="font-mono font-bold text-indigo-700 bg-white/70 px-1 py-0.5 rounded border border-indigo-200">StartCRM2026!</span>). Ze względów bezpieczeństwa musisz teraz ustanowić swoje własne, unikalne hasło stałe.
                 </p>
+              </div>
+
+              {/* Warning Alert - No Auto Recovery Mechanism */}
+              <div className="p-3 bg-amber-500/10 border-2 border-amber-500/30 rounded-2xl flex items-start gap-2.5 text-amber-950">
+                <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                <div className="space-y-0.5 text-left">
+                  <p className="text-xs font-bold text-amber-950">
+                    Ważne ostrzeżenie o bezpieczeństwie
+                  </p>
+                  <p className="text-xs font-semibold text-amber-900 leading-snug">
+                    Zapamiętaj swoje nowe hasło – obecnie brak mechanizmu automatycznego odzyskiwania dostępu.
+                  </p>
+                  <p className="text-[10px] text-amber-800/80 leading-normal">
+                    W razie utraty nowego hasła zresetowanie konta będzie możliwe wyłącznie przez kontakt z Administratorem Głównym Koła.
+                  </p>
+                </div>
               </div>
 
               {/* New Password field */}
               <div className="space-y-1.5">
                 <label htmlFor="app_access_code_new" className="block text-xs font-bold text-slate-700">
-                  Wpisz kod dostępu
+                  Nowe hasło stałe
                 </label>
                 <div className="relative">
                   <KeyRound size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -378,8 +397,8 @@ export default function LoginScreen({ onOpenPublicForm }) {
                     spellCheck="false"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Minimum 8 znaków..."
-                    className="w-full pl-10 pr-10 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-400 outline-none transition font-medium text-slate-800 font-mono"
+                    placeholder="Wpisz nowe hasło (min. 8 znaków)..."
+                    className="w-full pl-10 pr-10 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-400 outline-none transition font-medium text-slate-800 font-mono"
                   />
                   <button
                     type="button"
@@ -395,7 +414,7 @@ export default function LoginScreen({ onOpenPublicForm }) {
               {/* Confirm Password field */}
               <div className="space-y-1.5">
                 <label htmlFor="app_access_code_confirm" className="block text-xs font-bold text-slate-700">
-                  Powtórz kod dostępu
+                  Powtórz nowe hasło stałe
                 </label>
                 <div className="relative">
                   <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -409,8 +428,8 @@ export default function LoginScreen({ onOpenPublicForm }) {
                     spellCheck="false"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Wpisz ponownie ten sam kod dostępu..."
-                    className="w-full pl-10 pr-10 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-400 outline-none transition font-medium text-slate-800 font-mono"
+                    placeholder="Powtórz dokładnie to samo hasło..."
+                    className="w-full pl-10 pr-10 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-400 outline-none transition font-medium text-slate-800 font-mono"
                   />
                   <button
                     type="button"
@@ -443,7 +462,18 @@ export default function LoginScreen({ onOpenPublicForm }) {
                     <div className="w-3 h-3 rounded-full border border-slate-300" />
                   )}
                   <span className={passwordsMatch ? 'text-emerald-700 font-semibold' : 'text-slate-500'}>
-                    Kody dostępu są identyczne
+                    Hasła są identyczne
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {newPassword && newPassword !== DEFAULT_STARTER_PASSWORD ? (
+                    <CheckCircle2 size={13} className="text-emerald-600" />
+                  ) : (
+                    <div className="w-3 h-3 rounded-full border border-slate-300" />
+                  )}
+                  <span className={newPassword && newPassword !== DEFAULT_STARTER_PASSWORD ? 'text-emerald-700 font-semibold' : 'text-slate-500'}>
+                    Różne od hasła startowego ({DEFAULT_STARTER_PASSWORD})
                   </span>
                 </div>
               </div>
@@ -455,10 +485,10 @@ export default function LoginScreen({ onOpenPublicForm }) {
                 className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.99]"
               >
                 {loading ? (
-                  <span>Zapisywanie kodu dostępu…</span>
+                  <span>Zapisywanie nowego hasła…</span>
                 ) : (
                   <>
-                    <span>Zapisz kod dostępu i wejdź</span>
+                    <span>Zapisz hasło stałe i zaloguj do CRM</span>
                     <ArrowRight size={15} />
                   </>
                 )}

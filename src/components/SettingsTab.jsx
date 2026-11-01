@@ -60,7 +60,7 @@ import {
 import { ActivityWeightIcon, VectorRingIndicator } from './VectorIcons';
 import { useSettings, DEFAULT_POINT_WEIGHTS, DEFAULT_ATTENDANCE_CONFIG, getEngagementScaleLevel } from '../context/SettingsContext';
 import { useOrg } from '../context/OrgContext';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, DEFAULT_STARTER_PASSWORD } from '../context/AuthContext';
 import {
   exportOrgBackup,
   importOrgBackup,
@@ -656,7 +656,7 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
 
     const roleInfo = roleMap[newUserRole] || roleMap.ADMIN;
     const cleanEmail = newUserEmail.trim().toLowerCase();
-    const tempPassword = `SKN!${Math.random().toString(36).slice(2, 6).toUpperCase()}${Math.floor(100 + Math.random() * 900)}`;
+    const tempPassword = DEFAULT_STARTER_PASSWORD;
 
     const newUser = {
       id: `usr_${Date.now()}`,

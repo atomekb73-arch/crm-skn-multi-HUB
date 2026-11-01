@@ -27,6 +27,9 @@ export const ROLES = {
 
 export const ADMIN_PASSWORD = import.meta.env?.VITE_ADMIN_PASSWORD || 'Ntx2t44V';
 
+/** Stałe domyślne hasło startowe dla wszystkich nowych użytkowników */
+export const DEFAULT_STARTER_PASSWORD = 'StartCRM2026!';
+
 export const MASTER_ADMIN_EMAILS = [
   'admin@wskz.pl',
   'admin',
@@ -41,19 +44,51 @@ export const MASTER_ADMIN_PASSWORDS = {
   'atomekb73@gmail.com': '730273',
 };
 
-export const DEFAULT_AUTHORIZED_ACCOUNTS = [];
+export const DEFAULT_AUTHORIZED_ACCOUNTS = [
+  {
+    email: 'm.czepirek@gmail.com',
+    name: 'Magda Czepirska',
+    role: 'SUPER_ADMIN',
+    roleLabel: 'Przewodnicząca SKNU / Sekretarz SKNS',
+    isFirstLogin: true,
+    tempPassword: DEFAULT_STARTER_PASSWORD,
+    accessibleOrgs: ['*'],
+  },
+  {
+    email: '15998@student.wskz.pl',
+    name: 'Tomasz Bratkowski',
+    role: 'SUPER_ADMIN',
+    roleLabel: 'Przewodniczący SKNS',
+    isFirstLogin: true,
+    tempPassword: DEFAULT_STARTER_PASSWORD,
+    accessibleOrgs: ['*'],
+  },
+  {
+    email: 'gabriel.creart@gmail.com',
+    name: 'Michał Rodak',
+    role: 'ADMIN',
+    roleLabel: 'Zarząd Koła',
+    isFirstLogin: true,
+    tempPassword: DEFAULT_STARTER_PASSWORD,
+    accessibleOrgs: ['*'],
+  },
+];
 
 export const STARTER_PASSWORDS = {
   'admin@wskz.pl': ADMIN_PASSWORD,
   'admin': ADMIN_PASSWORD,
   'zarzad@wskz.pl': ADMIN_PASSWORD,
-  'opiekun@wskz.pl': 'Start2026!',
+  'opiekun@wskz.pl': DEFAULT_STARTER_PASSWORD,
+  'm.czepirek@gmail.com': DEFAULT_STARTER_PASSWORD,
+  '15998@student.wskz.pl': DEFAULT_STARTER_PASSWORD,
+  'gabriel.creart@gmail.com': DEFAULT_STARTER_PASSWORD,
   'atomekb73@gmail.com': '730273',
 };
 
 export const ACCESS_PASSWORDS = [
   ADMIN_PASSWORD,
   'Ntx2t44V',
+  DEFAULT_STARTER_PASSWORD,
   'Start2026!',
   '730273',
   import.meta.env?.VITE_ACCESS_PASSWORD,
@@ -113,7 +148,7 @@ export function getUserStoredPassword(email) {
   if (STARTER_PASSWORDS[clean]) {
     return STARTER_PASSWORDS[clean];
   }
-  return null;
+  return DEFAULT_STARTER_PASSWORD;
 }
 
 /** Sprawdź czy użytkownik loguje się po raz pierwszy */
@@ -136,19 +171,19 @@ export function getUserFirstLoginStatus(email, userRecord = null) {
     }
   } catch {}
 
-  // Jeśli użytkownik ma już zapisane własne hasło w skn_user_passwords, to nie jest pierwsze logowanie
+  // Jeśli użytkownik ma już zapisane własne, unikalne hasło (inne niż hasło startowe), to nie jest pierwsze logowanie
   try {
     const rawPass = localStorage.getItem('skn_user_passwords');
     if (rawPass) {
       const passwords = JSON.parse(rawPass);
-      if (passwords && passwords[cleanEmail]) {
+      if (passwords && passwords[cleanEmail] && passwords[cleanEmail] !== DEFAULT_STARTER_PASSWORD && passwords[cleanEmail] !== 'Start2026!') {
         return false;
       }
     }
   } catch {}
 
-  // Jeśli rekord użytkownika ma jawnie isFirstLogin: false
-  if (userRecord && userRecord.isFirstLogin === false) {
+  // Jeśli rekord użytkownika ma jawnie isFirstLogin: false i brak przypisanego tempPassword
+  if (userRecord && userRecord.isFirstLogin === false && !userRecord.tempPassword) {
     return false;
   }
 
@@ -376,6 +411,21 @@ export function AuthProvider({ children }) {
       return { success: false, error: 'Wprowadzone hasła nie są identyczne.' };
     }
 
+    const isStarter = [
+      DEFAULT_STARTER_PASSWORD,
+      'StartCRM2026!',
+      'Start2026!',
+      'Psycho2026!',
+      'Psychoonkologia2026!',
+      'wskz2026',
+      'skn2026',
+      STARTER_PASSWORDS[cleanEmail],
+    ].filter(Boolean).includes(p1);
+
+    if (isStarter) {
+      return { success: false, error: 'Nowe hasło nie może być hasłem startowym (StartCRM2026!). Wybierz inne, bezpieczne hasło stałe.' };
+    }
+
     try {
       // 1. Zapisz nowe hasło w rejestrze haseł użytkowników (lokalnie i w Supabase)
       let passwords = {};
@@ -471,7 +521,8 @@ export function AuthProvider({ children }) {
     const tempPassword = status.user?.tempPassword || null;
     const isMasterOrBoard = MASTER_ADMIN_EMAILS.some(e => e.toLowerCase() === cleanEmail) || cleanEmail === 'zarzad@wskz.pl';
 
-    const isTempPasswordMatch = tempPassword && cleanPassword === tempPassword;
+    const isStarterMatch = cleanPassword === DEFAULT_STARTER_PASSWORD || cleanPassword === 'Start2026!';
+    const isTempPasswordMatch = (tempPassword && cleanPassword === tempPassword) || isStarterMatch;
     const isPasswordValid = (storedPassword && storedPassword === cleanPassword) ||
                             isTempPasswordMatch ||
                             (isMasterOrBoard && (cleanPassword === ADMIN_PASSWORD || cleanPassword === 'Ntx2t44V'));
@@ -480,8 +531,9 @@ export function AuthProvider({ children }) {
       return { success: false, error: 'Nieprawidłowe hasło dostępowe.' };
     }
 
-    // Wymuszenie zmiany hasła przy pierwszym logowaniu lub gdy zalogowano hasłem tymczasowym
-    if (isTempPasswordMatch || status.isFirstLogin) {
+    // Wymuszenie zmiany hasła przy pierwszym logowaniu lub gdy podano hasło startowe StartCRM2026!
+    const mustChangePassword = isStarterMatch || (tempPassword && cleanPassword === tempPassword) || status.isFirstLogin;
+    if (!isMasterOrBoard && mustChangePassword) {
       return {
         success: false,
         requiresActivation: true,
@@ -532,18 +584,18 @@ export function AuthProvider({ children }) {
     }
 
     const isStarter = [
+      DEFAULT_STARTER_PASSWORD,
+      'StartCRM2026!',
+      'Start2026!',
       'Psycho2026!',
       'Psychoonkologia2026!',
       'wskz2026',
       'skn2026',
-      'Liliana123',
-      'Kasia123',
-      'Piotr123',
       STARTER_PASSWORDS[cleanEmail],
     ].filter(Boolean).includes(p1);
 
     if (isStarter) {
-      return { success: false, error: 'Nowe hasło nie może być hasłem startowym. Wybierz inne, bezpieczne hasło.' };
+      return { success: false, error: 'Nowe hasło nie może być hasłem startowym (StartCRM2026!). Wybierz inne, bezpieczne hasło stałe.' };
     }
 
     try {
