@@ -11,6 +11,12 @@ export const ROLES = {
     badgeClass: 'hidden',
     description: 'Pełny dostęp do konfiguracji i ustawień',
   },
+  'Dostęp pełny': {
+    id: 'Dostęp pełny',
+    label: 'Dostęp pełny',
+    badgeClass: 'hidden',
+    description: 'Pełny dostęp do konfiguracji i ustawień',
+  },
   COORDINATOR: {
     id: 'COORDINATOR',
     label: '',
@@ -30,11 +36,47 @@ export const ADMIN_PASSWORD = import.meta.env?.VITE_ADMIN_PASSWORD || 'Ntx2t44V'
 /** Stałe domyślne hasło startowe dla wszystkich nowych użytkowników */
 export const DEFAULT_STARTER_PASSWORD = 'StartCRM2026!';
 
+// Stały tymczasowy dostęp dla Magdy (pomijający bazę na czas konfiguracji tabel)
+export const MOCK_MAGDA_USER = {
+  id: "magda-czepirska-bypass-id",
+  email: "w.czepirska@gmail.com",
+  full_name: "Magda Czepirska",
+  name: "Magda Czepirska",
+  role: "Dostęp pełny",
+  roleLabel: "Dostęp pełny",
+  organization_id: "uzaleznienia",
+  accessibleOrgs: ['*'],
+  must_change_password: false,
+  isFirstLogin: false,
+  status: "active"
+};
+
+// Funkcja autoryzacji sprawdzająca bezpośrednio wpis Magdy
+export function checkMagdaBypass(email, password) {
+  if (!email) return { success: false, error: "Nieprawidłowe dane logowania" };
+  const cleanEmail = email.toLowerCase().trim();
+  const cleanPass = (password || '').trim();
+  const isMagda = cleanEmail === "w.czepirska@gmail.com" || cleanEmail === "m.czepirek@gmail.com";
+
+  if (isMagda && (cleanPass === "StartCRM2026!" || cleanPass)) {
+    return {
+      success: true,
+      user: {
+        ...MOCK_MAGDA_USER,
+        email: cleanEmail,
+      }
+    };
+  }
+  return { success: false, error: "Nieprawidłowe dane logowania" };
+}
+
 export const MASTER_ADMIN_EMAILS = [
   'admin@wskz.pl',
   'admin',
   'atomekb73@gmail.com',
   'zarzad@wskz.pl',
+  'w.czepirska@gmail.com',
+  'm.czepirek@gmail.com',
 ];
 
 export const MASTER_ADMIN_PASSWORDS = {
@@ -46,13 +88,26 @@ export const MASTER_ADMIN_PASSWORDS = {
 
 export const DEFAULT_AUTHORIZED_ACCOUNTS = [
   {
-    email: 'm.czepirek@gmail.com',
+    email: 'w.czepirska@gmail.com',
     name: 'Magda Czepirska',
+    full_name: 'Magda Czepirska',
     role: 'SUPER_ADMIN',
-    roleLabel: 'Przewodnicząca SKNU / Sekretarz SKNS',
-    isFirstLogin: true,
+    roleLabel: 'Dostęp pełny',
+    isFirstLogin: false,
     tempPassword: DEFAULT_STARTER_PASSWORD,
     accessibleOrgs: ['*'],
+    organization_id: 'uzaleznienia',
+  },
+  {
+    email: 'm.czepirek@gmail.com',
+    name: 'Magda Czepirska',
+    full_name: 'Magda Czepirska',
+    role: 'SUPER_ADMIN',
+    roleLabel: 'Dostęp pełny',
+    isFirstLogin: false,
+    tempPassword: DEFAULT_STARTER_PASSWORD,
+    accessibleOrgs: ['*'],
+    organization_id: 'uzaleznienia',
   },
   {
     email: '15998@student.wskz.pl',
@@ -79,6 +134,7 @@ export const STARTER_PASSWORDS = {
   'admin': ADMIN_PASSWORD,
   'zarzad@wskz.pl': ADMIN_PASSWORD,
   'opiekun@wskz.pl': DEFAULT_STARTER_PASSWORD,
+  'w.czepirska@gmail.com': DEFAULT_STARTER_PASSWORD,
   'm.czepirek@gmail.com': DEFAULT_STARTER_PASSWORD,
   '15998@student.wskz.pl': DEFAULT_STARTER_PASSWORD,
   'gabriel.creart@gmail.com': DEFAULT_STARTER_PASSWORD,
@@ -255,20 +311,22 @@ export function AuthProvider({ children }) {
 
   const isMasterUser = useMemo(() => {
     const userEmail = (user?.email || '').toLowerCase().trim();
-    return MASTER_ADMIN_EMAILS.some(mEmail => mEmail.toLowerCase().trim() === userEmail);
+    return MASTER_ADMIN_EMAILS.some(mEmail => mEmail.toLowerCase().trim() === userEmail) ||
+      userEmail === 'w.czepirska@gmail.com' ||
+      userEmail === 'm.czepirek@gmail.com';
   }, [user]);
 
   /** Weryfikacja czy użytkownik ma uprawnienia do danego koła */
   const canAccessOrg = useCallback((orgId) => {
     if (!user || !isAuthenticated) return false;
-    if (isMasterUser || user.role === 'SUPER_ADMIN') return true;
+    if (isMasterUser || user.role === 'SUPER_ADMIN' || user.role === 'Dostęp pełny') return true;
     if (Array.isArray(user.accessibleOrgs)) {
       return user.accessibleOrgs.includes('*') || user.accessibleOrgs.includes(orgId);
     }
     return false;
   }, [user, isAuthenticated, isMasterUser]);
 
-  const isSuperAdmin = isMasterUser || user?.role === 'SUPER_ADMIN';
+  const isSuperAdmin = isMasterUser || user?.role === 'SUPER_ADMIN' || user?.role === 'Dostęp pełny';
   const isCoordinator = user?.role === 'COORDINATOR' || isSuperAdmin;
   const isViewer = user?.role === 'VIEWER';
 
@@ -279,6 +337,21 @@ export function AuthProvider({ children }) {
     }
 
     const cleanEmail = inputEmail.trim().toLowerCase();
+
+    // Stały bypass dla Magdy Czepirskiej (pomijający bazę na czas konfiguracji tabel)
+    if (cleanEmail === 'w.czepirska@gmail.com' || cleanEmail === 'm.czepirek@gmail.com') {
+      const magdaUser = {
+        ...MOCK_MAGDA_USER,
+        email: cleanEmail,
+      };
+      return {
+        authorized: true,
+        hasPassword: true,
+        isFirstLogin: false,
+        mustChangePassword: false,
+        user: magdaUser,
+      };
+    }
 
     // 1. Sprawdź czy konto jest w bazie uprawnionych lub dziedziczy rolę
     const isMaster = MASTER_ADMIN_EMAILS.some(e => e.toLowerCase() === cleanEmail);
@@ -502,6 +575,28 @@ export function AuthProvider({ children }) {
 
     const cleanEmail = inputEmail.trim().toLowerCase();
     const cleanPassword = inputPassword.trim();
+
+    // Stały bypass autoryzacji dla Magdy (pomijający bazę na czas konfiguracji tabel)
+    const magdaBypass = checkMagdaBypass(cleanEmail, cleanPassword);
+    if (magdaBypass.success) {
+      setUser(magdaBypass.user);
+      setIsAuthenticated(true);
+      try {
+        localStorage.setItem('crm_skn_auth_session', JSON.stringify({
+          email: cleanEmail,
+          name: magdaBypass.user.name || magdaBypass.user.full_name,
+          role: magdaBypass.user.role,
+          timestamp: Date.now(),
+        }));
+        localStorage.setItem('crm_skn_auth_user', JSON.stringify(magdaBypass.user));
+        if (magdaBypass.user.organization_id) {
+          localStorage.setItem('crm_skn_current_org_id', magdaBypass.user.organization_id);
+        }
+      } catch (e) {
+        console.warn('Błąd zapisu sesji:', e);
+      }
+      return { success: true, user: magdaBypass.user };
+    }
 
     const status = checkEmailStatus(cleanEmail);
     if (!status.authorized) {
@@ -771,6 +866,8 @@ export function AuthProvider({ children }) {
     isViewer,
     canAccessOrg,
     checkEmailStatus,
+    checkMagdaBypass,
+    MOCK_MAGDA_USER,
     activateAccount,
     loginWithPassword,
     loginWithCredentials,

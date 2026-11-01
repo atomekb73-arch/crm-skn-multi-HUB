@@ -348,7 +348,7 @@ export default function ProfileMenu({ onOpenSettings }) {
                 <p className="text-xs font-bold text-slate-800 font-mono">{user.email}</p>
               </div>
               <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
-                {user.role === 'SUPER_ADMIN' ? 'Administrator' : 'Użytkownik'}
+                {user.role === 'SUPER_ADMIN' || user.role === 'Dostęp pełny' ? 'Dostęp pełny' : (user.roleLabel || 'Użytkownik')}
               </span>
             </div>
 

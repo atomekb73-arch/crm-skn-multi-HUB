@@ -3240,7 +3240,7 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
         </div>
 
         {/* ── SEKTOR 8: ZAAWANSOWANE ZARZĄDZANIE DANYMI (Kopia i Konserwacja) ─────── */}
-        {(isSuperAdmin || currentUser?.role === 'SUPER_ADMIN' || currentUser?.email === 'atomekb73@gmail.com') && (
+        {(isSuperAdmin || currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'Dostęp pełny' || currentUser?.email === 'atomekb73@gmail.com') && (
           <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-4 sm:p-5 border border-indigo-500/30 text-white shadow-xl space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-indigo-800/40">
               <div className="flex items-center gap-3">
