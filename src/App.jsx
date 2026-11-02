@@ -2871,13 +2871,13 @@ export default function App() {
 
   return (
     <div
-      className={`min-h-screen w-full max-w-full overflow-x-hidden tenant-backdrop bg-gradient-to-br transition-colors duration-500 ${theme?.backdropGradientClass || 'from-slate-50 via-sky-50/40 to-indigo-50/50'}`}
+      className={`min-h-screen w-full max-w-full overflow-x-clip tenant-backdrop bg-gradient-to-br transition-colors duration-500 ${theme?.backdropGradientClass || 'from-slate-50 via-sky-50/40 to-indigo-50/50'}`}
       style={theme?.backdropStyle}
     >
 
       {/* ── Toast Notification Banner ───────────────────────────────────────── */}
       {toastMessage && (
-        <div className="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in slide-in-from-bottom-5 duration-200 text-xs print:hidden">
+        <div className="fixed bottom-5 right-5 z-[90] bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in slide-in-from-bottom-5 duration-200 text-xs print:hidden">
           <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
           <span>{toastMessage}</span>
           <button onClick={() => setToastMessage(null)} className="text-slate-400 hover:text-white ml-2">
@@ -2886,26 +2886,26 @@ export default function App() {
         </div>
       )}
 
-      {/* ── Header with Responsive Two-Row Mobile Architecture ─────────────── */}
-      <header className="border-b border-slate-100 bg-white/80 backdrop-blur-sm sticky top-0 z-30 print:hidden w-full max-w-full overflow-x-hidden">
-        <div className="w-full max-w-[1850px] mx-auto px-3 sm:px-4 md:px-6 py-2 sm:py-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-4 min-h-[56px] sm:min-h-[64px]">
+      {/* ── Header with Bulletproof Z-Index & Clean Responsive Tiering ─────────── */}
+      <header className="border-b border-slate-200/80 bg-white/95 backdrop-blur-md sticky top-0 z-50 print:hidden w-full shadow-xs">
+        <div className="w-full max-w-[1850px] mx-auto px-3 sm:px-4 md:px-6 py-2.5 sm:py-3 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-2.5 sm:gap-3 xl:gap-4 min-h-[56px] sm:min-h-[64px]">
 
-          {/* Row 1 on Mobile: Logo & Multi-Tenant Organization Switcher (Full Width & Unclipped) */}
-          <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 min-w-0 w-full sm:w-auto relative">
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 sm:flex-none">
+          {/* Row 1 on Mobile & Tablets (< 1280px): Logo & Multi-Tenant Organization Switcher */}
+          <div className="flex items-center justify-between xl:justify-start gap-2 sm:gap-3 min-w-0 w-full xl:w-auto relative">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 xl:flex-none">
               <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center shadow-md text-white font-black text-xs tracking-wider shrink-0 transition-all duration-300 ${
                 theme?.headerBadgeGradient || 'bg-gradient-to-br from-indigo-600 via-sky-600 to-indigo-700 shadow-indigo-500/25'
               }`}>
                 {theme?.badgeText || (currentOrg.id === 'uzaleznienia' ? 'UZAL' : 'SEKS')}
               </div>
               
-              <div className="relative min-w-0 flex-1 sm:flex-none">
+              <div className="relative min-w-0 flex-1 xl:flex-none">
                 <button
                   onClick={() => setIsOrgDropdownOpen(prev => !prev)}
-                  className="w-full flex items-center justify-between sm:justify-start gap-1.5 sm:gap-2 text-left group hover:bg-slate-100/80 px-2 sm:px-2.5 py-1 sm:py-1.5 -mx-1 sm:-mx-1.5 rounded-xl transition cursor-pointer border border-transparent hover:border-slate-200/60 min-w-0"
+                  className="w-full flex items-center justify-between xl:justify-start gap-1.5 sm:gap-2 text-left group hover:bg-slate-100/80 px-2 sm:px-2.5 py-1 sm:py-1.5 -mx-1 sm:-mx-1.5 rounded-xl transition cursor-pointer border border-transparent hover:border-slate-200/60 min-w-0"
                   title="Kliknij, aby przełączyć koło naukowe"
                 >
-                  <div className="min-w-0 flex-1 sm:flex-none">
+                  <div className="min-w-0 flex-1 xl:flex-none">
                     <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                       <h1 className={`text-xs sm:text-sm font-extrabold text-slate-900 transition leading-tight truncate ${theme?.headerHoverTitle || 'group-hover:text-indigo-600'}`}>
                         {currentOrg.name}
@@ -2917,7 +2917,8 @@ export default function App() {
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 text-[10px] sm:text-[11px] text-slate-500 font-medium truncate">
-                      <p className="truncate">System Ewidencyjno-Sprawozdawczy</p>
+                      <p className="truncate hidden sm:inline">System Ewidencyjno-Sprawozdawczy</p>
+                      <p className="truncate sm:hidden">System CRM</p>
                       <span className="text-[10px] text-slate-400 shrink-0">•</span>
                       <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded shrink-0">
                         {academicYear}
@@ -2930,8 +2931,8 @@ export default function App() {
                 {/* Organization Dropdown Menu */}
                 {isOrgDropdownOpen && (
                   <>
-                    <div className="fixed inset-0 z-40" onClick={() => setIsOrgDropdownOpen(false)} />
-                    <div className="absolute top-full left-0 mt-2 w-80 max-w-[calc(100vw-24px)] bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 z-50 animate-in fade-in zoom-in-95 duration-100">
+                    <div className="fixed inset-0 z-[60]" onClick={() => setIsOrgDropdownOpen(false)} />
+                    <div className="absolute top-full left-0 mt-2 w-80 max-w-[calc(100vw-24px)] bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 z-[70] animate-in fade-in zoom-in-95 duration-100">
                       <div className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 flex items-center justify-between">
                         <span>Wybierz Koło Naukowe</span>
                         <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">Multi-Tenant</span>
@@ -2995,18 +2996,20 @@ export default function App() {
             </div>
           </div>
 
-          {/* Row 2 on Mobile: Sync Status + Refresh Button + User Profile (Full Visibility & Clickability) */}
-          <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 shrink-0 w-full sm:w-auto pt-1.5 sm:pt-0 border-t border-slate-100 sm:border-t-0 min-h-[38px] sm:min-h-[44px]">
+          {/* Row 2 on Mobile/Tablets, Right Column on Large Desktop (xl:): Controls Toolbar */}
+          <div className="flex items-center justify-between xl:justify-end gap-2 sm:gap-3 shrink-0 w-full xl:w-auto pt-2 xl:pt-0 border-t border-slate-100 xl:border-t-0 min-h-[38px] sm:min-h-[44px]">
             {/* Intelligent Cloud Sync Indicator */}
-            <SyncIndicator
-              status={isSyncing ? 'syncing' : cloudSyncStatus.status}
-              lastSyncTime={cloudSyncStatus.lastSyncTime || lastSync}
-              onRetry={() => handleRefreshData({ silent: false })}
-            />
+            <div className="shrink-0 min-w-0">
+              <SyncIndicator
+                status={isSyncing ? 'syncing' : cloudSyncStatus.status}
+                lastSyncTime={cloudSyncStatus.lastSyncTime || lastSync}
+                onRetry={() => handleRefreshData({ silent: false })}
+              />
+            </div>
 
-            {/* Record count (Single-line row) */}
+            {/* Topbar statistics pill - Only visible on very wide desktop screens (2xl:), hidden elsewhere to avoid clutter */}
             {lastSync && !error && (
-              <div className="hidden lg:flex items-center gap-3 text-xs text-slate-500 bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-full whitespace-nowrap shrink-0">
+              <div className="hidden 2xl:flex items-center gap-2.5 text-xs text-slate-500 bg-slate-50 border border-slate-200/80 px-3 py-1.5 rounded-full whitespace-nowrap shrink-0">
                 <span>Aktywni: <strong className="text-slate-800 font-semibold">{activeMembersCount}</strong></span>
                 <span className="text-slate-300">•</span>
                 <span>Kwarantanna: <strong className="text-amber-700 font-semibold">{quarantine.length}</strong></span>
@@ -3017,16 +3020,16 @@ export default function App() {
               </div>
             )}
 
-            <div className="flex items-center gap-2 shrink-0 ml-auto sm:ml-0">
+            <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 ml-auto xl:ml-0">
               {/* Refresh button with Smart Sync & Reconciliation */}
               <button
                 onClick={() => handleRefreshData({ silent: false })}
                 disabled={loading || isSyncing}
                 title="Inteligentna synchronizacja dwukierunkowa (Smart Sync & Reconcile)"
-                className={`inline-flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl ${theme?.primaryBtn || 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/20'} disabled:opacity-50 text-white text-xs font-semibold transition-all shadow-sm cursor-pointer whitespace-nowrap min-h-[36px] sm:min-h-0`}
+                className={`inline-flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl ${theme?.primaryBtn || 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/20'} disabled:opacity-50 text-white text-xs font-semibold transition-all shadow-sm cursor-pointer whitespace-nowrap min-h-[36px] sm:min-h-0`}
               >
                 <RefreshCw size={13} className={(loading || isSyncing) ? 'animate-spin' : ''} />
-                <span className="hidden sm:inline">{isSyncing ? 'Synchronizacja...' : 'Odśwież dane'}</span>
+                <span className="hidden md:inline">{isSyncing ? 'Synchronizacja...' : 'Odśwież dane'}</span>
               </button>
 
               {/* User Profile & Role Switcher Menu */}
@@ -3047,8 +3050,8 @@ export default function App() {
         </div>
       )}
 
-      {/* ── Main Content Area ───────────────────────────────────────────────── */}
-      <main className="w-full max-w-[1850px] mx-auto px-3 sm:px-4 md:px-6 py-3 sm:py-4 space-y-4 sm:space-y-6 min-h-[calc(100vh-80px)] overflow-x-hidden" style={{ contain: 'layout' }}>
+      {/* ── Main Content Area with Protected Top Padding ───────────────────── */}
+      <main className="w-full max-w-[1850px] mx-auto px-3 sm:px-4 md:px-6 pt-5 sm:pt-6 md:pt-8 pb-12 space-y-4 sm:space-y-6 min-h-[calc(100vh-80px)] overflow-x-hidden">
 
         {/* Navigation Bar with Condensed 5 Tabs and Sub-Tabs */}
         <Navbar

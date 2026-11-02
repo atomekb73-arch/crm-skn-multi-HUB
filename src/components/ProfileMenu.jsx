@@ -153,7 +153,7 @@ export default function ProfileMenu({ onOpenSettings }) {
         {/* Profile Trigger Button */}
         <button
           onClick={() => setIsOpen(prev => !prev)}
-          className="flex items-center gap-2.5 p-1.5 pr-3 rounded-2xl border border-slate-200/80 bg-white hover:bg-slate-50 hover:border-slate-300 transition shadow-2xs cursor-pointer group"
+          className="flex items-center gap-1.5 sm:gap-2.5 p-1 sm:p-1.5 sm:pr-3 rounded-2xl border border-slate-200/80 bg-white hover:bg-slate-50 hover:border-slate-300 transition shadow-2xs cursor-pointer group shrink-0 min-h-[36px]"
         >
           {/* Avatar / Initials */}
           <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-violet-500 text-white font-bold text-xs flex items-center justify-center shadow-xs shrink-0">
@@ -165,7 +165,7 @@ export default function ProfileMenu({ onOpenSettings }) {
           </div>
 
           {/* Name */}
-          <div className="text-left hidden sm:block min-w-0">
+          <div className="text-left hidden md:block min-w-0">
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-bold text-slate-800 group-hover:text-indigo-600 transition truncate max-w-[130px]">
                 {user.name}
@@ -178,7 +178,7 @@ export default function ProfileMenu({ onOpenSettings }) {
 
         {/* Dropdown Menu */}
         {isOpen && (
-          <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-3xl shadow-2xl border border-slate-100 p-2.5 z-50 animate-in fade-in zoom-in-95 duration-100">
+          <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-24px)] bg-white rounded-3xl shadow-2xl border border-slate-100 p-2.5 z-[60] animate-in fade-in zoom-in-95 duration-100">
             
             {/* User Info Header Card */}
             <div className="p-3 bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-2xl mb-2">
