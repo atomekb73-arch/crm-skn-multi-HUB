@@ -120,7 +120,8 @@ export default function Navbar({
                 }`}
               >
                 <Users size={13} className={`w-3.5 h-3.5 shrink-0 ${membersSubTab === 'management' || activeTab === 'management' ? (theme?.navActiveTabIcon || 'text-indigo-600') : 'text-slate-600 group-hover:text-slate-900'}`} />
-                <span>Główna lista członków</span>
+                <span className="sm:hidden">Główna lista</span>
+                <span className="hidden sm:inline">Główna lista członków</span>
               </button>
 
               <button
@@ -137,7 +138,8 @@ export default function Navbar({
                 }`}
               >
                 <ShieldAlert size={13} className={`w-3.5 h-3.5 shrink-0 ${membersSubTab === 'quarantine' || activeTab === 'quarantine' ? 'text-amber-600' : 'text-slate-600 group-hover:text-slate-900'}`} />
-                <span>Kwarantanna & Zgłoszenia</span>
+                <span className="sm:hidden">Kwarantanna</span>
+                <span className="hidden sm:inline">Kwarantanna & Zgłoszenia</span>
                 {pendingCount > 0 && (
                   <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 text-[11px] font-semibold leading-none text-white bg-amber-500 rounded-full select-none translate-y-[1px]">
                     {pendingCount}
@@ -156,25 +158,37 @@ export default function Navbar({
                 <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                   <span className="font-bold text-xs text-slate-900 font-mono">{membersMetrics.activeCount}</span>
-                  <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">Aktywni członkowie</span>
+                  <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">
+                    <span className="sm:hidden">Aktywni</span>
+                    <span className="hidden sm:inline">Aktywni członkowie</span>
+                  </span>
                 </div>
 
                 {/* 2) Frekwencja */}
                 <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0">
                   <span className="font-bold text-xs text-slate-900 font-mono">{isNaN(membersMetrics.avgFreq) ? 0 : membersMetrics.avgFreq}%</span>
-                  <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">Średnia frekwencja</span>
+                  <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">
+                    <span className="sm:hidden">Frekwencja</span>
+                    <span className="hidden sm:inline">Średnia frekwencja</span>
+                  </span>
                 </div>
 
                 {/* 3) Zaświadczenia */}
                 <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0">
                   <span className="font-bold text-xs text-slate-900 font-mono">{membersMetrics.certReady}</span>
-                  <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">Gotowe zaświadczenia</span>
+                  <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">
+                    <span className="sm:hidden">Zaświadczenia</span>
+                    <span className="hidden sm:inline">Gotowe zaświadczenia</span>
+                  </span>
                 </div>
 
                 {/* 4) Mailing */}
                 <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0">
                   <span className="font-bold text-xs text-slate-900 font-mono">{membersMetrics.mailingConsentsCount}</span>
-                  <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">Zgody na mailing</span>
+                  <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">
+                    <span className="sm:hidden">Mailing</span>
+                    <span className="hidden sm:inline">Zgody na mailing</span>
+                  </span>
                 </div>
               </div>
               <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-slate-100 to-transparent rounded-r-xl sm:hidden" />

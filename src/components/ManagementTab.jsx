@@ -1148,21 +1148,20 @@ export default function ManagementTab({
         </div>
 
         {/* Action Controls: Academic Year + Filters + XLSX Export + Print Button */}
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
-          {/* Academic Year Selector in Management Tab */}
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap shrink-0 w-full sm:w-auto">
+          {/* Academic Year Selector in Management Tab (Clean select without redundant label) */}
           <div className="inline-flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200 text-xs font-semibold shrink-0 gap-1.5 shadow-2xs">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide pl-1.5">Rok:</span>
             <select
               value={academicYear}
               onChange={e => handleYearChange(e.target.value)}
-              className="text-xs border border-slate-200 rounded-lg px-2.5 py-1 bg-white font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer shadow-xs"
+              className="text-xs border border-slate-200 rounded-lg px-2 sm:px-2.5 py-1 bg-white font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer shadow-xs"
             >
               {academicYearOptions.map(opt => (
                 <option key={opt.value} value={opt.value}>
-                  Rok akademicki {opt.label}
+                  Rok {opt.label}
                 </option>
               ))}
-              <option value="custom">Własny zakres dat...</option>
+              <option value="custom">Własny zakres...</option>
             </select>
             {academicYear === 'custom' && (
               <div className="flex items-center gap-1.5 text-xs bg-white px-2 py-0.5 rounded-lg border border-slate-200">
@@ -1183,73 +1182,76 @@ export default function ManagementTab({
             )}
           </div>
 
-          {/* Segmented Filter Pills */}
-          <div className="inline-flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200 text-xs font-semibold shrink-0 gap-1 shadow-2xs">
+          {/* Segmented Filter Pills (Concise Labels) */}
+          <div className="inline-flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200 text-xs font-semibold shrink-0 gap-1 shadow-2xs overflow-x-auto max-w-full scrollbar-none">
             <button
               type="button"
               onClick={() => startTransition(() => setStatusFilter('active'))}
-              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
                 statusFilter === 'active'
                   ? 'bg-white text-emerald-700 shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span>Tylko aktywni ({activeCount})</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+              <span>Aktywni ({activeCount})</span>
             </button>
 
             {finalSemesterCount > 0 && (
               <button
                 type="button"
                 onClick={() => startTransition(() => setStatusFilter('final_semester'))}
-                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
                   statusFilter === 'final_semester'
                     ? 'bg-white text-sky-700 shadow-xs font-bold'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <span className="w-2 h-2 rounded-full bg-sky-500" />
-                <span>Ostatni semestr ({finalSemesterCount})</span>
+                <span className="w-2 h-2 rounded-full bg-sky-500 shrink-0" />
+                <span className="sm:hidden">Sem. ost. ({finalSemesterCount})</span>
+                <span className="hidden sm:inline">Ostatni semestr ({finalSemesterCount})</span>
               </button>
             )}
 
             <button
               type="button"
               onClick={() => startTransition(() => setStatusFilter('guest'))}
-              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
                 statusFilter === 'guest'
                   ? 'bg-white text-indigo-700 shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <span className="w-2 h-2 rounded-full bg-indigo-500" />
-              <span>Goście & Wolni słuchacze ({guestCount})</span>
+              <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+              <span className="sm:hidden">Goście ({guestCount})</span>
+              <span className="hidden sm:inline">Goście & Wolni słuchacze ({guestCount})</span>
             </button>
 
             <button
               type="button"
               onClick={() => startTransition(() => setStatusFilter('resigned'))}
-              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
                 statusFilter === 'resigned'
                   ? 'bg-white text-slate-800 shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <span className="w-2 h-2 rounded-full bg-slate-400" />
-              <span>Byli / Nieaktywni ({resignedCount})</span>
+              <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" />
+              <span className="sm:hidden">Nieaktywni ({resignedCount})</span>
+              <span className="hidden sm:inline">Byli / Nieaktywni ({resignedCount})</span>
             </button>
 
             {graduatesCount > 0 && (
               <button
                 type="button"
                 onClick={() => startTransition(() => setStatusFilter('graduates'))}
-                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
                   statusFilter === 'graduates'
                     ? 'bg-white text-indigo-700 shadow-xs font-bold'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <GraduationCap size={13} className="text-indigo-600" />
+                <GraduationCap size={13} className="text-indigo-600 shrink-0" />
                 <span>Absolwenci ({graduatesCount})</span>
               </button>
             )}
@@ -1257,7 +1259,7 @@ export default function ManagementTab({
             <button
               type="button"
               onClick={() => startTransition(() => setStatusFilter('all'))}
-              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition-all cursor-pointer shrink-0 ${
                 statusFilter === 'all'
                   ? 'bg-white text-indigo-700 shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
@@ -1267,27 +1269,25 @@ export default function ManagementTab({
             </button>
           </div>
 
-          {/* Export XLSX Button */}
+          {/* Export XLSX Button (Icon-Only on Mobile, Full on Desktop) */}
           <button
             type="button"
             onClick={handleExportMainListXlsx}
-            className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer shrink-0 min-h-[38px] sm:min-h-0"
+            className="p-2 sm:px-3.5 sm:py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl sm:rounded-lg shadow-sm transition-colors cursor-pointer shrink-0 inline-flex items-center justify-center gap-1.5 min-w-[36px] sm:min-w-0 h-9 sm:h-auto"
             title="Pobierz zestawienie do pliku Excel (.xlsx)"
           >
-            <FileSpreadsheet size={15} />
-            <span className="sm:hidden">XLS</span>
+            <FileSpreadsheet size={16} />
             <span className="hidden sm:inline">Eksportuj XLSX</span>
           </button>
 
-          {/* Print List Button */}
+          {/* Print List Button (Icon-Only on Mobile, Full on Desktop) */}
           <button
             type="button"
             onClick={() => window.print()}
-            className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 bg-slate-900 hover:bg-black text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer shrink-0 min-h-[38px] sm:min-h-0"
+            className="p-2 sm:px-3.5 sm:py-1.5 bg-slate-900 hover:bg-black text-white text-xs font-semibold rounded-xl sm:rounded-lg shadow-sm transition-colors cursor-pointer shrink-0 inline-flex items-center justify-center gap-1.5 min-w-[36px] sm:min-w-0 h-9 sm:h-auto"
             title="Wydrukuj wykaz członków na potrzeby Dziekanatu"
           >
-            <Printer size={15} />
-            <span className="sm:hidden">Drukuj</span>
+            <Printer size={16} />
             <span className="hidden sm:inline">Drukuj listę</span>
           </button>
         </div>
@@ -1343,17 +1343,17 @@ export default function ManagementTab({
           <thead className="sticky top-0 z-10 bg-slate-200/90 backdrop-blur-xs border-b-2 border-slate-300 shadow-sm">
             <tr className="text-left select-none print:bg-slate-100 print:border-slate-900">
               {/* 1. LP. (Liczba porządkowa) - Print: 5% */}
-              <th className="w-12 px-2 py-2.5 text-center text-xs font-bold text-slate-800 uppercase tracking-wider whitespace-nowrap bg-slate-200/90 backdrop-blur-xs print:w-[5%] print:text-slate-900 print:font-mono print:text-center">LP.</th>
+              <th className="w-8 sm:w-12 px-1 sm:px-2 py-2.5 text-center text-xs font-bold text-slate-800 uppercase tracking-wider whitespace-nowrap bg-slate-200/90 backdrop-blur-xs print:w-[5%] print:text-slate-900 print:font-mono print:text-center">LP.</th>
               
               {/* 2. Imię i Nazwisko / Email - Print: 35% */}
               <th
                 onClick={() => handleSort('fullName')}
-                className="min-w-[190px] sm:min-w-[240px] md:min-w-[280px] px-3 py-2 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group bg-slate-200/90 backdrop-blur-xs print:w-[35%] print:min-w-0 print:text-slate-900 print:cursor-default"
+                className="w-auto flex-1 min-w-0 sm:min-w-[200px] md:min-w-[240px] px-2 sm:px-3 py-2 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group bg-slate-200/90 backdrop-blur-xs print:w-[35%] print:min-w-0 print:text-slate-900 print:cursor-default"
               >
-                <div className="flex items-center justify-between gap-1.5">
+                <div className="flex items-center justify-between gap-1">
                   <div className="flex flex-col items-start leading-tight">
                     <span className="text-xs font-bold text-slate-800 uppercase tracking-wider whitespace-nowrap print:text-[8pt]">Imię i Nazwisko</span>
-                    <span className="print-subtext text-[10px] font-semibold text-slate-600 block mt-0.5 normal-case tracking-normal">Adres e-mail</span>
+                    <span className="print-subtext text-[10px] font-semibold text-slate-600 hidden sm:block mt-0.5 normal-case tracking-normal">Adres e-mail</span>
                   </div>
                   {renderSortIcon('fullName')}
                 </div>
@@ -1362,10 +1362,10 @@ export default function ManagementTab({
               {/* 3. Nr Indeksu - Print: 15% */}
               <th
                 onClick={() => handleSort('index')}
-                className="w-28 px-2 py-2 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group text-center bg-slate-200/90 backdrop-blur-xs print:w-[15%] print:min-w-0 print:text-slate-900 print:text-center"
+                className="w-16 sm:w-28 px-1 sm:px-2 py-2 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group text-center bg-slate-200/90 backdrop-blur-xs print:w-[15%] print:min-w-0 print:text-slate-900 print:text-center"
               >
                 <div className="flex items-center justify-center">
-                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wider whitespace-nowrap print:text-[8pt]">Nr Indeksu</span>
+                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wider whitespace-nowrap print:text-[8pt]">Indeks</span>
                   {renderSortIcon('index')}
                 </div>
               </th>
@@ -1373,10 +1373,10 @@ export default function ManagementTab({
               {/* 4. Kierunek / Rok - Print: 45% */}
               <th
                 onClick={() => handleSort('field')}
-                className="min-w-[160px] sm:min-w-[200px] md:min-w-[240px] px-3 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group bg-slate-200/90 backdrop-blur-xs print:w-[45%] print:min-w-0 print:text-slate-900"
+                className="hidden md:table-cell min-w-[140px] sm:min-w-[180px] md:min-w-[200px] px-3 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group bg-slate-200/90 backdrop-blur-xs print:table-cell print:w-[45%] print:min-w-0 print:text-slate-900"
               >
                 <div className="flex items-center">
-                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wider whitespace-nowrap print:text-[8pt]">Kierunek / Rok studiów</span>
+                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wider whitespace-nowrap print:text-[8pt]">Kierunek / Rok</span>
                   {renderSortIcon('field')}
                 </div>
               </th>
@@ -1384,7 +1384,7 @@ export default function ManagementTab({
               {/* Hidden on Print: 5. Status */}
               <th
                 onClick={() => handleSort('status')}
-                className="w-32 px-2 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group text-center bg-slate-200/90 backdrop-blur-xs print:hidden no-print"
+                className="w-20 sm:w-28 px-1 sm:px-2 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group text-center bg-slate-200/90 backdrop-blur-xs print:hidden no-print"
               >
                 <div className="flex items-center justify-center">
                   <span className="text-xs font-bold text-slate-800 uppercase tracking-wider whitespace-nowrap">Status</span>
@@ -1395,7 +1395,7 @@ export default function ManagementTab({
               {/* Hidden on Print: Frekwencja */}
               <th
                 onClick={() => handleSort('freq')}
-                className="w-48 px-2 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group text-center bg-slate-200/90 backdrop-blur-xs print:hidden"
+                className="hidden lg:table-cell w-36 xl:w-44 px-2 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group text-center bg-slate-200/90 backdrop-blur-xs print:hidden"
               >
                 <div className="flex items-center justify-center">
                   <span className="text-xs font-bold text-slate-800 uppercase tracking-wider whitespace-nowrap">Frekwencja</span>
@@ -1406,7 +1406,7 @@ export default function ManagementTab({
               {/* Hidden on Print: Ob. / Nieob. */}
               <th
                 onClick={() => handleSort('present')}
-                className="w-28 px-2 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group text-center bg-slate-200/90 backdrop-blur-xs print:hidden"
+                className="hidden lg:table-cell w-24 px-2 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group text-center bg-slate-200/90 backdrop-blur-xs print:hidden"
               >
                 <div className="flex items-center justify-center">
                   <span className="text-xs font-bold text-slate-800 uppercase tracking-wider whitespace-nowrap">Ob. / Nieob.</span>
@@ -1415,14 +1415,14 @@ export default function ManagementTab({
               </th>
 
               {/* Hidden on Print: Zaświadczenie */}
-              <th className="w-40 px-2 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider text-center whitespace-nowrap bg-slate-200/90 backdrop-blur-xs print:hidden">
+              <th className="hidden xl:table-cell w-32 px-2 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider text-center whitespace-nowrap bg-slate-200/90 backdrop-blur-xs print:hidden">
                 Zaświadczenie
               </th>
 
               {/* Hidden on Print: Punkty Aktywności */}
               <th
                 onClick={() => handleSort('points')}
-                className="w-28 px-2 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group text-center bg-slate-200/90 backdrop-blur-xs print:hidden"
+                className="hidden sm:table-cell w-20 sm:w-24 px-2 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group text-center bg-slate-200/90 backdrop-blur-xs print:hidden"
               >
                 <div className="flex items-center justify-center">
                   <span className="text-xs font-bold text-slate-800 uppercase tracking-wider whitespace-nowrap">Punkty</span>
@@ -1433,7 +1433,7 @@ export default function ManagementTab({
               {/* Hidden on Print: Mailing Consent */}
               <th
                 onClick={() => handleSort('mailingConsent')}
-                className="w-16 px-2 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group text-center bg-slate-200/90 backdrop-blur-xs print:hidden"
+                className="hidden xl:table-cell w-16 px-2 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group text-center bg-slate-200/90 backdrop-blur-xs print:hidden"
               >
                 <div className="flex items-center justify-center">
                   <span className="text-xs font-bold text-slate-800 uppercase tracking-wider whitespace-nowrap">Mailing</span>
@@ -1442,7 +1442,7 @@ export default function ManagementTab({
               </th>
 
               {/* Hidden on Print: Opcje */}
-              <th className="w-20 px-3 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider text-center whitespace-nowrap bg-slate-200/90 backdrop-blur-xs print:hidden">
+              <th className="hidden sm:table-cell w-16 sm:w-20 px-2 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider text-center whitespace-nowrap bg-slate-200/90 backdrop-blur-xs print:hidden">
                 Opcje
               </th>
             </tr>
@@ -1499,10 +1499,10 @@ export default function ManagementTab({
                   }`}
                 >
                   {/* 1. # (Lp.) - Print: 5% */}
-                  <td className="w-12 px-2 py-2.5 text-slate-400 text-xs font-mono text-center align-middle whitespace-nowrap print:w-[5%] print:text-slate-900 print:font-mono print:text-center">{i + 1}</td>
+                  <td className="w-8 sm:w-12 px-1 sm:px-2 py-2.5 text-slate-400 text-xs font-mono text-center align-middle whitespace-nowrap print:w-[5%] print:text-slate-900 print:font-mono print:text-center">{i + 1}</td>
                   
                   {/* 2. Name + Email - Print: 35% */}
-                  <td className="min-w-[190px] sm:min-w-[240px] md:min-w-[280px] px-3 py-2.5 align-middle text-left whitespace-nowrap print:w-[35%] print:min-w-0 print:whitespace-normal">
+                  <td className="w-auto min-w-0 sm:min-w-[200px] md:min-w-[240px] px-2 sm:px-3 py-2.5 align-middle text-left whitespace-nowrap print:w-[35%] print:min-w-0 print:whitespace-normal">
                     <div className="flex items-center gap-1.5 font-semibold text-slate-900 text-xs truncate print:whitespace-normal print:overflow-visible print:text-slate-900 print:leading-tight" title={name}>
                       <span
                         onClick={() => setDecisionModalMember(m)}
@@ -1514,38 +1514,38 @@ export default function ManagementTab({
                         {name}
                       </span>
                       {isGuestMember && (
-                        <span className="text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded font-semibold shrink-0 print:hidden no-print">Gość</span>
+                        <span className="text-[10px] text-indigo-700 font-semibold shrink-0 print:hidden no-print">· Gość</span>
                       )}
                       {isResigned && (
-                        <span className="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-semibold shrink-0 print:hidden no-print">Nieaktywny</span>
+                        <span className="text-[10px] text-slate-500 font-semibold shrink-0 print:hidden no-print">· Nieaktywny</span>
                       )}
                       {isSingleWordName && (
                         <button
                           onClick={() => setEditingMember(m)}
-                          className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-lg border border-amber-200 hover:bg-amber-100 transition print:hidden cursor-pointer"
+                          className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 hover:text-amber-800 transition print:hidden cursor-pointer"
                           title="Kliknij, aby dodać nazwisko"
                         >
-                          <Pencil size={12} strokeWidth={2.2} /> <span>Korekta</span>
+                          <Pencil size={11} strokeWidth={2.2} /> <span className="hidden sm:inline">Korekta</span>
                         </button>
                       )}
                     </div>
                     {m.email && (
-                      <div className="print-subtext text-[11px] text-slate-400 font-normal truncate mt-0.5 print:whitespace-normal print:overflow-visible" title={m.email}>{m.email}</div>
+                      <div className="print-subtext hidden sm:block text-[11px] text-slate-400 font-normal truncate mt-0.5 print:whitespace-normal print:overflow-visible" title={m.email}>{m.email}</div>
                     )}
                   </td>
 
                   {/* 3. Nr Indeksu - Print: 15% */}
-                  <td className="w-28 px-2 py-2.5 text-slate-700 font-mono text-xs text-center align-middle whitespace-nowrap print:w-[15%] print:min-w-0 print:text-slate-900 print:font-mono print:font-bold print:text-center">
+                  <td className="w-16 sm:w-28 px-1 sm:px-2 py-2.5 text-slate-700 font-mono text-xs text-center align-middle whitespace-nowrap print:w-[15%] print:min-w-0 print:text-slate-900 print:font-mono print:font-bold print:text-center">
                     {m.index ? (
                       <span className="font-semibold text-center inline-block">{m.index}</span>
                     ) : (
                       <span className="print:text-slate-400 font-normal text-center inline-block">
                         <button
                           onClick={() => setEditingMember(m)}
-                          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors shadow-2xs print:hidden cursor-pointer"
+                          className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 hover:underline transition-colors print:hidden cursor-pointer"
                           title="Brak numeru indeksu! Kliknij, aby uzupełnić."
                         >
-                          <AlertTriangle size={12} strokeWidth={2.2} className="text-amber-600 print:hidden" /> <span>Brak</span>
+                          <AlertTriangle size={11} strokeWidth={2.2} className="text-amber-500 print:hidden" /> <span>Brak</span>
                         </button>
                         <span className="hidden print:inline">—</span>
                       </span>
@@ -1553,12 +1553,12 @@ export default function ManagementTab({
                   </td>
 
                   {/* 4. Kierunek / Rok z dynamiczną auto-progresją i statusem absolwenta - Print: 45% */}
-                  <td className="min-w-[160px] sm:min-w-[200px] md:min-w-[240px] px-3 py-2.5 text-xs text-slate-900 whitespace-nowrap align-middle print:w-[45%] print:min-w-0 print:whitespace-normal print:text-slate-900">
+                  <td className="hidden md:table-cell min-w-[140px] sm:min-w-[180px] md:min-w-[200px] px-3 py-2.5 text-xs text-slate-900 whitespace-nowrap align-middle print:table-cell print:w-[45%] print:min-w-0 print:whitespace-normal print:text-slate-900">
                     <div className="truncate font-semibold text-slate-900 text-xs print:whitespace-normal print:overflow-visible print:text-[8pt] print:leading-snug">{m.field || '—'}</div>
                     <div className="print-subtext flex items-center gap-1.5 mt-0.5 whitespace-nowrap print:whitespace-normal">
                       {isGrad || studyInfo.isGraduate ? (
                         <span
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-purple-50 text-purple-800 border border-purple-200 print:border-none print:bg-transparent print:p-0 print:text-[7pt] print:font-normal print:text-slate-600"
+                          className="inline-flex items-center gap-1 text-[10px] font-bold text-purple-700 print:text-[7pt] print:font-normal print:text-slate-600"
                           title={`Status absolwenta (${studyInfo.maxSemesters || 6} semestrów). Rejestracja: Rok ${studyInfo.originalYear || '?'}`}
                         >
                           <GraduationCap size={13} strokeWidth={2.2} className="shrink-0 text-purple-700 print:hidden" />
@@ -1566,7 +1566,7 @@ export default function ManagementTab({
                         </span>
                       ) : isFinalSem || studyInfo.isFinalSemester ? (
                         <span
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-sky-50 text-sky-800 border border-sky-200 print:border-none print:bg-transparent print:p-0 print:text-[7pt] print:font-normal print:text-slate-600"
+                          className="inline-flex items-center gap-1 text-[10px] font-bold text-sky-700 print:text-[7pt] print:font-normal print:text-slate-600"
                           title={`Ostatni semestr studiów (${studyInfo.currentSemester || 6}. semestr). Przygotowanie do dyplomu.`}
                         >
                           <GraduationCap size={13} strokeWidth={2.2} className="shrink-0 text-sky-700 print:hidden" />
@@ -1599,35 +1599,35 @@ export default function ManagementTab({
                   </td>
 
                   {/* Hidden on Print: 5. Status */}
-                  <td className="w-28 px-2 py-2 text-center align-middle whitespace-nowrap print:hidden no-print">
+                  <td className="w-20 sm:w-28 px-1 sm:px-2 py-2 text-center align-middle whitespace-nowrap print:hidden no-print">
                     <button
                       onClick={() => setDecisionModalMember(m)}
-                      className={`h-7 px-2.5 inline-flex items-center justify-center gap-1.5 rounded-full text-xs font-semibold tracking-tight border shadow-2xs transition-colors cursor-pointer whitespace-nowrap ${
+                      className={`inline-flex items-center justify-center gap-1.5 text-xs font-bold transition-colors cursor-pointer hover:underline ${
                         isGuestMember
-                          ? 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100'
+                          ? 'text-indigo-600'
                           : isResigned
-                          ? 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                          ? 'text-slate-500'
                           : isGrad
-                          ? 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'
+                          ? 'text-purple-600'
                           : isFinalSem
-                          ? 'bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100'
-                          : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                          ? 'text-sky-600'
+                          : 'text-emerald-600'
                       }`}
                       title="Kliknij, aby zmienić status lub opcje wpisu"
                     >
                       <VectorRingIndicator
                         color={isGuestMember ? 'indigo' : isResigned ? 'slate' : isGrad ? 'purple' : isFinalSem ? 'sky' : 'emerald'}
-                        size={12}
+                        size={10}
                       />
                       <span>{isGuestMember ? 'Gość' : isResigned ? 'Nieaktywny' : isGrad ? 'Absolwent' : isFinalSem ? 'Ostatni sem.' : 'Aktywny'}</span>
                     </button>
                   </td>
 
-                  {/* Hidden on Print: Frekwencja (with Gentle 5-Level Scale Badge & Non-Red Progress Bar) */}
-                  <td className="w-48 px-2 py-2.5 align-middle text-center whitespace-nowrap print:hidden">
-                    <div className="flex flex-col items-center justify-center gap-1 whitespace-nowrap">
+                  {/* Hidden on Print: Frekwencja */}
+                  <td className="hidden lg:table-cell w-36 xl:w-44 px-2 py-2.5 align-middle text-center whitespace-nowrap print:hidden">
+                    <div className="flex flex-col items-center justify-center gap-0.5 whitespace-nowrap">
                       <div className="flex items-center justify-center gap-1.5">
-                        <div className="w-14 bg-slate-100 rounded-full h-1.5 hidden xl:block print:hidden">
+                        <div className="w-12 bg-slate-100 rounded-full h-1.5 hidden xl:block print:hidden">
                           <div
                             className={`h-1.5 rounded-full ${
                               freq >= 75
@@ -1644,20 +1644,16 @@ export default function ManagementTab({
                         <span className="text-slate-900 font-bold text-xs font-mono">{isNaN(freq) ? 0 : freq}%</span>
                       </div>
                       <span
-                        className={`h-5.5 w-[152px] inline-flex items-center justify-between px-2.5 rounded-full text-[10.5px] font-semibold tracking-tight border whitespace-nowrap mx-auto shadow-2xs ${badge.color}`}
+                        className="text-[11px] font-medium text-slate-500 truncate"
                         title={`5-stopniowa skala zaangażowania: ${badge.label} (${freq}%)`}
                       >
-                        <span className="w-3.5 flex items-center justify-start shrink-0">
-                          <VectorRingIndicator color={badge.dotColor?.replace('bg-', '') || 'slate'} size={10} />
-                        </span>
-                        <span className="flex-1 text-center truncate px-1">{badge.label}</span>
-                        <span className="w-3.5 shrink-0" aria-hidden="true" />
+                        {badge.label}
                       </span>
                     </div>
                   </td>
 
                   {/* Hidden on Print: Combined Present / Absent ({present} / {absent}) */}
-                  <td className="w-28 px-2 py-2.5 text-center align-middle whitespace-nowrap font-mono text-xs font-bold print:hidden">
+                  <td className="hidden lg:table-cell w-24 px-2 py-2.5 text-center align-middle whitespace-nowrap font-mono text-xs font-bold print:hidden">
                     <div className="flex items-center justify-center gap-1.5 font-medium whitespace-nowrap">
                       {/* Główna liczba: łączna liczba obecności / nieobecności obowiązkowe */}
                       <span className="text-slate-900 font-semibold font-mono">
@@ -1668,11 +1664,11 @@ export default function ManagementTab({
                         {freqData.missedCount ?? freqData.absent ?? 0}
                       </span>
 
-                      {/* Subtelny badge z informacją o spotkaniach dodatkowych / zarządzie */}
+                      {/* Subtelna informacja o spotkaniach dodatkowych */}
                       {(freqData.attendedBonusCount ?? freqData.bonusAttended ?? 0) > 0 && (
                         <span
                           title={`W tym ${freqData.attendedBonusCount ?? freqData.bonusAttended} spotkań dodatkowych (Zarząd / TW / Warsztaty)`}
-                          className="ml-1 px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200 cursor-help"
+                          className="ml-0.5 text-[10px] font-semibold text-emerald-600 cursor-help"
                         >
                           +{freqData.attendedBonusCount ?? freqData.bonusAttended}
                         </span>
@@ -1680,8 +1676,8 @@ export default function ManagementTab({
                     </div>
                   </td>
 
-                  {/* Hidden on Print: Zaświadczenie Status (Uniform Single-Line Badges - Centered, Fixed Width) */}
-                  <td className="w-40 px-2 py-2.5 text-center align-middle whitespace-nowrap print:hidden">
+                  {/* Hidden on Print: Zaświadczenie Status */}
+                  <td className="hidden xl:table-cell w-32 px-2 py-2.5 text-center align-middle whitespace-nowrap print:hidden">
                     <button
                       onClick={() => {
                         if (onNavigateToReports) {
@@ -1690,10 +1686,8 @@ export default function ManagementTab({
                           handleOpenCertificate(m, 'membership');
                         }
                       }}
-                      className={`h-7 w-[120px] min-w-[120px] max-w-[120px] inline-flex items-center justify-center text-center px-2 text-xs font-semibold tracking-tight rounded-full whitespace-nowrap border shadow-2xs transition-all cursor-pointer mx-auto ${
-                        cert.canIssue
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:shadow-xs'
-                          : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
+                      className={`inline-flex items-center justify-center text-center text-xs font-bold transition-all cursor-pointer hover:underline ${
+                        cert.canIssue ? 'text-emerald-600' : 'text-slate-500'
                       }`}
                       title={
                         cert.canIssue
@@ -1706,50 +1700,48 @@ export default function ManagementTab({
                   </td>
 
                   {/* Hidden on Print: Punkty Aktywności */}
-                  <td className="w-28 px-2 py-2.5 text-center align-middle whitespace-nowrap print:hidden">
+                  <td className="hidden sm:table-cell w-20 sm:w-24 px-2 py-2.5 text-center align-middle whitespace-nowrap print:hidden">
                     <span
                       title={
                         (freqData?.boardPoints ?? 0) > 0
                           ? `Spotkania: ${freqData?.meetingPoints ?? 0} pkt | Zarząd: ${freqData?.boardPoints ?? 0} pkt${(freqData?.totalMemberPoints ?? memberPoints ?? 0) > (freqData?.meetingPoints ?? 0) + (freqData?.boardPoints ?? 0) ? ` | Baza profilu: ${(freqData?.totalMemberPoints ?? memberPoints ?? 0) - (freqData?.meetingPoints ?? 0) - (freqData?.boardPoints ?? 0)} pkt` : ''}`
                           : `Spotkania: ${freqData?.meetingPoints ?? freqData?.calculatedPoints ?? 0} pkt`
                       }
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold cursor-help transition-all ${
-                        (freqData?.boardPoints ?? 0) > 0
-                          ? "bg-purple-50 text-purple-700 border border-purple-200 shadow-2xs"
-                          : "bg-blue-50 text-blue-700 border border-blue-200"
+                      className={`inline-flex items-center gap-1 text-xs font-bold cursor-help ${
+                        (freqData?.boardPoints ?? 0) > 0 ? "text-purple-700" : "text-blue-700"
                       }`}
                     >
-                      <Zap size={14} strokeWidth={2.2} className="shrink-0 text-amber-600" />
+                      <Zap size={13} strokeWidth={2.2} className="shrink-0 text-amber-500" />
                       <span>{freqData?.totalMemberPoints ?? memberPoints ?? 0} pkt</span>
                     </span>
                   </td>
 
                   {/* Hidden on Print: Mailing Consent */}
-                  <td className="w-16 px-2 py-2.5 text-center align-middle whitespace-nowrap print:hidden">
+                  <td className="hidden xl:table-cell w-16 px-2 py-2.5 text-center align-middle whitespace-nowrap print:hidden">
                     {hasMailingConsent(m) ? (
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200" title="Zgoda na mailing udzielona (Zgoda na mailing)">
-                        <Check size={14} strokeWidth={2.5} />
+                      <span className="inline-flex items-center justify-center text-emerald-600" title="Zgoda na mailing udzielona (Zgoda na mailing)">
+                        <Check size={15} strokeWidth={2.5} />
                       </span>
                     ) : (
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 border border-slate-200" title="Brak zgody na mailing (Brak zgody)">
-                        <X size={13} strokeWidth={2.2} />
+                      <span className="inline-flex items-center justify-center text-slate-400" title="Brak zgody na mailing (Brak zgody)">
+                        <X size={14} strokeWidth={2.2} />
                       </span>
                     )}
                   </td>
 
                   {/* Hidden on Print: Akcje / Menu Option Button */}
-                  <td className="w-24 px-3 py-2.5 text-center align-middle whitespace-nowrap print:hidden">
-                    <div className="inline-flex items-center justify-center gap-1.5">
+                  <td className="hidden sm:table-cell w-16 sm:w-20 px-2 py-2.5 text-center align-middle whitespace-nowrap print:hidden">
+                    <div className="inline-flex items-center justify-center gap-1">
                       <button
                         onClick={() => setEditingMember(m)}
-                        className="h-8 w-8 inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-2xs cursor-pointer"
+                        className="p-1 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-slate-100 transition cursor-pointer"
                         title="Edytuj profil i dane członka"
                       >
                         <Pencil size={15} strokeWidth={2.2} />
                       </button>
                       <button
                         onClick={() => setDecisionModalMember(m)}
-                        className="h-8 w-8 inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-all shadow-2xs cursor-pointer"
+                        className="p-1 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer"
                         title="Opcje zarządzania statusem wpisu"
                       >
                         <MoreVertical size={16} strokeWidth={2.2} />

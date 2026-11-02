@@ -2886,115 +2886,117 @@ export default function App() {
         </div>
       )}
 
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      {/* ── Header with Responsive Two-Row Mobile Architecture ─────────────── */}
       <header className="border-b border-slate-100 bg-white/80 backdrop-blur-sm sticky top-0 z-30 print:hidden w-full max-w-full overflow-x-hidden">
-        <div className="w-full max-w-[1850px] mx-auto px-3 sm:px-4 md:px-6 py-2 sm:py-3 flex items-center justify-between gap-2 sm:gap-4 min-h-[56px] sm:min-h-[64px]">
+        <div className="w-full max-w-[1850px] mx-auto px-3 sm:px-4 md:px-6 py-2 sm:py-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-4 min-h-[56px] sm:min-h-[64px]">
 
-          {/* Logo & Multi-Tenant Organization Switcher */}
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0 max-w-[calc(100vw-130px)] sm:max-w-none relative">
-            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center shadow-md text-white font-black text-xs tracking-wider shrink-0 transition-all duration-300 ${
-              theme?.headerBadgeGradient || 'bg-gradient-to-br from-indigo-600 via-sky-600 to-indigo-700 shadow-indigo-500/25'
-            }`}>
-              {theme?.badgeText || (currentOrg.id === 'uzaleznienia' ? 'UZAL' : 'SEKS')}
-            </div>
-            
-            <div className="relative min-w-0">
-              <button
-                onClick={() => setIsOrgDropdownOpen(prev => !prev)}
-                className="flex items-center gap-1.5 sm:gap-2 text-left group hover:bg-slate-100/80 px-2 sm:px-2.5 py-1 sm:py-1.5 -mx-1 sm:-mx-1.5 rounded-xl transition cursor-pointer border border-transparent hover:border-slate-200/60 min-w-0"
-                title="Kliknij, aby przełączyć koło naukowe"
-              >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                    <h1 className={`text-xs sm:text-sm font-extrabold text-slate-900 transition leading-tight truncate ${theme?.headerHoverTitle || 'group-hover:text-indigo-600'}`}>
-                      {currentOrg.name}
-                    </h1>
-                    <span className={`text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full border font-mono tracking-wide transition-colors shrink-0 ${
-                      theme?.headerTagBadge || 'bg-indigo-50 text-indigo-700 border-indigo-200/80'
-                    }`}>
-                      {currentOrg.tag || 'WSKZ'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 text-[10px] sm:text-[11px] text-slate-500 font-medium truncate">
-                    <p className="truncate">System Ewidencyjno-Sprawozdawczy</p>
-                    <span className="text-[10px] text-slate-400 shrink-0">•</span>
-                    <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded shrink-0">
-                      {academicYear}
-                    </span>
-                  </div>
-                </div>
-                <ChevronDown size={14} className={`text-slate-400 transition shrink-0 ml-0.5 ${theme?.headerHoverIcon || 'group-hover:text-indigo-600'}`} />
-              </button>
-
-              {/* Organization Dropdown Menu */}
-              {isOrgDropdownOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setIsOrgDropdownOpen(false)} />
-                  <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 z-50 animate-in fade-in zoom-in-95 duration-100">
-                    <div className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 flex items-center justify-between">
-                      <span>Wybierz Koło Naukowe</span>
-                      <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">Multi-Tenant</span>
+          {/* Row 1 on Mobile: Logo & Multi-Tenant Organization Switcher (Full Width & Unclipped) */}
+          <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 min-w-0 w-full sm:w-auto relative">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 sm:flex-none">
+              <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center shadow-md text-white font-black text-xs tracking-wider shrink-0 transition-all duration-300 ${
+                theme?.headerBadgeGradient || 'bg-gradient-to-br from-indigo-600 via-sky-600 to-indigo-700 shadow-indigo-500/25'
+              }`}>
+                {theme?.badgeText || (currentOrg.id === 'uzaleznienia' ? 'UZAL' : 'SEKS')}
+              </div>
+              
+              <div className="relative min-w-0 flex-1 sm:flex-none">
+                <button
+                  onClick={() => setIsOrgDropdownOpen(prev => !prev)}
+                  className="w-full flex items-center justify-between sm:justify-start gap-1.5 sm:gap-2 text-left group hover:bg-slate-100/80 px-2 sm:px-2.5 py-1 sm:py-1.5 -mx-1 sm:-mx-1.5 rounded-xl transition cursor-pointer border border-transparent hover:border-slate-200/60 min-w-0"
+                  title="Kliknij, aby przełączyć koło naukowe"
+                >
+                  <div className="min-w-0 flex-1 sm:flex-none">
+                    <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                      <h1 className={`text-xs sm:text-sm font-extrabold text-slate-900 transition leading-tight truncate ${theme?.headerHoverTitle || 'group-hover:text-indigo-600'}`}>
+                        {currentOrg.name}
+                      </h1>
+                      <span className={`text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full border font-mono tracking-wide transition-colors shrink-0 ${
+                        theme?.headerTagBadge || 'bg-indigo-50 text-indigo-700 border-indigo-200/80'
+                      }`}>
+                        {currentOrg.tag || 'WSKZ'}
+                      </span>
                     </div>
-                    <div className="space-y-1.5 py-1.5 max-h-72 overflow-y-auto">
-                      {organizations.map(org => {
-                        const isSelected = org.id === currentOrg.id;
-                        const orgTheme = getTenantTheme(org.id);
-                        return (
-                          <button
-                            key={org.id}
-                            onClick={() => {
-                              switchOrg(org.id);
-                              setIsOrgDropdownOpen(false);
-                              setToastMessage(`Przełączono kontekst: ${org.name}`);
-                            }}
-                            className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs text-left transition cursor-pointer border ${
-                              isSelected
-                                ? (orgTheme.dropdownSelectedClass || 'bg-indigo-50/90 text-indigo-950 font-bold border-indigo-200 shadow-xs')
-                                : 'text-slate-700 hover:bg-slate-50 border-transparent hover:border-slate-200/60'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-[10px] text-white shrink-0 shadow-2xs ${
-                                orgTheme.headerBadgeGradient || 'bg-gradient-to-br from-indigo-600 to-violet-700'
-                              }`}>
-                                {orgTheme.badgeText || (org.id === 'uzaleznienia' ? 'UZAL' : 'SEKS')}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="truncate font-bold leading-snug">{org.name}</p>
-                                <div className="flex items-center gap-1.5 mt-0.5">
-                                  <span className="text-[10px] text-slate-500 font-mono">{org.tag || 'WSKZ'}</span>
-                                  <span className="text-[9px] text-slate-400">•</span>
-                                  <span className="text-[10px] text-slate-400 truncate">{org.faculty || 'Wydział Psychologii'}</span>
+                    <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 text-[10px] sm:text-[11px] text-slate-500 font-medium truncate">
+                      <p className="truncate">System Ewidencyjno-Sprawozdawczy</p>
+                      <span className="text-[10px] text-slate-400 shrink-0">•</span>
+                      <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded shrink-0">
+                        {academicYear}
+                      </span>
+                    </div>
+                  </div>
+                  <ChevronDown size={14} className={`text-slate-400 transition shrink-0 ml-1 ${theme?.headerHoverIcon || 'group-hover:text-indigo-600'}`} />
+                </button>
+
+                {/* Organization Dropdown Menu */}
+                {isOrgDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setIsOrgDropdownOpen(false)} />
+                    <div className="absolute top-full left-0 mt-2 w-80 max-w-[calc(100vw-24px)] bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 z-50 animate-in fade-in zoom-in-95 duration-100">
+                      <div className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 flex items-center justify-between">
+                        <span>Wybierz Koło Naukowe</span>
+                        <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">Multi-Tenant</span>
+                      </div>
+                      <div className="space-y-1.5 py-1.5 max-h-72 overflow-y-auto">
+                        {organizations.map(org => {
+                          const isSelected = org.id === currentOrg.id;
+                          const orgTheme = getTenantTheme(org.id);
+                          return (
+                            <button
+                              key={org.id}
+                              onClick={() => {
+                                switchOrg(org.id);
+                                setIsOrgDropdownOpen(false);
+                                setToastMessage(`Przełączono kontekst: ${org.name}`);
+                              }}
+                              className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs text-left transition cursor-pointer border ${
+                                isSelected
+                                  ? (orgTheme.dropdownSelectedClass || 'bg-indigo-50/90 text-indigo-950 font-bold border-indigo-200 shadow-xs')
+                                  : 'text-slate-700 hover:bg-slate-50 border-transparent hover:border-slate-200/60'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                                <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-[10px] text-white shrink-0 shadow-2xs ${
+                                  orgTheme.headerBadgeGradient || 'bg-gradient-to-br from-indigo-600 to-violet-700'
+                                }`}>
+                                  {orgTheme.badgeText || (org.id === 'uzaleznienia' ? 'UZAL' : 'SEKS')}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="truncate font-bold leading-snug">{org.name}</p>
+                                  <div className="flex items-center gap-1.5 mt-0.5">
+                                    <span className="text-[10px] text-slate-500 font-mono">{org.tag || 'WSKZ'}</span>
+                                    <span className="text-[9px] text-slate-400">•</span>
+                                    <span className="text-[10px] text-slate-400 truncate">{org.faculty || 'Wydział Psychologii'}</span>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                            {isSelected && (
-                              <CheckCircle2 size={16} className={`${orgTheme.dropdownSelectedIcon || 'text-indigo-600'} shrink-0`} />
-                            )}
-                          </button>
-                        );
-                      })}
+                              {isSelected && (
+                                <CheckCircle2 size={16} className={`${orgTheme.dropdownSelectedIcon || 'text-indigo-600'} shrink-0`} />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="border-t border-slate-100 pt-1.5 mt-1">
+                        <button
+                          onClick={() => {
+                            setIsOrgDropdownOpen(false);
+                            setIsSettingsOpen(true);
+                          }}
+                          className={`w-full flex items-center gap-2 p-2 rounded-xl text-xs font-bold text-slate-600 ${theme?.headerHoverTitle || 'hover:text-indigo-600'} hover:bg-slate-50 transition cursor-pointer`}
+                        >
+                          <Settings size={14} />
+                          <span>Konfiguracja kół i uprawnień…</span>
+                        </button>
+                      </div>
                     </div>
-                    <div className="border-t border-slate-100 pt-1.5 mt-1">
-                      <button
-                        onClick={() => {
-                          setIsOrgDropdownOpen(false);
-                          setIsSettingsOpen(true);
-                        }}
-                        className={`w-full flex items-center gap-2 p-2 rounded-xl text-xs font-bold text-slate-600 ${theme?.headerHoverTitle || 'hover:text-indigo-600'} hover:bg-slate-50 transition cursor-pointer`}
-                      >
-                        <Settings size={14} />
-                        <span>Konfiguracja kół i uprawnień…</span>
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Sync status + Settings + refresh */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0 h-11 min-h-[44px]">
+          {/* Row 2 on Mobile: Sync Status + Refresh Button + User Profile (Full Visibility & Clickability) */}
+          <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 shrink-0 w-full sm:w-auto pt-1.5 sm:pt-0 border-t border-slate-100 sm:border-t-0 min-h-[38px] sm:min-h-[44px]">
             {/* Intelligent Cloud Sync Indicator */}
             <SyncIndicator
               status={isSyncing ? 'syncing' : cloudSyncStatus.status}
@@ -3015,19 +3017,21 @@ export default function App() {
               </div>
             )}
 
-            {/* Refresh button with Smart Sync & Reconciliation */}
-            <button
-              onClick={() => handleRefreshData({ silent: false })}
-              disabled={loading || isSyncing}
-              title="Inteligentna synchronizacja dwukierunkowa (Smart Sync & Reconcile)"
-              className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl ${theme?.primaryBtn || 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/20'} disabled:opacity-50 text-white text-xs font-semibold transition-all shadow-sm cursor-pointer whitespace-nowrap`}
-            >
-              <RefreshCw size={13} className={(loading || isSyncing) ? 'animate-spin' : ''} />
-              <span className="hidden sm:inline">{isSyncing ? 'Synchronizacja...' : 'Odśwież dane'}</span>
-            </button>
+            <div className="flex items-center gap-2 shrink-0 ml-auto sm:ml-0">
+              {/* Refresh button with Smart Sync & Reconciliation */}
+              <button
+                onClick={() => handleRefreshData({ silent: false })}
+                disabled={loading || isSyncing}
+                title="Inteligentna synchronizacja dwukierunkowa (Smart Sync & Reconcile)"
+                className={`inline-flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl ${theme?.primaryBtn || 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/20'} disabled:opacity-50 text-white text-xs font-semibold transition-all shadow-sm cursor-pointer whitespace-nowrap min-h-[36px] sm:min-h-0`}
+              >
+                <RefreshCw size={13} className={(loading || isSyncing) ? 'animate-spin' : ''} />
+                <span className="hidden sm:inline">{isSyncing ? 'Synchronizacja...' : 'Odśwież dane'}</span>
+              </button>
 
-            {/* User Profile & Role Switcher Menu */}
-            <ProfileMenu onOpenSettings={() => setIsSettingsOpen(true)} />
+              {/* User Profile & Role Switcher Menu */}
+              <ProfileMenu onOpenSettings={() => setIsSettingsOpen(true)} />
+            </div>
           </div>
         </div>
       </header>

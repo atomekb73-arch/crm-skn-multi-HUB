@@ -1296,27 +1296,25 @@ export default function QuarantineTab({
           </div>
         )}
 
-        {/* Export XLSX & Print Quarantine Buttons (Right-aligned in toolbar) */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-auto w-full sm:w-auto">
+        {/* Export XLSX & Print Quarantine Buttons (Right-aligned in toolbar, compact on mobile) */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-auto w-auto">
           <button
             type="button"
             onClick={handleExportQuarantineXlsx}
-            className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer min-h-[38px] sm:min-h-0"
+            className="p-2 sm:px-3.5 sm:py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl sm:rounded-lg shadow-sm transition-colors cursor-pointer shrink-0 inline-flex items-center justify-center gap-1.5 min-w-[36px] sm:min-w-0 h-9 sm:h-auto"
             title="Pobierz listę zgłoszeń do pliku Excel (.xlsx)"
           >
-            <FileSpreadsheet size={15} />
-            <span className="sm:hidden">XLS</span>
+            <FileSpreadsheet size={16} />
             <span className="hidden sm:inline">Eksportuj XLSX</span>
           </button>
 
           <button
             type="button"
             onClick={() => window.print()}
-            className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 bg-slate-900 hover:bg-black text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer min-h-[38px] sm:min-h-0"
+            className="p-2 sm:px-3.5 sm:py-1.5 bg-slate-900 hover:bg-black text-white text-xs font-semibold rounded-xl sm:rounded-lg shadow-sm transition-colors cursor-pointer shrink-0 inline-flex items-center justify-center gap-1.5 min-w-[36px] sm:min-w-0 h-9 sm:h-auto"
             title="Drukuj wykaz zgłoszeń / kwarantanny"
           >
-            <Printer size={15} />
-            <span className="sm:hidden">Drukuj</span>
+            <Printer size={16} />
             <span className="hidden sm:inline">Drukuj zgłoszenia</span>
           </button>
         </div>
@@ -1376,7 +1374,7 @@ export default function QuarantineTab({
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50/80 text-left select-none">
                     {/* 1. Checkbox (Screen) / Lp. (Print: 6%) */}
-                    <th className="w-10 px-2 py-2.5 text-center print:w-[6%] print:text-center">
+                    <th className="w-8 sm:w-10 px-1 sm:px-2 py-2.5 text-center print:w-[6%] print:text-center">
                       <input
                         type="checkbox"
                         checked={allValidSelected}
@@ -1390,7 +1388,7 @@ export default function QuarantineTab({
                     {/* 2. Data wpłynięcia (Print: 14%) */}
                     <th
                       onClick={() => handleSort('timestamp')}
-                      className="w-32 px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer hover:bg-slate-100/80 transition-colors group print:w-[14%] print:min-w-0"
+                      className="hidden md:table-cell w-32 px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer hover:bg-slate-100/80 transition-colors group print:table-cell print:w-[14%] print:min-w-0"
                     >
                       <div className="flex items-center gap-1">
                         <span>Data wpłynięcia</span>
@@ -1401,7 +1399,7 @@ export default function QuarantineTab({
                     {/* 3. Student / E-mail (Print: 40%) */}
                     <th
                       onClick={() => handleSort('fullName')}
-                      className="px-4 min-w-[200px] py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer hover:bg-slate-100/80 transition-colors group print:w-[40%] print:min-w-0"
+                      className="px-2 sm:px-4 min-w-0 sm:min-w-[200px] py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer hover:bg-slate-100/80 transition-colors group print:w-[40%] print:min-w-0"
                     >
                       <div className="flex items-center gap-1">
                         <span>Student / E-mail</span>
@@ -1412,10 +1410,10 @@ export default function QuarantineTab({
                     {/* 4. Nr Indeksu (Print: 15%) */}
                     <th
                       onClick={() => handleSort('index')}
-                      className="w-28 px-2 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer hover:bg-slate-100/80 transition-colors group print:w-[15%] print:min-w-0 print:text-center"
+                      className="w-16 sm:w-28 px-1 sm:px-2 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer hover:bg-slate-100/80 transition-colors group print:w-[15%] print:min-w-0 print:text-center"
                     >
                       <div className="flex items-center justify-center gap-1">
-                        <span>Nr Indeksu</span>
+                        <span>Indeks</span>
                         <span className="print:hidden no-print">{renderSortIcon('index')}</span>
                       </div>
                     </th>
@@ -1423,7 +1421,7 @@ export default function QuarantineTab({
                     {/* 5. Kierunek / Rok (Print: 25%) */}
                     <th
                       onClick={() => handleSort('field')}
-                      className="px-3 min-w-[160px] py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer hover:bg-slate-100/80 transition-colors group print:w-[25%] print:min-w-0"
+                      className="hidden lg:table-cell px-3 min-w-[160px] py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer hover:bg-slate-100/80 transition-colors group print:table-cell print:w-[25%] print:min-w-0"
                     >
                       <div className="flex items-center gap-1">
                         <span>Kierunek / Rok</span>
@@ -1432,14 +1430,14 @@ export default function QuarantineTab({
                     </th>
 
                     {/* Hidden on Print: Zgody */}
-                    <th className="w-28 px-2 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide print:hidden no-print">
+                    <th className="hidden xl:table-cell w-28 px-2 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide print:hidden no-print">
                       Zgody
                     </th>
 
                     {/* Hidden on Print: Weryfikacja */}
                     <th
                       onClick={() => handleSort('isDuplicate')}
-                      className="w-32 px-2 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer hover:bg-slate-100/80 transition-colors group print:hidden no-print"
+                      className="hidden sm:table-cell w-28 sm:w-32 px-2 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer hover:bg-slate-100/80 transition-colors group print:hidden no-print"
                     >
                       <div className="flex items-center justify-center gap-1">
                         <span>Weryfikacja</span>
@@ -1448,7 +1446,7 @@ export default function QuarantineTab({
                     </th>
 
                     {/* Hidden on Print: Akcja */}
-                    <th className="w-48 px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide text-right whitespace-nowrap print:hidden no-print">
+                    <th className="w-24 sm:w-48 px-2 sm:px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide text-right whitespace-nowrap print:hidden no-print">
                       Akcja
                     </th>
                   </tr>
@@ -1480,7 +1478,7 @@ export default function QuarantineTab({
                         }`}
                       >
                         {/* 1. Checkbox (Screen) / Lp. (Print: 6%) */}
-                        <td className="px-2 py-2.5 text-center align-middle print:w-[6%] print:text-center print:font-mono">
+                        <td className="w-8 sm:w-10 px-1 sm:px-2 py-2.5 text-center align-middle print:w-[6%] print:text-center print:font-mono">
                           <input
                             type="checkbox"
                             checked={isSelected}
@@ -1491,7 +1489,7 @@ export default function QuarantineTab({
                         </td>
 
                         {/* 2. Data wpłynięcia (Print: 14%) */}
-                        <td className="px-3 py-2.5 align-middle text-left whitespace-nowrap print:w-[14%] print:min-w-0 print:whitespace-normal">
+                        <td className="hidden md:table-cell px-3 py-2.5 align-middle text-left whitespace-nowrap print:table-cell print:w-[14%] print:min-w-0 print:whitespace-normal">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="font-medium text-slate-700 text-xs leading-tight font-mono print:text-[8pt] print:text-slate-900">
                               {formatSubmissionDate(q.timestamp || q.dataWplywu)}
@@ -1503,7 +1501,7 @@ export default function QuarantineTab({
                         </td>
 
                         {/* 3. Student / E-mail (Print: 40%) */}
-                        <td className="px-4 py-2.5 align-middle text-left min-w-[200px] print:w-[40%] print:min-w-0 print:whitespace-normal">
+                        <td className="px-2 sm:px-4 py-2.5 align-middle text-left min-w-0 sm:min-w-[200px] print:w-[40%] print:min-w-0 print:whitespace-normal">
                           <div className="flex items-center gap-1.5 font-semibold text-slate-800 text-xs truncate print:whitespace-normal print:overflow-visible print:text-[8pt] print:text-slate-900" title={name}>
                             <span>{name}</span>
                             <button
@@ -1514,13 +1512,13 @@ export default function QuarantineTab({
                               <Pencil size={13} strokeWidth={2.2} />
                             </button>
                           </div>
-                          <div className="print-subtext text-[11px] text-slate-500 font-normal truncate mt-0.5 print:whitespace-normal print:overflow-visible" title={q.email}>
+                          <div className="print-subtext hidden sm:block text-[11px] text-slate-500 font-normal truncate mt-0.5 print:whitespace-normal print:overflow-visible" title={q.email}>
                             {q.email || '—'}
                           </div>
                         </td>
 
                         {/* 4. Nr Indeksu (Print: 15%) */}
-                        <td className="px-2 py-2.5 text-slate-700 font-mono font-medium text-xs align-middle text-center print:w-[15%] print:min-w-0 print:text-center print:font-bold print:text-slate-900">
+                        <td className="w-16 sm:w-28 px-1 sm:px-2 py-2.5 text-slate-700 font-mono font-medium text-xs align-middle text-center print:w-[15%] print:min-w-0 print:text-center print:font-bold print:text-slate-900">
                           {(q.index || q.nrIndeksu || q.cleanIndex) ? (
                             (q.index || q.nrIndeksu || q.cleanIndex)
                           ) : (
@@ -1538,7 +1536,7 @@ export default function QuarantineTab({
                         </td>
 
                         {/* 5. Kierunek / Rok (Print: 25%) */}
-                        <td className="px-3 py-2.5 text-xs text-slate-600 whitespace-normal break-words leading-snug align-middle text-left min-w-[160px] print:w-[25%] print:min-w-0 print:text-[8pt] print:text-slate-900">
+                        <td className="hidden lg:table-cell px-3 py-2.5 text-xs text-slate-600 whitespace-normal break-words leading-snug align-middle text-left min-w-[160px] print:table-cell print:w-[25%] print:min-w-0 print:text-[8pt] print:text-slate-900">
                           <div className="font-medium text-slate-900 print:text-[8pt]">{q.field || q.kierunek || '—'}</div>
                           {(q.year || q.rokStudiow) && (
                             <div className="print-subtext text-[11px] text-slate-500 mt-0.5">{q.year || q.rokStudiow}</div>
@@ -1546,18 +1544,18 @@ export default function QuarantineTab({
                         </td>
 
                         {/* Hidden on Print: Zgody */}
-                        <td className="px-2 py-2.5 align-middle text-center print:hidden no-print">
+                        <td className="hidden xl:table-cell px-2 py-2.5 align-middle text-center print:hidden no-print">
                           <ConsentBadge status={q.consentStatus} ok={q.zgodyOk || q.zgody || q.consentStatus === 'Zgody OK'} />
                         </td>
 
                         {/* Hidden on Print: Weryfikacja */}
-                        <td className="px-2 py-2.5 align-middle text-center print:hidden no-print">
+                        <td className="hidden sm:table-cell px-2 py-2.5 align-middle text-center print:hidden no-print">
                           <DuplicateBadge isDuplicate={q.isDuplicate} existsInManagement={q.existsInManagement} isResignation={q.isResignation} />
                         </td>
 
                         {/* Hidden on Print: Akcja */}
-                        <td className="px-3 py-2.5 align-middle text-right whitespace-nowrap w-56 print:hidden no-print">
-                          <div className="flex items-center justify-end gap-1.5">
+                        <td className="px-2 sm:px-3 py-2.5 align-middle text-right whitespace-nowrap w-24 sm:w-56 print:hidden no-print">
+                          <div className="flex items-center justify-end gap-1 sm:gap-1.5">
                             <button
                               onClick={() => setEditingMember(q)}
                               className="p-1.5 text-slate-500 hover:text-purple-600 rounded-lg hover:bg-purple-50 transition cursor-pointer"
@@ -1569,11 +1567,11 @@ export default function QuarantineTab({
                             <button
                               type="button"
                               onClick={() => setWelcomeMailMember(q)}
-                              className="inline-flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-2xs transition cursor-pointer"
+                              className="inline-flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 text-xs font-semibold p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg shadow-2xs transition cursor-pointer"
                               title="Wyślij powitanie / potwierdzenie i zarejestruj w Ewidencja_Poczty"
                             >
                               <Mail size={15} strokeWidth={2.2} className="text-indigo-600" />
-                              <span>Wyślij powitanie / potwierdzenie</span>
+                              <span className="hidden md:inline">Powitanie</span>
                             </button>
 
                             {(() => {
@@ -1582,11 +1580,11 @@ export default function QuarantineTab({
                                 <button
                                   onClick={() => handleSingleApprove(q.id)}
                                   disabled={isApproving}
-                                  className="inline-flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-xs transition cursor-pointer"
+                                  className="inline-flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs font-semibold p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg shadow-xs transition cursor-pointer"
                                   title="Zatwierdź studenta do widoku Zarządzania"
                                 >
                                   {isApproving ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} strokeWidth={2.2} />}
-                                  <span>{isApproving ? 'Zapisywanie...' : 'Zatwierdź'}</span>
+                                  <span className="hidden sm:inline">{isApproving ? 'Zapisywanie...' : 'Zatwierdź'}</span>
                                 </button>
                               );
                             })()}
@@ -1643,7 +1641,7 @@ export default function QuarantineTab({
               <table className="print-table w-full text-sm table-fixed border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/80 text-left select-none">
-                  <th className="w-10 px-3 py-2.5 text-center print:w-[6%] print:text-center">
+                  <th className="w-8 sm:w-10 px-1 sm:px-3 py-2.5 text-center print:w-[6%] print:text-center">
                     <input
                       type="checkbox"
                       checked={selectedArchiveIds.length > 0 && selectedArchiveIds.length === archivedQuarantine.length}
@@ -1652,11 +1650,11 @@ export default function QuarantineTab({
                     />
                     <span className="hidden print:inline font-mono">Lp.</span>
                   </th>
-                  <th className="w-32 px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase print:w-[14%] print:min-w-0">Data wpłynięcia</th>
-                  <th className="w-auto px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase print:w-[40%] print:min-w-0">Student / E-mail</th>
-                  <th className="w-28 px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase print:w-[15%] print:min-w-0 print:text-center">Nr Indeksu</th>
-                  <th className="w-44 px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase print:w-[25%] print:min-w-0">Kierunek / Rok</th>
-                  <th className="w-36 px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase text-right print:hidden no-print">Akcja</th>
+                  <th className="hidden md:table-cell w-32 px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase print:table-cell print:w-[14%] print:min-w-0">Data wpłynięcia</th>
+                  <th className="w-auto min-w-0 px-2 sm:px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase print:w-[40%] print:min-w-0">Student / E-mail</th>
+                  <th className="w-16 sm:w-28 px-1 sm:px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase text-center print:w-[15%] print:min-w-0 print:text-center">Indeks</th>
+                  <th className="hidden lg:table-cell w-44 px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase print:table-cell print:w-[25%] print:min-w-0">Kierunek / Rok</th>
+                  <th className="w-20 sm:w-36 px-2 sm:px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase text-right print:hidden no-print">Akcja</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -1677,7 +1675,7 @@ export default function QuarantineTab({
                       style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}
                       className="hover:bg-slate-50/70 transition-colors bg-slate-50/30 print:bg-white print:break-inside-avoid"
                     >
-                      <td className="px-3 py-2.5 text-center align-middle print:w-[6%] print:text-center print:font-mono">
+                      <td className="w-8 sm:w-10 px-1 sm:px-3 py-2.5 text-center align-middle print:w-[6%] print:text-center print:font-mono">
                         <input
                           type="checkbox"
                           checked={isSel}
@@ -1686,7 +1684,7 @@ export default function QuarantineTab({
                         />
                         <span className="hidden print:inline font-mono">{idx + 1}</span>
                       </td>
-                      <td className="px-3 py-2.5 align-middle text-left whitespace-nowrap print:w-[14%] print:min-w-0">
+                      <td className="hidden md:table-cell px-3 py-2.5 align-middle text-left whitespace-nowrap print:table-cell print:w-[14%] print:min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="font-mono text-xs text-slate-600">{ts.date}</span>
                           <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
@@ -1694,23 +1692,24 @@ export default function QuarantineTab({
                           </span>
                         </div>
                       </td>
-                      <td className="px-3 py-2.5 align-middle text-left print:w-[40%] print:min-w-0 print:whitespace-normal">
+                      <td className="w-auto min-w-0 px-2 sm:px-3 py-2.5 align-middle text-left print:w-[40%] print:min-w-0 print:whitespace-normal">
                         <div className="font-semibold text-slate-800 text-xs truncate print:whitespace-normal print:overflow-visible print:text-[8pt]">{a.fullName}</div>
-                        <div className="print-subtext text-[11px] text-slate-400 truncate print:whitespace-normal print:overflow-visible">{a.email || '—'}</div>
+                        <div className="print-subtext hidden sm:block text-[11px] text-slate-400 truncate print:whitespace-normal print:overflow-visible">{a.email || '—'}</div>
                       </td>
-                      <td className="px-3 py-2.5 font-mono text-xs text-slate-600 align-middle print:w-[15%] print:min-w-0 print:text-center">{a.index || '—'}</td>
-                      <td className="px-3 py-2.5 text-xs text-slate-600 align-middle print:w-[25%] print:min-w-0 print:whitespace-normal">{a.kierunekRok || formatYear(a.field || a.kierunek, a.year || a.rokStudiow)}</td>
-                      <td className="px-3 py-2.5 text-right align-middle whitespace-nowrap print:hidden no-print">
-                        <div className="inline-flex items-center justify-end gap-2">
+                      <td className="w-16 sm:w-28 px-1 sm:px-3 py-2.5 font-mono text-xs text-slate-600 align-middle text-center print:w-[15%] print:min-w-0 print:text-center">{a.index || '—'}</td>
+                      <td className="hidden lg:table-cell px-3 py-2.5 text-xs text-slate-600 align-middle print:table-cell print:w-[25%] print:min-w-0 print:whitespace-normal">{a.kierunekRok || formatYear(a.field || a.kierunek, a.year || a.rokStudiow)}</td>
+                      <td className="w-20 sm:w-36 px-2 sm:px-3 py-2.5 text-right align-middle whitespace-nowrap print:hidden no-print">
+                        <div className="inline-flex items-center justify-end gap-1 sm:gap-2">
                           <button
                             onClick={() => {
                               onRestoreArchive(a);
                               setSelectedArchiveIds(prev => prev.filter(id => id !== a.id));
                             }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold border border-amber-200 transition-colors cursor-pointer"
+                            className="inline-flex items-center gap-1.5 p-1.5 sm:px-3 sm:py-1 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold border border-amber-200 transition-colors cursor-pointer"
+                            title="Przywróć zgłoszenie z archiwum"
                           >
                             <RotateCcw size={14} strokeWidth={2.2} />
-                            <span>Przywróć</span>
+                            <span className="hidden sm:inline">Przywróć</span>
                           </button>
                           <button
                             onClick={() => {
