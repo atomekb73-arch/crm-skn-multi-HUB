@@ -2828,8 +2828,10 @@ export default function App() {
       avgFreq: isNaN(avgFreq) ? 0 : avgFreq,
       certReady: certReadyCount,
       mailingConsentsCount: consentsCount,
+      archivedCount: Array.isArray(archivedQuarantine) ? archivedQuarantine.length : 0,
+      meetingsCount: Array.isArray(safeMeetings) ? safeMeetings.length : (Array.isArray(meetings) ? meetings.length : 0),
     };
-  }, [members, meetings, isMemberActive, currentOrg?.id, attendanceConfig?.minPassingPercent, academicYear, currentScope]);
+  }, [members, meetings, isMemberActive, currentOrg?.id, attendanceConfig?.minPassingPercent, academicYear, currentScope, archivedQuarantine]);
 
   const allMembersForMeetings = useMemo(() => {
     const list = [...(Array.isArray(members) ? members : [])];
@@ -3006,19 +3008,6 @@ export default function App() {
                 onRetry={() => handleRefreshData({ silent: false })}
               />
             </div>
-
-            {/* Topbar statistics pill - Only visible on very wide desktop screens (2xl:), hidden elsewhere to avoid clutter */}
-            {lastSync && !error && (
-              <div className="hidden 2xl:flex items-center gap-2.5 text-xs text-slate-500 bg-slate-50 border border-slate-200/80 px-3 py-1.5 rounded-full whitespace-nowrap shrink-0">
-                <span>Aktywni: <strong className="text-slate-800 font-semibold">{activeMembersCount}</strong></span>
-                <span className="text-slate-300">•</span>
-                <span>Kwarantanna: <strong className="text-amber-700 font-semibold">{quarantine.length}</strong></span>
-                <span className="text-slate-300">•</span>
-                <span>Archiwum: <strong className="text-slate-800 font-semibold">{archivedQuarantine.length}</strong></span>
-                <span className="text-slate-300">•</span>
-                <span>Spotkania: <strong className="text-slate-800 font-semibold">{meetings.length}</strong></span>
-              </div>
-            )}
 
             <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 ml-auto xl:ml-0">
               {/* Refresh button with Smart Sync & Reconciliation */}

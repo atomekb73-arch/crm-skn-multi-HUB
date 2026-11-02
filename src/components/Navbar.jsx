@@ -150,10 +150,10 @@ export default function Navbar({
             <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-slate-200 to-transparent rounded-r-xl sm:hidden" />
           </div>
 
-          {/* Compact 4 Metric Badges in single row */}
+          {/* Compact Metric Badges in single row */}
           {membersMetrics && (
             <div className="relative max-w-full sm:ml-auto">
-              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto whitespace-nowrap max-w-full py-0.5 scrollbar-none scroll-smooth touch-pan-x sm:ml-auto h-9 min-h-[36px]">
+              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto whitespace-nowrap max-w-full py-0.5 scrollbar-none scroll-smooth touch-auto sm:ml-auto h-9 min-h-[36px]">
                 {/* 1) Aktywni */}
                 <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
@@ -164,7 +164,25 @@ export default function Navbar({
                   </span>
                 </div>
 
-                {/* 2) Frekwencja */}
+                {/* 2) Archiwum */}
+                <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0" title="Liczba zarchiwizowanych zgłoszeń i wpisów">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                  <span className="font-bold text-xs text-slate-900 font-mono">{membersMetrics.archivedCount ?? 0}</span>
+                  <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">
+                    Archiwum
+                  </span>
+                </div>
+
+                {/* 3) Spotkania */}
+                <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0" title="Łączna liczba zarejestrowanych spotkań koła">
+                  <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+                  <span className="font-bold text-xs text-slate-900 font-mono">{membersMetrics.meetingsCount ?? 0}</span>
+                  <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">
+                    Spotkania
+                  </span>
+                </div>
+
+                {/* 4) Frekwencja */}
                 <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0">
                   <span className="font-bold text-xs text-slate-900 font-mono">{isNaN(membersMetrics.avgFreq) ? 0 : membersMetrics.avgFreq}%</span>
                   <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">
@@ -173,7 +191,7 @@ export default function Navbar({
                   </span>
                 </div>
 
-                {/* 3) Zaświadczenia */}
+                {/* 5) Zaświadczenia */}
                 <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0">
                   <span className="font-bold text-xs text-slate-900 font-mono">{membersMetrics.certReady}</span>
                   <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">
@@ -182,7 +200,7 @@ export default function Navbar({
                   </span>
                 </div>
 
-                {/* 4) Mailing */}
+                {/* 6) Mailing */}
                 <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0">
                   <span className="font-bold text-xs text-slate-900 font-mono">{membersMetrics.mailingConsentsCount}</span>
                   <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">

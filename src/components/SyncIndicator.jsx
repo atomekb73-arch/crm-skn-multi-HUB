@@ -30,9 +30,7 @@ export default function SyncIndicator({ status = 'synced', lastSyncTime = null, 
         title="Trwa pobieranie i synchronizacja najświeższych danych z chmury"
       >
         <Loader2 size={13} className="animate-spin text-indigo-600 shrink-0" />
-        <span className="hidden lg:inline">Synchronizacja z chmurą...</span>
-        <span className="hidden sm:inline lg:hidden">Synchronizacja...</span>
-        <span className="sm:hidden text-[11px]">Sync...</span>
+        <span>Synchronizacja...</span>
       </div>
     );
   }
@@ -46,9 +44,7 @@ export default function SyncIndicator({ status = 'synced', lastSyncTime = null, 
         title="Wystąpił błąd zapisu do chmury. Kliknij, aby ponowić synchronizację."
       >
         <AlertTriangle size={13} className="text-amber-600 shrink-0" />
-        <span className="hidden lg:inline">Błąd zapisu – kliknij, aby ponowić</span>
-        <span className="hidden sm:inline lg:hidden">Błąd – ponów</span>
-        <span className="sm:hidden text-[11px]">Błąd zapisu</span>
+        <span>Błąd – ponów</span>
       </button>
     );
   }
@@ -63,9 +59,7 @@ export default function SyncIndicator({ status = 'synced', lastSyncTime = null, 
         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
         <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
       </span>
-      <span className="hidden lg:inline">Zsynchronizowano z chmurą {formattedTime ? `[${formattedTime}]` : ''}</span>
-      <span className="hidden sm:inline lg:hidden">Zsynchronizowano {formattedTime ? `[${formattedTime}]` : ''}</span>
-      <span className="sm:hidden text-[11px] font-mono">{formattedTime ? `[${formattedTime}]` : 'OK'}</span>
+      <span>Synchronizacja {formattedTime ? `[${formattedTime}]` : ''}</span>
     </div>
   );
 }
