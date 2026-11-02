@@ -1492,8 +1492,8 @@ export default function ManagementTab({
                 canIssue,
                 label: canIssue ? 'Można wydać' : 'W toku',
                 color: canIssue
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:shadow-xs'
-                  : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
+                  ? 'text-emerald-600 hover:text-emerald-700'
+                  : 'text-slate-500 hover:text-slate-700'
               };
               const badge = getFrequencyBadge(freq);
               const memberPoints = membersPointsMap.get(m.id || m.nrIndeksu) || membersPointsMap.get(m.memberKey) || 0;
@@ -1692,17 +1692,17 @@ export default function ManagementTab({
                   </td>
 
                   {/* Hidden on Print: Zaświadczenie Status */}
-                  <td className="hidden xl:table-cell w-44 xl:w-48 px-3 py-2.5 text-center align-middle whitespace-nowrap print:hidden">
+                  <td className="hidden xl:table-cell w-44 xl:w-48 px-3 py-2 text-center align-middle whitespace-nowrap print:hidden">
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleOpenCertificate(m, 'membership');
                       }}
-                      className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-2xs border cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${
+                      className={`inline-flex items-center justify-center gap-1.5 text-xs font-bold transition-colors cursor-pointer hover:underline ${
                         cert.canIssue
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:text-emerald-800 hover:shadow-xs'
-                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-800 hover:shadow-xs'
+                          ? 'text-emerald-600 hover:text-emerald-700'
+                          : 'text-slate-500 hover:text-slate-700'
                       }`}
                       title={
                         cert.canIssue
@@ -1711,9 +1711,9 @@ export default function ManagementTab({
                       }
                     >
                       {cert.canIssue ? (
-                        <FileCheck2 size={13} className="text-emerald-600 shrink-0" />
+                        <FileCheck2 size={14} strokeWidth={2.2} className="text-emerald-600 shrink-0" />
                       ) : (
-                        <Clock size={13} className="text-slate-400 shrink-0" />
+                        <Clock size={13} strokeWidth={2} className="text-slate-400 shrink-0" />
                       )}
                       <span>{cert.label}</span>
                     </button>
