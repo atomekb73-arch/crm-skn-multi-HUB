@@ -1863,16 +1863,16 @@ export default function MeetingsTab({
   }, [parsedParticipants, attendeeSearchQuery]);
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6">
-      {/* Header controls for Academic Year & Calendar (Sticky at Top) */}
-      <div className="bg-white/95 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 md:p-5 border border-slate-200 shadow-sm space-y-3 sm:space-y-4 sticky top-14 sm:top-16 z-20">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+    <div className="w-full max-w-full overflow-x-clip space-y-2.5 sm:space-y-3 -mt-2 sm:-mt-3 md:-mt-4">
+      {/* Header controls for Academic Year & Calendar */}
+      <div className="bg-white/95 backdrop-blur-md rounded-2xl p-2.5 sm:p-3 md:p-3.5 border border-slate-200 shadow-xs space-y-2.5 relative z-10">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 sm:gap-3">
           <div>
-            <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
+            <h2 className="text-sm sm:text-base font-bold text-slate-800 flex items-center gap-2">
               <Calendar size={18} className="text-indigo-600" />
               Harmonogram & Kategoryzacja Spotkań
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-2">
+            <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 flex items-center gap-2">
               <span>Wszystkich spotkań: <strong>{activeMeetings.length}</strong></span>
               <span>•</span>
               <span className="text-emerald-700 font-medium">{upcomingCount} nadchodzących</span>
@@ -1881,14 +1881,14 @@ export default function MeetingsTab({
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
             {/* Academic Year Dropdown */}
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Rok:</span>
               <select
                 value={academicYear}
                 onChange={e => onAcademicYearChange(e.target.value)}
-                className="text-xs border border-slate-200 rounded-xl px-3 py-2 bg-slate-50 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer"
+                className="text-xs border border-slate-200 rounded-xl px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-50 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer"
               >
                 {getAcademicYearOptions(2, 1).map(opt => (
                   <option key={opt.value} value={opt.value}>
@@ -1910,7 +1910,7 @@ export default function MeetingsTab({
             <button
               onClick={onRefreshMeetings}
               disabled={loadingMeetings}
-              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-all shadow-sm disabled:opacity-50 shrink-0 cursor-pointer w-full sm:w-auto min-h-[38px] sm:min-h-0"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-all shadow-xs disabled:opacity-50 shrink-0 cursor-pointer w-full sm:w-auto min-h-[36px] sm:min-h-0"
             >
               <RefreshCw size={13} className={loadingMeetings ? 'animate-spin' : ''} />
               <span className="sm:hidden">Odśwież</span>
@@ -2005,7 +2005,7 @@ export default function MeetingsTab({
           </button>
 
           {/* Scrollable Meeting Cards List */}
-          <div className="space-y-2 max-h-[calc(100vh-270px)] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-indigo-200">
+          <div className="space-y-2 max-h-[calc(100vh-210px)] md:max-h-[calc(100dvh-190px)] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-indigo-200">
             {viewMode === 'trash' ? (
               trashList.length === 0 ? (
                 <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-4 sm:p-6 text-center text-slate-400 text-xs">
@@ -2694,7 +2694,7 @@ export default function MeetingsTab({
                   </p>
                 </div>
               ) : (
-                <div className="space-y-1.5 max-h-[calc(100vh-360px)] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-indigo-200">
+                <div className="space-y-1.5 max-h-[calc(100vh-280px)] md:max-h-[calc(100dvh-260px)] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-indigo-200">
                   {filteredParticipants.map((p, idx) => {
                     const isApproved = p.manualApproved;
                     const isSpeaker = p.role === 'speaker' || p.role === 'prelegent' || p.rola === 'speaker' || p.rola === 'prelegent' || p.isSpeaker || String(p.rawName || '').includes('[SPEAKER]') || String(p.name || '').includes('[SPEAKER]');
