@@ -1789,7 +1789,7 @@ export default function AttendanceModal({
         )}
 
         {/* ── KPI Summary Cards Bar ────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 p-4 bg-slate-50/60 border-b border-slate-100 shrink-0">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3 p-3 sm:p-4 bg-slate-50/60 border-b border-slate-100 shrink-0">
           {/* 1. Approved Attendance (All with status Zaliczono) */}
           <div
             onClick={() => setActiveFilter('approved')}
@@ -1857,7 +1857,7 @@ export default function AttendanceModal({
           {/* 5. Total Logged */}
           <div
             onClick={() => setActiveFilter('all')}
-            className={`p-3 rounded-2xl border shadow-2xs flex items-center gap-3 cursor-pointer transition ${
+            className={`col-span-2 sm:col-span-1 p-3 rounded-2xl border shadow-2xs flex items-center gap-3 cursor-pointer transition ${
               activeFilter === 'all' ? 'bg-purple-50/80 border-purple-300 ring-2 ring-purple-200' : 'bg-white border-purple-100 hover:bg-purple-50/30'
             }`}
           >

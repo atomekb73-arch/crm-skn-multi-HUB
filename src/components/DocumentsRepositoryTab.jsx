@@ -1116,7 +1116,7 @@ export default function DocumentsRepositoryTab() {
                 <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1 mb-1.5">
                   Moduł Dokumentacji
                 </div>
-                <div className="space-y-1.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-1.5">
                   <button
                     type="button"
                     onClick={() => setActiveModuleTab('repository')}
@@ -1195,7 +1195,7 @@ export default function DocumentsRepositoryTab() {
                   <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1 mb-1.5 pt-1 border-t border-slate-100">
                     Kategorie Dokumentów
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-1 gap-1.5">
                     {CATEGORIES.map((cat) => {
                       const count = cat === 'Wszystkie'
                         ? documents.length
@@ -1295,7 +1295,7 @@ export default function DocumentsRepositoryTab() {
                   <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1 mb-1.5 pt-1 border-t border-slate-100">
                     Kierunek Korespondencji
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-1.5">
                     {/* Wszystkie pisma */}
                     <button
                       type="button"
@@ -2590,7 +2590,7 @@ export default function DocumentsRepositoryTab() {
 
             <form onSubmit={handleSaveDocument} className="flex flex-col flex-1 overflow-hidden min-h-0">
               <div className="p-4 sm:p-6 overflow-y-auto pr-2 flex-1 space-y-4">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label htmlFor="modal-doc-category-select" className="text-xs font-bold text-slate-700 block mb-1">Kategoria Dokumentu:</label>
                     <select
@@ -2636,7 +2636,7 @@ export default function DocumentsRepositoryTab() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label htmlFor="modal-doc-date-input" className="text-xs font-bold text-slate-700 block mb-1">Data Uchwalenia / Wydania:</label>
                     <input

@@ -2289,7 +2289,7 @@ export default function MeetingsTab({
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-0.5">
                         Status / Charakter spotkania
                       </span>
-                      <div className="grid grid-cols-2 gap-2 flex-1">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-2 flex-1">
                         {Object.entries(MEETING_TYPES)
                           .filter(([, cfg]) => cfg.group === 'status')
                           .map(([typeKey, typeCfg]) => {
@@ -2328,7 +2328,7 @@ export default function MeetingsTab({
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-0.5">
                         Format / Kategoria wydarzenia
                       </span>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2 flex-1">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-1 gap-2 flex-1">
                         {Object.entries(MEETING_TYPES)
                           .filter(([, cfg]) => cfg.group === 'format')
                           .map(([typeKey, typeCfg]) => {

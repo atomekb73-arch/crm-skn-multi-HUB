@@ -926,7 +926,7 @@ export function MeetingsSummaryTableTemplate({
       </div>
 
       {/* ── KPI Podsumowanie ── */}
-      <div className="metric-box-container w-full grid grid-cols-3 gap-3 mb-6 text-center text-xs box-border">
+      <div className="metric-box-container w-full grid grid-cols-1 sm:grid-cols-3 md:grid-cols-3 gap-2.5 sm:gap-3 mb-6 text-center text-xs box-border">
         <div className="p-2.5 bg-slate-50/90 rounded-lg border border-slate-200">
           <span className="text-[9.5px] uppercase font-bold text-slate-500 tracking-wider block">Zrealizowane spotkania</span>
           <span className="text-base font-bold text-indigo-950 font-mono mt-0.5 block">{meetingsList.length}</span>
@@ -1807,7 +1807,7 @@ export function AnnualReportProtocolTemplate({
       </div>
 
       {/* KPI Podsumowanie */}
-      <div className="metric-box-container w-full grid grid-cols-4 gap-2 mb-4 text-center box-border">
+      <div className="metric-box-container w-full grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 mb-4 text-center box-border">
         <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
           <span className="text-[9px] uppercase font-bold text-slate-500 block">Aktywni Członkowie</span>
           <span className="text-base font-bold text-slate-900 font-mono">{activeMembers.length}</span>
@@ -1967,7 +1967,7 @@ export function OfficialRegistryProtocolTemplate({
       </div>
 
       {/* Summary Stat Pills */}
-      <div className="metric-box-container grid grid-cols-4 gap-3 my-5 p-3 rounded-xl bg-slate-50 border border-slate-200 text-center box-border">
+      <div className="metric-box-container grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3 my-5 p-3 rounded-xl bg-slate-50 border border-slate-200 text-center box-border">
         <div className="p-2 bg-white rounded-lg border border-slate-200">
           <p className="text-[10px] font-bold text-slate-500 uppercase">Wszystkie Akty</p>
           <p className="text-base font-black text-slate-900 font-mono">{totalCount}</p>
@@ -2107,7 +2107,7 @@ export function OfficialCorrespondenceProtocolTemplate({
       </div>
 
       {/* Summary Stat Pills */}
-      <div className="metric-box-container grid grid-cols-3 gap-3 my-5 p-3 rounded-xl bg-slate-50 border border-slate-200 text-center box-border">
+      <div className="metric-box-container grid grid-cols-1 sm:grid-cols-3 md:grid-cols-3 gap-2.5 sm:gap-3 my-5 p-3 rounded-xl bg-slate-50 border border-slate-200 text-center box-border">
         <div className="p-2 bg-white rounded-lg border border-slate-200">
           <p className="text-[10px] font-bold text-slate-500 uppercase">Wszystkie Pisma</p>
           <p className="text-base font-black text-slate-900 font-mono">{totalCount}</p>

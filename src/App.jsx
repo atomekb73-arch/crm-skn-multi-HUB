@@ -3063,7 +3063,7 @@ export default function App() {
         {/* Skeleton loading state on first load */}
         {loading && members.length === 0 && quarantine.length === 0 && (
           <div className="space-y-4 animate-pulse">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
               {[1,2,3].map(i => (
                 <div key={i} className="bg-white rounded-2xl border border-slate-100 h-24" />
               ))}

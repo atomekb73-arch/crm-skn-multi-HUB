@@ -720,7 +720,7 @@ export default function ResearchTab({ members = [] }) {
             </div>
 
             {/* Vertical Stats / Quick Filters */}
-            <div className="space-y-1.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-1 gap-1.5">
               {/* All Items Tile */}
               <button
                 type="button"
@@ -1410,7 +1410,7 @@ export default function ResearchTab({ members = [] }) {
 
               {formState.type === 'Publication' && (
                 <>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label htmlFor="research-authors-input" className="text-xs font-bold text-slate-700 block mb-1">Autorzy:</label>
                       <input
@@ -1454,7 +1454,7 @@ export default function ResearchTab({ members = [] }) {
 
               {formState.type === 'Conference' && (
                 <>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label htmlFor="research-speakers-input" className="text-xs font-bold text-slate-700 block mb-1">Prelegenci:</label>
                       <input
@@ -1758,7 +1758,7 @@ export default function ResearchTab({ members = [] }) {
               )}
 
               {!isProjectLike(formState.type) && (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label htmlFor="research-status-select" className="text-xs font-bold text-slate-700 block mb-1">Status Realizacji:</label>
                     <select

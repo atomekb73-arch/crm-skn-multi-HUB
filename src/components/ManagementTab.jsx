@@ -1807,7 +1807,7 @@ export default function ManagementTab({
                 <div className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
                   Zmień status członkostwa / etapu studiów:
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1.5">
                   <button
                     type="button"
                     onClick={() => handleSetStatusAction(decisionModalMember, 'active')}
