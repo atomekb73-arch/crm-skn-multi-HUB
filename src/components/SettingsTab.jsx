@@ -1048,9 +1048,9 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
   };
 
   return (
-    <div className="space-y-4 animate-fadeIn pb-16">
+    <div className="w-full max-w-full overflow-x-hidden space-y-4 animate-fadeIn pb-16">
       {/* ── Header ───────────────────────────────────────────────────────────── */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl py-4 px-6 text-white shadow-xl relative overflow-hidden">
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl py-3.5 sm:py-4 px-3.5 sm:px-5 md:px-6 text-white shadow-xl relative overflow-hidden">
         <div className="absolute right-0 top-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -1899,7 +1899,7 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
         {/* Modal zastępowania roli jednoosobowej */}
         {roleReplacementConflict && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-            <div className="bg-white rounded-3xl p-6 shadow-2xl border border-amber-200 max-w-lg w-full space-y-4">
+            <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-2xl border border-amber-200 max-w-lg w-full space-y-4">
               <div className="flex items-center gap-3 text-amber-600">
                 <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
                   <AlertTriangle size={22} className="text-amber-600" />

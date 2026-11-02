@@ -33,6 +33,28 @@
   transition: background-color 0.4s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
+/* ── Global Overflow Protection & Box Sizing (Baza RWD) ── */
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 html,
 body,
 input,

@@ -119,9 +119,9 @@ export default function ToolsTab({ members, materials, meetings, onBulkMarkGradu
   }
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6">
       {/* Graduate Detection & Database Cleaning Card */}
-      <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-4">
+      <div className="bg-white rounded-2xl border border-slate-100 p-3.5 sm:p-4 md:p-5 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">

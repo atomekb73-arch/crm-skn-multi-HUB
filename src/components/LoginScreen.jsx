@@ -140,7 +140,7 @@ export default function LoginScreen({ onOpenPublicForm }) {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950 text-slate-100 flex items-center justify-center p-4 sm:p-6 font-sans relative overflow-hidden">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950 text-slate-100 flex items-center justify-center p-3 sm:p-4 md:p-6 font-sans relative overflow-hidden">
       {/* Decorative background glows */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
@@ -164,7 +164,7 @@ export default function LoginScreen({ onOpenPublicForm }) {
         </div>
 
         {/* Dynamic Card Container */}
-        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-6 sm:p-8 shadow-2xl border border-white/20 text-slate-900 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+        <div className="bg-white/95 backdrop-blur-xl rounded-3xl p-4 sm:p-6 md:p-8 shadow-2xl border border-white/20 text-slate-900 space-y-5 animate-in fade-in zoom-in-95 duration-200">
           
           {/* Top Status Header */}
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">

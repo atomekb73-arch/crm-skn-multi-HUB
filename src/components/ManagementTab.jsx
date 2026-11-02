@@ -1040,7 +1040,7 @@ export default function ManagementTab({
   };
 
   return (
-    <div className="w-full space-y-6 relative printable-area">
+    <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6 relative printable-area">
 
       {/* ── Print Page Margin Optimization CSS ─────────────────────────────── */}
       <style>{`
@@ -1124,7 +1124,7 @@ export default function ManagementTab({
       />
 
       {/* ── Search & Filter Controls Toolbar (Hidden during Print) ───────────── */}
-      <div className="w-full flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 print:hidden no-print">
+      <div className="w-full max-w-full flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 print:hidden no-print">
         {/* Search Input inside distinct gray base container with inner shadow */}
         <div className="bg-slate-100 border border-slate-300/80 rounded-xl p-1 shadow-inner relative flex-1 max-w-md">
           <div className="relative">
@@ -1331,7 +1331,7 @@ export default function ManagementTab({
       )}
 
       {/* ── Table Container with Independent Scrolling & Sticky Thead ── */}
-      <div className="printable-area w-full bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden max-h-[calc(100vh-230px)] overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-200 print:max-h-none print:overflow-visible print:shadow-none print:border-none print:rounded-none">
+      <div className="printable-area w-full max-w-full bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-x-auto overflow-y-auto max-h-[calc(100vh-230px)] scrollbar-thin scrollbar-thumb-indigo-200 print:max-h-none print:overflow-visible print:shadow-none print:border-none print:rounded-none">
         <table className="print-table w-full text-xs table-fixed border-collapse">
           <thead className="sticky top-0 z-10 bg-slate-200/90 backdrop-blur-xs border-b-2 border-slate-300 shadow-sm">
             <tr className="text-left select-none print:bg-slate-100 print:border-slate-900">
@@ -1770,7 +1770,7 @@ export default function ManagementTab({
       {/* ── Member Decision Modal (Hidden during Print) ───────────────────── */}
       {decisionModalMember && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 print:hidden">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl border border-slate-100 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 max-w-md w-full shadow-xl border border-slate-100 space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
                 <AlertCircle size={20} />

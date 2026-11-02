@@ -1971,7 +1971,7 @@ export default function AttendanceModal({
         </div>
 
         {/* ── Scrollable Participants Table Area ───────────────────────────── */}
-        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-200 p-6 pb-32">
+        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-200 p-3 sm:p-4 md:p-6 pb-24 sm:pb-32">
           {sortedAndFilteredParticipants.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center text-slate-400 py-12">
               <Users size={40} className="text-slate-300 mb-2" />

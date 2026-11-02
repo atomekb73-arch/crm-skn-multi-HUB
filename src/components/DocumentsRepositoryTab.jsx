@@ -152,7 +152,7 @@ export function DocumentPreviewModal({ isOpen, onClose, documentTitle, documentC
               allow="autoplay"
             />
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 bg-white rounded-2xl border border-slate-200 text-center space-y-4 shadow-inner">
+            <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 bg-white rounded-2xl border border-slate-200 text-center space-y-4 shadow-inner">
               <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto shadow-xs">
                 <HardDrive size={28} />
               </div>
@@ -984,10 +984,10 @@ export default function DocumentsRepositoryTab() {
   };
 
   return (
-    <div className="space-y-4 pb-12 font-sans animate-in fade-in duration-200">
+    <div className="w-full max-w-full overflow-x-hidden space-y-4 pb-12 font-sans animate-in fade-in duration-200">
       
       {/* ── HEADER BAR ────────────────────────────────────────────────────────── */}
-      <div className="bg-white px-6 py-3.5 h-[72px] min-h-[72px] max-h-[72px] rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-3 print:hidden">
+      <div className="bg-white px-3.5 sm:px-4 md:px-6 py-3 min-h-[64px] rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 print:hidden">
         <div className="flex items-center min-w-0">
           <div className="w-11 h-11 min-w-[44px] rounded-xl bg-slate-100 border border-slate-200/80 text-slate-700 flex items-center justify-center mr-4 shrink-0 shadow-2xs">
             {activeModuleTab === 'repository' ? <FolderKanban className="w-5 h-5" /> : <Mail className="w-5 h-5" />}
@@ -2034,7 +2034,7 @@ export default function DocumentsRepositoryTab() {
             </div>
 
             {/* Modal Body */}
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               {mailModalTab === 'parser' ? (
                 <div className="space-y-4">
                   <div className="p-3 bg-indigo-50/70 border border-indigo-200 rounded-2xl text-xs text-indigo-900">
@@ -2345,7 +2345,7 @@ export default function DocumentsRepositoryTab() {
             </div>
 
             {/* Drawer Content (Scrollable) */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-5 text-xs text-slate-800">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 text-xs text-slate-800">
               {/* Quick Status Bar & Date */}
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -2569,7 +2569,7 @@ export default function DocumentsRepositoryTab() {
             </div>
 
             <form onSubmit={handleSaveDocument} className="flex flex-col flex-1 overflow-hidden min-h-0">
-              <div className="p-6 overflow-y-auto pr-2 flex-1 space-y-4">
+              <div className="p-4 sm:p-6 overflow-y-auto pr-2 flex-1 space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label htmlFor="modal-doc-category-select" className="text-xs font-bold text-slate-700 block mb-1">Kategoria Dokumentu:</label>
@@ -2759,7 +2759,7 @@ export default function DocumentsRepositoryTab() {
               </button>
             </div>
 
-            <form onSubmit={handleSaveDriveUrl} className="p-6 space-y-4">
+            <form onSubmit={handleSaveDriveUrl} className="p-4 sm:p-6 space-y-4">
               <div>
                 <label htmlFor="edit-drive-url-input" className="text-xs font-bold text-slate-700 block mb-1">
                   Adres URL głównego folderu Google Drive koła:
@@ -2818,7 +2818,7 @@ export default function DocumentsRepositoryTab() {
               </button>
             </div>
 
-            <form onSubmit={handleSaveStatutConfig} className="p-6 space-y-4">
+            <form onSubmit={handleSaveStatutConfig} className="p-4 sm:p-6 space-y-4">
               <div>
                 <label htmlFor="edit-statut-url-input" className="text-xs font-bold text-slate-700 block mb-1">
                   Link do pliku Statutu na Google Drive:

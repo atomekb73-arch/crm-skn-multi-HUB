@@ -486,9 +486,9 @@ export default function ResearchTab({ members = [] }) {
   };
 
   return (
-    <div className="space-y-4 pb-12 font-sans animate-in fade-in duration-200 print:p-0 print:space-y-4">
+    <div className="w-full max-w-full overflow-x-hidden space-y-4 pb-12 font-sans animate-in fade-in duration-200 print:p-0 print:space-y-4">
       {/* ── HEADER BAR ────────────────────────────────────────────────────────── */}
-      <div className="bg-white px-6 py-3.5 h-[72px] min-h-[72px] max-h-[72px] rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-3 print:hidden">
+      <div className="bg-white px-3.5 sm:px-4 md:px-6 py-3 min-h-[64px] rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 print:hidden">
         <div className="flex items-center min-w-0">
           <div className="w-11 h-11 min-w-[44px] rounded-xl bg-slate-100 border border-slate-200/80 text-slate-700 flex items-center justify-center mr-4 shrink-0 shadow-2xs">
             <Microscope className="w-5 h-5" />
@@ -1361,7 +1361,7 @@ export default function ResearchTab({ members = [] }) {
               </button>
             </div>
 
-            <form onSubmit={handleSaveItem} className="p-6 space-y-4">
+            <form onSubmit={handleSaveItem} className="p-4 sm:p-6 space-y-4">
               <datalist id="members-autocomplete-list">
                 {availableMembers.map((m, idx) => {
                   const fullName = m.fullName || (m.firstName && m.lastName ? `${m.firstName} ${m.lastName}` : (m.imie && m.nazwisko ? `${m.imie} ${m.nazwisko}` : m.name)) || '';

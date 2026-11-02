@@ -169,7 +169,7 @@ export default function SettingsModal({ isOpen, onClose }) {
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto space-y-6">
+        <div className="p-3.5 sm:p-4 md:p-6 overflow-y-auto space-y-4 sm:space-y-6">
 
           {/* VIEW: LIST OF ORGANIZATIONS */}
           {view === 'list' && (

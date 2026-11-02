@@ -476,12 +476,12 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
   };
 
   return (
-    <div className={`min-h-screen py-10 sm:py-16 px-4 sm:px-6 lg:px-8 flex items-center justify-center font-sans relative ${
+    <div className={`min-h-screen w-full max-w-full overflow-x-hidden py-6 sm:py-12 md:py-16 px-3 sm:px-6 lg:px-8 flex items-center justify-center font-sans relative ${
       isUzaleznienia
         ? 'bg-[#f0f6f4] bg-gradient-to-b from-[#f4f8f6] via-[#edf5f2] to-[#e4efeb] selection:bg-teal-600 selection:text-white'
         : 'bg-[#eef4f8] bg-gradient-to-b from-[#f1f6fa] via-[#eef4f8] to-[#e4eef6] selection:bg-indigo-600 selection:text-white'
     }`}>
-      <div className={`max-w-3xl w-full bg-white rounded-[32px] shadow-2xl overflow-hidden p-6 sm:p-12 md:p-14 transition-all relative ${
+      <div className={`max-w-3xl w-full bg-white rounded-[24px] sm:rounded-[32px] shadow-2xl overflow-hidden p-4 sm:p-8 md:p-12 transition-all relative ${
         isUzaleznienia
           ? 'shadow-teal-950/10 border border-teal-100/90 ring-1 ring-teal-900/5'
           : 'shadow-sky-950/10 border border-sky-100/90 ring-1 ring-slate-900/5'

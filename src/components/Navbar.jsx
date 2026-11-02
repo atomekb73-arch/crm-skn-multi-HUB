@@ -62,9 +62,9 @@ export default function Navbar({
     : activeTab;
 
   return (
-    <div className="space-y-3 print:hidden">
+    <div className="space-y-2.5 sm:space-y-3 print:hidden w-full max-w-full overflow-x-hidden">
       {/* ── Main 5 Condensed Navigation Bar ───────────────────────────────── */}
-      <div className="w-full flex items-center gap-1.5 justify-start overflow-x-auto py-1 px-2 bg-slate-200/90 rounded-2xl border border-slate-300 shadow-xs h-11 min-h-[44px] shrink-0">
+      <div className="w-full max-w-full flex items-center gap-1 sm:gap-1.5 justify-start overflow-x-auto py-1 px-1.5 sm:px-2 bg-slate-200/90 rounded-2xl border border-slate-300 shadow-xs h-11 min-h-[44px] shrink-0 scrollbar-none">
         {MAIN_TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = isMainTabActive(tab);
@@ -72,7 +72,7 @@ export default function Navbar({
             <button
               key={tab.id}
               onClick={() => handleMainTabClick(tab.id)}
-              className={`group flex items-center gap-2 text-xs md:text-sm px-3.5 py-1.5 rounded-xl transition-colors duration-150 whitespace-nowrap cursor-pointer font-semibold ${
+              className={`group flex items-center gap-2 text-xs md:text-sm px-3 sm:px-3.5 py-1.5 rounded-xl transition-colors duration-150 whitespace-nowrap cursor-pointer font-semibold ${
                 isActive
                   ? 'bg-white text-slate-950 shadow-sm border border-slate-300'
                   : 'text-slate-700 hover:text-slate-950 hover:bg-slate-300/70'
@@ -94,8 +94,8 @@ export default function Navbar({
 
       {/* Sub-bar for Członkowie with inline compact metrics */}
       {currentTab === 'members' && (
-        <div className="flex items-center justify-between gap-3 w-full flex-wrap xl:flex-nowrap min-h-[40px] animate-in fade-in duration-150">
-          <div className="flex items-center gap-1 bg-slate-200/90 p-1 rounded-xl w-fit border border-slate-300 shrink-0 shadow-2xs h-9 min-h-[36px]">
+        <div className="flex items-center justify-between gap-2 sm:gap-3 w-full max-w-full flex-wrap min-h-[40px] animate-in fade-in duration-150">
+          <div className="flex items-center gap-1 bg-slate-200/90 p-1 rounded-xl w-fit max-w-full overflow-x-auto border border-slate-300 shrink-0 shadow-2xs h-9 min-h-[36px] scrollbar-none">
             <button
               onClick={() => {
                 startTransition(() => {
@@ -138,28 +138,28 @@ export default function Navbar({
 
           {/* Compact 4 Metric Badges in single row */}
           {membersMetrics && (
-            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0 ml-auto h-9 min-h-[36px]">
+            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto max-w-full py-0.5 scrollbar-none sm:ml-auto h-9 min-h-[36px]">
               {/* 1) Aktywni */}
-              <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs">
+              <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                 <span className="font-bold text-xs text-slate-900 font-mono">{membersMetrics.activeCount}</span>
                 <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">Aktywni członkowie</span>
               </div>
 
               {/* 2) Frekwencja */}
-              <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs">
+              <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0">
                 <span className="font-bold text-xs text-slate-900 font-mono">{isNaN(membersMetrics.avgFreq) ? 0 : membersMetrics.avgFreq}%</span>
                 <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">Średnia frekwencja</span>
               </div>
 
               {/* 3) Zaświadczenia */}
-              <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs">
+              <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0">
                 <span className="font-bold text-xs text-slate-900 font-mono">{membersMetrics.certReady}</span>
                 <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">Gotowe zaświadczenia</span>
               </div>
 
               {/* 4) Mailing */}
-              <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs">
+              <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0">
                 <span className="font-bold text-xs text-slate-900 font-mono">{membersMetrics.mailingConsentsCount}</span>
                 <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">Zgody na mailing</span>
               </div>

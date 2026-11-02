@@ -320,7 +320,7 @@ export default function ProfileMenu({ onOpenSettings }) {
       {/* ── MODAL: Zmień hasło ──────────────────────────────────────────────── */}
       {isChangePasswordOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-white rounded-3xl p-6 sm:p-7 shadow-2xl border border-slate-100 space-y-5 animate-in zoom-in-95 duration-150">
+          <div className="w-full max-w-md bg-white rounded-3xl p-4 sm:p-6 md:p-7 shadow-2xl border border-slate-100 space-y-5 animate-in zoom-in-95 duration-150">
             
             {/* Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">

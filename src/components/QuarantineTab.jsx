@@ -695,7 +695,7 @@ export default function QuarantineTab({
   };
 
   return (
-    <div className="space-y-6 relative printable-area">
+    <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6 relative printable-area">
 
       {/* ── Official Printable Header for Quarantine (Visible ONLY during print) ── */}
       <div className="hidden print:block mb-3 pb-2 border-b-2 border-slate-900 font-sans">
@@ -742,7 +742,7 @@ export default function QuarantineTab({
       {/* ── Single Archive Confirmation Modal ──────────────────────────────── */}
       {archiveModalEntry && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl border border-slate-100 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 max-w-md w-full shadow-xl border border-slate-100 space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
                 <Archive size={20} />
@@ -778,7 +778,7 @@ export default function QuarantineTab({
       {/* ── Permanent Delete Confirmation Modal ────────────────────────────── */}
       {deleteModalEntry && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl border border-slate-100 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 max-w-md w-full shadow-xl border border-slate-100 space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl bg-red-100 text-red-700 flex items-center justify-center shrink-0">
                 <Trash2 size={20} />
@@ -812,7 +812,7 @@ export default function QuarantineTab({
       {/* ── Modal: Ręczne dodanie nowego członka koła ──────────────────────── */}
       {showAddMemberModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl border border-slate-100 space-y-4 animate-in fade-in zoom-in-95 duration-150 my-8">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 max-w-lg w-full shadow-2xl border border-slate-100 space-y-4 animate-in fade-in zoom-in-95 duration-150 my-8">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center">

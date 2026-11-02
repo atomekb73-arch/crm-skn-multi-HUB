@@ -657,7 +657,7 @@ export default function ReportsTab({
   }, [members]);
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6">
 
       {/* ── Print Specific Styles ── */}
       <style>{`
@@ -1440,7 +1440,7 @@ export default function ReportsTab({
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4">
 
               {/* Mode Switcher Tabs */}
               <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200">
@@ -1817,7 +1817,7 @@ export default function ReportsTab({
               </button>
             </div>
 
-            <form onSubmit={handleSaveManualEntry} className="p-6 space-y-3.5 text-xs">
+            <form onSubmit={handleSaveManualEntry} className="p-4 sm:p-6 space-y-3.5 text-xs">
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1">Typ Dokumentu:</label>
                 <select

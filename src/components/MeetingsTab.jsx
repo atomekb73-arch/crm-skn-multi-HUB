@@ -1863,9 +1863,9 @@ export default function MeetingsTab({
   }, [parsedParticipants, attendeeSearchQuery]);
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6">
       {/* Header controls for Academic Year & Calendar (Sticky at Top) */}
-      <div className="bg-white/95 backdrop-blur-md rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4 sticky top-16 z-20">
+      <div className="bg-white/95 backdrop-blur-md rounded-2xl p-3.5 sm:p-4 md:p-5 border border-slate-200 shadow-sm space-y-3 sm:space-y-4 sticky top-14 sm:top-16 z-20">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
@@ -2007,7 +2007,7 @@ export default function MeetingsTab({
           <div className="space-y-2 max-h-[calc(100vh-270px)] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-indigo-200">
             {viewMode === 'trash' ? (
               trashList.length === 0 ? (
-                <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-6 text-center text-slate-400 text-xs">
+                <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-4 sm:p-6 text-center text-slate-400 text-xs">
                   <div className="w-10 h-10 mx-auto mb-2 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
                     <Trash2 size={16} />
                   </div>
@@ -2064,7 +2064,7 @@ export default function MeetingsTab({
                 })
               )
             ) : activeMeetings.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center text-slate-400 text-xs">
+              <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 text-center text-slate-400 text-xs">
                 Brak spotkań w wybranym okresie.
               </div>
             ) : (
@@ -2128,12 +2128,12 @@ export default function MeetingsTab({
           {/* ── Middle Column: Main Details & Editing Panel (flex-1) ── */}
           <div className="flex-1 min-w-0 w-full space-y-4">
           {!selectedMeeting ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-400 text-sm shadow-sm">
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 md:p-12 text-center text-slate-400 text-sm shadow-sm">
               <ClipboardList size={36} className="mx-auto mb-2 text-slate-300" />
               Wybierz spotkanie z listy po lewej stronie, aby edytować jego szczegóły, próg obecności lub przetworzyć dane z Google Meet.
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-sm">
+            <div className="bg-white rounded-2xl border border-slate-200 p-3.5 sm:p-4 md:p-5 space-y-4 shadow-sm">
               {/* Selected Meeting Banner with Inline Code Edit */}
               <div className={`flex items-center justify-between rounded-xl px-4 py-3 border ${
                 currentSelectedMeeting.isUpcoming
@@ -2620,7 +2620,7 @@ export default function MeetingsTab({
         {/* ── Right Column: Attendance List Sidebar (280px - 320px) ── */}
         <div className="w-full lg:w-[285px] xl:w-[315px] shrink-0 space-y-3 lg:sticky lg:top-20">
           {!selectedMeeting ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-400 text-xs shadow-sm">
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 md:p-8 text-center text-slate-400 text-xs shadow-sm">
               <Users size={28} className="mx-auto mb-2 text-slate-300" />
               <p className="font-semibold text-slate-600">Lista obecności</p>
               <p className="mt-1 text-[11px]">Wybierz spotkanie, aby podejrzeć listę uczestników.</p>
@@ -2905,7 +2905,7 @@ export default function MeetingsTab({
       {/* ── Reset Reprocess Confirmation Modal ── */}
       {showResetConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 max-w-md w-full space-y-4 animate-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 sm:p-6 max-w-md w-full space-y-4 animate-in zoom-in-95 duration-150">
             <div className="flex items-center gap-3 text-amber-600">
               <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
                 <AlertTriangle size={22} />
@@ -2969,7 +2969,7 @@ export default function MeetingsTab({
             </div>
 
             {/* Modal Scrollable Body */}
-            <div className="p-6 overflow-y-auto space-y-4 text-xs">
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-4 text-xs">
               {protocolSaveStatus && (
                 <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-2xl text-emerald-800 font-semibold flex items-center gap-2 animate-in fade-in">
                   <CheckCircle2 size={18} className="text-emerald-600 shrink-0 w-5 h-5" />
@@ -3204,7 +3204,7 @@ export default function MeetingsTab({
       {/* ── Modal: ➕ Dodaj nowe spotkanie ───────────────────────────────── */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full p-6 space-y-4">
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full p-4 sm:p-6 space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
@@ -3442,7 +3442,7 @@ export default function MeetingsTab({
       {/* ── Modal: ⚠️ Ostrzeżenie przed przeniesieniem do Kosza ───────────── */}
       {meetingToTrash && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-md w-full p-6 space-y-4">
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-md w-full p-4 sm:p-6 space-y-4">
             <div className="flex items-center gap-3 text-rose-600">
               <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center shrink-0">
                 <Trash2 size={20} className="text-rose-600" />
@@ -3486,7 +3486,7 @@ export default function MeetingsTab({
       {/* ── Modal: Definitywne trwałe usunięcie z Kosza ──────────────────── */}
       {meetingToPermanentDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl shadow-xl border border-rose-200 max-w-md w-full p-6 space-y-4">
+          <div className="bg-white rounded-2xl shadow-xl border border-rose-200 max-w-md w-full p-4 sm:p-6 space-y-4">
             <div className="flex items-center gap-3 text-rose-600">
               <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center shrink-0">
                 <AlertTriangle size={20} className="text-rose-600" />
@@ -3524,7 +3524,7 @@ export default function MeetingsTab({
       {/* ── Modal potwierdzenia trwałego usunięcia obecności z Google Sheets ── */}
       {showClearConfirmModal && selectedMeeting && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl shadow-2xl border border-rose-200 p-6 max-w-lg w-full space-y-5 animate-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-2xl shadow-2xl border border-rose-200 p-4 sm:p-6 max-w-lg w-full space-y-5 animate-in zoom-in-95 duration-150">
             
             {/* Nagłówek z ikoną ostrzegawczą */}
             <div className="flex items-start gap-3.5">

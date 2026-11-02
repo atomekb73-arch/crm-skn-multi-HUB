@@ -23,7 +23,7 @@ export default class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="p-8 max-w-2xl mx-auto my-12 bg-white rounded-3xl border border-rose-200 shadow-xl text-center space-y-4">
+        <div className="p-4 sm:p-6 md:p-8 max-w-2xl mx-auto my-6 sm:my-12 bg-white rounded-3xl border border-rose-200 shadow-xl text-center space-y-4">
           <div className="w-14 h-14 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto">
             <AlertTriangle size={28} />
           </div>

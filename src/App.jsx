@@ -2871,7 +2871,7 @@ export default function App() {
 
   return (
     <div
-      className={`min-h-screen tenant-backdrop bg-gradient-to-br transition-colors duration-500 ${theme?.backdropGradientClass || 'from-slate-50 via-sky-50/40 to-indigo-50/50'}`}
+      className={`min-h-screen w-full max-w-full overflow-x-hidden tenant-backdrop bg-gradient-to-br transition-colors duration-500 ${theme?.backdropGradientClass || 'from-slate-50 via-sky-50/40 to-indigo-50/50'}`}
       style={theme?.backdropStyle}
     >
 
@@ -2887,43 +2887,43 @@ export default function App() {
       )}
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <header className="border-b border-slate-100 bg-white/80 backdrop-blur-sm sticky top-0 z-30 print:hidden">
-        <div className="w-[98vw] max-w-[1850px] mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4 min-h-[64px]">
+      <header className="border-b border-slate-100 bg-white/80 backdrop-blur-sm sticky top-0 z-30 print:hidden w-full max-w-full overflow-x-hidden">
+        <div className="w-full max-w-[1850px] mx-auto px-3 sm:px-4 md:px-6 py-2 sm:py-3 flex items-center justify-between gap-2 sm:gap-4 min-h-[56px] sm:min-h-[64px]">
 
           {/* Logo & Multi-Tenant Organization Switcher */}
-          <div className="flex items-center gap-3 shrink-0 relative">
-            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-md text-white font-black text-xs tracking-wider shrink-0 transition-all duration-300 ${
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 max-w-[calc(100vw-130px)] sm:max-w-none relative">
+            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center shadow-md text-white font-black text-xs tracking-wider shrink-0 transition-all duration-300 ${
               theme?.headerBadgeGradient || 'bg-gradient-to-br from-indigo-600 via-sky-600 to-indigo-700 shadow-indigo-500/25'
             }`}>
               {theme?.badgeText || (currentOrg.id === 'uzaleznienia' ? 'UZAL' : 'SEKS')}
             </div>
             
-            <div className="relative">
+            <div className="relative min-w-0">
               <button
                 onClick={() => setIsOrgDropdownOpen(prev => !prev)}
-                className="flex items-center gap-2 text-left group hover:bg-slate-100/80 px-2.5 py-1.5 -mx-1.5 rounded-xl transition cursor-pointer border border-transparent hover:border-slate-200/60"
+                className="flex items-center gap-1.5 sm:gap-2 text-left group hover:bg-slate-100/80 px-2 sm:px-2.5 py-1 sm:py-1.5 -mx-1 sm:-mx-1.5 rounded-xl transition cursor-pointer border border-transparent hover:border-slate-200/60 min-w-0"
                 title="Kliknij, aby przełączyć koło naukowe"
               >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h1 className={`text-sm font-extrabold text-slate-900 transition leading-tight ${theme?.headerHoverTitle || 'group-hover:text-indigo-600'}`}>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                    <h1 className={`text-xs sm:text-sm font-extrabold text-slate-900 transition leading-tight truncate ${theme?.headerHoverTitle || 'group-hover:text-indigo-600'}`}>
                       {currentOrg.name}
                     </h1>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border font-mono tracking-wide transition-colors ${
+                    <span className={`text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full border font-mono tracking-wide transition-colors shrink-0 ${
                       theme?.headerTagBadge || 'bg-indigo-50 text-indigo-700 border-indigo-200/80'
                     }`}>
                       {currentOrg.tag || 'WSKZ'}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <p className="text-[11px] text-slate-500 font-medium">System Ewidencyjno-Sprawozdawczy</p>
-                    <span className="text-[10px] text-slate-400">•</span>
-                    <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded">
+                  <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 text-[10px] sm:text-[11px] text-slate-500 font-medium truncate">
+                    <p className="truncate">System Ewidencyjno-Sprawozdawczy</p>
+                    <span className="text-[10px] text-slate-400 shrink-0">•</span>
+                    <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded shrink-0">
                       {academicYear}
                     </span>
                   </div>
                 </div>
-                <ChevronDown size={15} className={`text-slate-400 transition shrink-0 ml-1 ${theme?.headerHoverIcon || 'group-hover:text-indigo-600'}`} />
+                <ChevronDown size={14} className={`text-slate-400 transition shrink-0 ml-0.5 ${theme?.headerHoverIcon || 'group-hover:text-indigo-600'}`} />
               </button>
 
               {/* Organization Dropdown Menu */}
@@ -3034,8 +3034,8 @@ export default function App() {
 
       {/* ── Error banner ───────────────────────────────────────────────────── */}
       {error && (
-        <div className="bg-red-50 border-b border-red-100 px-4 sm:px-6 py-2 print:hidden">
-          <div className="w-[98vw] max-w-[1850px] mx-auto flex items-center gap-2 text-sm text-red-700">
+        <div className="bg-red-50 border-b border-red-100 px-3 sm:px-4 md:px-6 py-2 print:hidden w-full max-w-full overflow-x-hidden">
+          <div className="w-full max-w-[1850px] mx-auto flex items-center gap-2 text-sm text-red-700">
             <WifiOff size={14} className="shrink-0" />
             <span>Błąd pobierania danych: <strong>{error}</strong></span>
             <button onClick={() => handleRefreshData({ silent: false })} className="ml-auto underline text-xs cursor-pointer">Spróbuj ponownie</button>
@@ -3044,7 +3044,7 @@ export default function App() {
       )}
 
       {/* ── Main Content Area ───────────────────────────────────────────────── */}
-      <main className="w-[98vw] max-w-[1850px] mx-auto px-4 sm:px-6 py-4 space-y-6 min-h-[calc(100vh-80px)]" style={{ contain: 'layout' }}>
+      <main className="w-full max-w-[1850px] mx-auto px-3 sm:px-4 md:px-6 py-3 sm:py-4 space-y-4 sm:space-y-6 min-h-[calc(100vh-80px)] overflow-x-hidden" style={{ contain: 'layout' }}>
 
         {/* Navigation Bar with Condensed 5 Tabs and Sub-Tabs */}
         <Navbar
