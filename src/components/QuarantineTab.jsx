@@ -1297,25 +1297,27 @@ export default function QuarantineTab({
         )}
 
         {/* Export XLSX & Print Quarantine Buttons (Right-aligned in toolbar) */}
-        <div className="flex items-center gap-2 shrink-0 ml-auto">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-auto w-full sm:w-auto">
           <button
             type="button"
             onClick={handleExportQuarantineXlsx}
-            className="flex items-center gap-2 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
+            className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer min-h-[38px] sm:min-h-0"
             title="Pobierz listę zgłoszeń do pliku Excel (.xlsx)"
           >
             <FileSpreadsheet size={15} />
-            <span>Eksportuj XLSX</span>
+            <span className="sm:hidden">XLS</span>
+            <span className="hidden sm:inline">Eksportuj XLSX</span>
           </button>
 
           <button
             type="button"
             onClick={() => window.print()}
-            className="flex items-center gap-2 px-3.5 py-1.5 bg-slate-900 hover:bg-black text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
+            className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 bg-slate-900 hover:bg-black text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer min-h-[38px] sm:min-h-0"
             title="Drukuj wykaz zgłoszeń / kwarantanny"
           >
             <Printer size={15} />
-            <span>Drukuj zgłoszenia</span>
+            <span className="sm:hidden">Drukuj</span>
+            <span className="hidden sm:inline">Drukuj zgłoszenia</span>
           </button>
         </div>
       </div>

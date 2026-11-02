@@ -1910,10 +1910,11 @@ export default function MeetingsTab({
             <button
               onClick={onRefreshMeetings}
               disabled={loadingMeetings}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-all shadow-sm disabled:opacity-50 shrink-0 cursor-pointer"
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-all shadow-sm disabled:opacity-50 shrink-0 cursor-pointer w-full sm:w-auto min-h-[38px] sm:min-h-0"
             >
               <RefreshCw size={13} className={loadingMeetings ? 'animate-spin' : ''} />
-              <span>Odśwież kalendarz</span>
+              <span className="sm:hidden">Odśwież</span>
+              <span className="hidden sm:inline">Odśwież kalendarz</span>
             </button>
           </div>
         </div>
@@ -3157,40 +3158,43 @@ export default function MeetingsTab({
             </div>
 
             {/* Modal Footer Actions */}
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+            <div className="p-3 sm:px-6 sm:py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-3 shrink-0">
               <button
                 type="button"
                 onClick={handleSaveProtocolToDocsRepo}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-300 text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-300 text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer min-h-[38px] sm:min-h-0"
                 title="Dodaje protokół jako oficjalny dokument do Repozytorium Dokumentów i Rejestru Uchwał"
               >
                 <FolderPlus className="w-5 h-5 shrink-0" size={20} />
-                <span>Zapisz w Dzienniku Dokumentów Koła</span>
+                <span className="sm:hidden">Zapisz w Dzienniku</span>
+                <span className="hidden sm:inline">Zapisz w Dzienniku Dokumentów Koła</span>
               </button>
 
-              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
                 <button
                   type="button"
                   onClick={handleSaveProtocol}
-                  className="px-4 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center gap-2 transition cursor-pointer"
+                  className="flex-1 sm:flex-none justify-center px-3.5 sm:px-4 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center gap-2 transition cursor-pointer min-h-[38px] sm:min-h-0"
                 >
-                  <Save className="w-5 h-5 shrink-0" size={20} />
-                  <span>Zapisz zmiany</span>
+                  <Save className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" size={18} />
+                  <span className="sm:hidden">Zapisz</span>
+                  <span className="hidden sm:inline">Zapisz zmiany</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={handlePrintProtocol}
-                  className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-2 shadow-sm transition cursor-pointer"
+                  className="flex-1 sm:flex-none justify-center px-3.5 sm:px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-2 shadow-sm transition cursor-pointer min-h-[38px] sm:min-h-0"
                 >
-                  <Printer className="w-5 h-5 shrink-0" size={20} />
-                  <span>Drukuj Protokół (PDF)</span>
+                  <Printer className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" size={18} />
+                  <span className="sm:hidden">Drukuj</span>
+                  <span className="hidden sm:inline">Drukuj Protokół (PDF)</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setIsProtocolModalOpen(false)}
-                  className="px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition cursor-pointer"
+                  className="w-full sm:w-auto justify-center px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition cursor-pointer min-h-[38px] sm:min-h-0"
                 >
                   Zamknij
                 </button>

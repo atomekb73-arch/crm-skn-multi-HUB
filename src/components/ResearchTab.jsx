@@ -508,7 +508,7 @@ export default function ResearchTab({ members = [] }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0 w-full sm:w-auto">
           {(items || []).length > 0 && (
             <button
               type="button"
@@ -516,7 +516,7 @@ export default function ResearchTab({ members = [] }) {
                 saveItems([]);
                 showToast('Wyczyszczono listę dorobku naukowego.');
               }}
-              className="h-9 px-3 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="h-9 px-2.5 sm:px-3 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
               title="Wyczyść wszystkie wpisy dorobku"
             >
               <Trash2 size={13} />
@@ -528,7 +528,7 @@ export default function ResearchTab({ members = [] }) {
             type="button"
             onClick={handleSyncToSheets}
             disabled={isSyncing}
-            className={`h-9 px-3.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer ${
+            className={`h-9 flex-1 sm:flex-none justify-center px-2.5 sm:px-3.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer ${
               syncSuccess
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
                 : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
@@ -542,22 +542,24 @@ export default function ResearchTab({ members = [] }) {
             ) : (
               <CloudUpload size={14} className="text-indigo-600" />
             )}
-            <span>{isSyncing ? 'Zapisywanie...' : syncSuccess ? 'Zapisano w Sheets' : 'Zapisz w Google Sheets'}</span>
+            <span className="sm:hidden">{isSyncing ? 'Zapis...' : syncSuccess ? 'Zapisano' : 'Zapisz'}</span>
+            <span className="hidden sm:inline">{isSyncing ? 'Zapisywanie...' : syncSuccess ? 'Zapisano w Sheets' : 'Zapisz w Google Sheets'}</span>
           </button>
 
           <button
             type="button"
             onClick={handlePrint}
-            className="h-9 px-3.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+            className="h-9 flex-1 sm:flex-none justify-center px-2.5 sm:px-3.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
           >
             <Printer size={14} />
-            <span>Drukuj Wykaz (PDF)</span>
+            <span className="sm:hidden">Drukuj</span>
+            <span className="hidden sm:inline">Drukuj Wykaz (PDF)</span>
           </button>
 
           <button
             type="button"
             onClick={() => handleOpenAddModal('Publication')}
-            className="h-9 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+            className="h-9 w-full sm:w-auto px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer min-h-[38px] sm:min-h-0"
           >
             <Plus size={16} strokeWidth={2.5} className="w-4 h-4 shrink-0" />
             <span>Dodaj Osiągnięcie</span>

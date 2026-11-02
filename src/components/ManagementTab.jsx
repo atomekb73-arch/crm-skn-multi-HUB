@@ -1271,22 +1271,24 @@ export default function ManagementTab({
           <button
             type="button"
             onClick={handleExportMainListXlsx}
-            className="flex items-center gap-2 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer shrink-0"
+            className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer shrink-0 min-h-[38px] sm:min-h-0"
             title="Pobierz zestawienie do pliku Excel (.xlsx)"
           >
             <FileSpreadsheet size={15} />
-            <span>Eksportuj XLSX</span>
+            <span className="sm:hidden">XLS</span>
+            <span className="hidden sm:inline">Eksportuj XLSX</span>
           </button>
 
           {/* Print List Button */}
           <button
             type="button"
             onClick={() => window.print()}
-            className="flex items-center gap-2 px-3.5 py-1.5 bg-slate-900 hover:bg-black text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer shrink-0"
+            className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 bg-slate-900 hover:bg-black text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer shrink-0 min-h-[38px] sm:min-h-0"
             title="Wydrukuj wykaz członków na potrzeby Dziekanatu"
           >
             <Printer size={15} />
-            <span>Drukuj listę</span>
+            <span className="sm:hidden">Drukuj</span>
+            <span className="hidden sm:inline">Drukuj listę</span>
           </button>
         </div>
       </div>

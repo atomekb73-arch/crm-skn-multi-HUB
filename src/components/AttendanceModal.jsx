@@ -2391,11 +2391,11 @@ export default function AttendanceModal({
             Podsumowanie do zapisu: <strong className="text-emerald-700 font-bold">{countApprovedTotal}</strong> zaliczonych obecności (w tym {countApprovedMembers} członków koła, {countSupervisors} opiekunów).
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition cursor-pointer"
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition cursor-pointer min-h-[38px] sm:min-h-0 text-center"
             >
               Anuluj
             </button>
@@ -2404,10 +2404,17 @@ export default function AttendanceModal({
               type="button"
               onClick={handleSaveAndApply}
               disabled={isSaving}
-              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs font-bold transition shadow-md cursor-pointer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs font-bold transition shadow-md cursor-pointer min-h-[38px] sm:min-h-0"
             >
               {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-              <span>{isSaving ? 'Zapisywanie w arkuszu...' : `Zapisz i przelicz frekwencję koła (${countApprovedTotal})`}</span>
+              {isSaving ? (
+                <span>Zapisywanie w arkuszu...</span>
+              ) : (
+                <>
+                  <span className="sm:hidden">Zapisz ({countApprovedTotal})</span>
+                  <span className="hidden sm:inline">{`Zapisz i przelicz frekwencję koła (${countApprovedTotal})`}</span>
+                </>
+              )}
             </button>
           </div>
         </div>

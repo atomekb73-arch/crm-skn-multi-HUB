@@ -1012,71 +1012,89 @@ export default function DocumentsRepositoryTab() {
         </div>
 
         {/* Global Quick Action Buttons */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0 w-full sm:w-auto">
           {activeModuleTab === 'repository' ? (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={handleBatchSyncDocuments}
                 disabled={isBatchSyncingDocs || documents.length === 0}
-                className="h-9 px-3.5 bg-amber-500 hover:bg-amber-600 disabled:bg-slate-300 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+                className="flex-1 sm:flex-none h-9 px-3 sm:px-3.5 bg-amber-500 hover:bg-amber-600 disabled:bg-slate-300 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition cursor-pointer min-h-[38px] sm:min-h-0"
                 title="Prześlij wszystkie akty prawne i uchwały do bazy koła w Google Sheets"
               >
                 <Zap size={14} className={isBatchSyncingDocs ? 'animate-bounce' : ''} />
-                <span>{isBatchSyncingDocs ? `Wysyłanie (${batchDocsProgress.current}/${batchDocsProgress.total})...` : 'Zsynchronizuj akty z bazą koła'}</span>
+                {isBatchSyncingDocs ? (
+                  <span>{`Wysyłanie (${batchDocsProgress.current}/${batchDocsProgress.total})...`}</span>
+                ) : (
+                  <>
+                    <span className="sm:hidden">Synchronizuj</span>
+                    <span className="hidden sm:inline">Zsynchronizuj akty z bazą koła</span>
+                  </>
+                )}
               </button>
 
               <button
                 type="button"
                 onClick={handleOpenAddModal}
-                className="h-9 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+                className="w-full sm:w-auto h-9 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition cursor-pointer min-h-[38px] sm:min-h-0"
               >
                 <Plus size={16} strokeWidth={2.5} className="w-4 h-4 shrink-0" />
-                <span>Dodaj Dokument</span>
+                <span className="sm:hidden">Dodaj</span>
+                <span className="hidden sm:inline">Dodaj Dokument</span>
               </button>
             </div>
           ) : (
-            <>
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={handleBatchSyncCorrespondence}
                 disabled={isBatchSyncing || correspondenceLog.length === 0}
-                className="h-9 px-3.5 bg-amber-500 hover:bg-amber-600 disabled:bg-slate-300 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+                className="flex-1 sm:flex-none h-9 px-3 sm:px-3.5 bg-amber-500 hover:bg-amber-600 disabled:bg-slate-300 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition cursor-pointer min-h-[38px] sm:min-h-0"
                 title="Prześlij wszystkie lokalne wpisy z dziennika korespondencji do bazy koła w Google Sheets"
               >
                 <Zap size={14} className={isBatchSyncing ? 'animate-bounce' : ''} />
-                <span>{isBatchSyncing ? `Wysyłanie (${batchProgress.current}/${batchProgress.total})...` : 'Zarejestruj lokalne pisma w bazie koła'}</span>
+                {isBatchSyncing ? (
+                  <span>{`Wysyłanie (${batchProgress.current}/${batchProgress.total})...`}</span>
+                ) : (
+                  <>
+                    <span className="sm:hidden">Synchronizuj</span>
+                    <span className="hidden sm:inline">Zarejestruj w arkuszu</span>
+                  </>
+                )}
               </button>
 
               <button
                 type="button"
                 onClick={() => setIsWelcomeMailModalOpen(true)}
-                className="h-9 px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"
+                className="flex-1 sm:flex-none h-9 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition cursor-pointer min-h-[38px] sm:min-h-0"
                 title="Przygotuj i wyślij powiadomienie do studenta"
               >
                 <Mail size={14} />
-                <span>Powiadomienie</span>
+                <span className="sm:hidden">Mail</span>
+                <span className="hidden sm:inline">Powiadomienie</span>
               </button>
 
               <button
                 type="button"
                 onClick={handlePrintCorrespondence}
-                className="h-9 px-3.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+                className="flex-1 sm:flex-none h-9 px-3 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 shadow-sm transition cursor-pointer min-h-[38px] sm:min-h-0"
                 title="Drukuj oficjalny Dziennik Podawczy do PDF dla Dziekanatu i PKA"
               >
                 <Printer size={14} />
-                <span>Drukuj Dziennik (PDF)</span>
+                <span className="sm:hidden">Drukuj</span>
+                <span className="hidden sm:inline">Drukuj Dziennik (PDF)</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => handleOpenMailModal()}
-                className="h-9 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition cursor-pointer"
+                className="w-full sm:w-auto h-9 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition cursor-pointer min-h-[38px] sm:min-h-0"
               >
                 <Plus size={16} strokeWidth={2.5} className="w-4 h-4 shrink-0" />
-                <span>Zarejestruj Pismo</span>
+                <span className="sm:hidden">Zarejestruj</span>
+                <span className="hidden sm:inline">Zarejestruj Pismo</span>
               </button>
-            </>
+            </div>
           )}
         </div>
       </div>
@@ -1581,10 +1599,11 @@ export default function DocumentsRepositoryTab() {
 
                   <button
                     onClick={handleOpenAddModal}
-                    className="h-9 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition cursor-pointer shrink-0"
+                    className="h-9 px-3.5 sm:px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition cursor-pointer shrink-0 min-h-[38px] sm:min-h-0"
                   >
                     <Plus size={16} strokeWidth={2.5} className="w-4 h-4 shrink-0" />
-                    <span>Dodaj Dokument</span>
+                    <span className="sm:hidden">Dodaj</span>
+                    <span className="hidden sm:inline">Dodaj Dokument</span>
                   </button>
                 </div>
               </div>
@@ -1846,11 +1865,12 @@ export default function DocumentsRepositoryTab() {
                   <button
                     type="button"
                     onClick={() => handleOpenMailModal()}
-                    className="h-9 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm flex items-center gap-1.5 transition cursor-pointer shrink-0"
+                    className="h-9 px-3.5 sm:px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm flex items-center justify-center gap-1.5 transition cursor-pointer shrink-0 min-h-[38px] sm:min-h-0"
                     title="Zarejestruj nowe pismo lub wklej treść e-maila"
                   >
                     <Plus size={16} strokeWidth={2.5} className="w-4 h-4 shrink-0" />
-                    <span>Zarejestruj pismo</span>
+                    <span className="sm:hidden">Zarejestruj</span>
+                    <span className="hidden sm:inline">Zarejestruj pismo</span>
                   </button>
                 </div>
               </div>
