@@ -3,7 +3,7 @@ import { matchMemberExact, isMetadataOrHeaderLine } from '../utils/meetingParser
 import { isFacultySupervisor } from '../utils/specialRoles.js';
 import { readSWRData, writeSWRData, CACHE_KEYS } from '../hooks/useCachedData.js';
 import { getAcademicYearFromDate } from '../utils/helpers.js';
-import { supabase } from '../supabaseClient.js';
+import { supabase, fetchAllTenantRows } from '../supabaseClient.js';
 
 function normalizeOrg(orgId) {
   const str = String(orgId || 'skn_seksuologii').trim();
@@ -83,9 +83,9 @@ export async function fetchGasData(orgId = 'skn_seksuologii') {
       { data: dbQuarantine },
       { data: dbAttendance }
     ] = await Promise.all([
-      supabase.from('members').select('*').eq('organization_id', cleanOrg).order('full_name', { ascending: true }),
-      supabase.from('quarantine_submissions').select('*').eq('organization_id', cleanOrg).order('created_at', { ascending: false }),
-      supabase.from('attendance').select('*').eq('organization_id', cleanOrg)
+      fetchAllTenantRows('members', cleanOrg, { orderBy: 'full_name', ascending: true }),
+      fetchAllTenantRows('quarantine_submissions', cleanOrg, { orderBy: 'created_at', ascending: false }),
+      fetchAllTenantRows('attendance', cleanOrg)
     ]);
 
     const czlonkowie = (dbMembers || []).map(m => ({
@@ -107,6 +107,7 @@ export async function fetchGasData(orgId = 'skn_seksuologii') {
     const ewidencja = [];
     const dorobek = [];
     const korespondencja = [];
+    const seenEwidencjaKeys = new Set();
 
     for (const row of (dbAttendance || [])) {
       const code = String(row.meeting_code || '').trim();
@@ -129,18 +130,25 @@ export async function fetchGasData(orgId = 'skn_seksuologii') {
           korespondencja.push(parsed);
         } catch {}
       } else if (code) {
-        ewidencja.push({
-          id: row.id,
-          kodSpotkania: code,
-          dataSpotkania: row.meeting_date,
-          nrIndeksu: row.index_number,
-          identyfikator: row.index_number,
-          status: row.role || 'Członek koła',
-          rola: row.role || 'Członek koła',
-          zrodlo: 'Supabase SSOT',
-          punkty: Number(row.points ?? 1),
-          opisAktywnosci: row.activity_description || 'Obecność na spotkaniu'
-        });
+        const rawIdx = String(row.index_number || '').trim().toLowerCase();
+        const rawDate = String(row.meeting_date || '').trim();
+        const rawCodeClean = code.toUpperCase().replace(/^\[.*?\]\s*/, '').trim();
+        const dedupeKey = `${rawDate}_${rawCodeClean}_${rawIdx}`;
+        if (!seenEwidencjaKeys.has(dedupeKey)) {
+          seenEwidencjaKeys.add(dedupeKey);
+          ewidencja.push({
+            id: row.id,
+            kodSpotkania: code,
+            dataSpotkania: row.meeting_date,
+            nrIndeksu: row.index_number,
+            identyfikator: row.index_number,
+            status: row.role || 'Członek koła',
+            rola: row.role || 'Członek koła',
+            zrodlo: 'Supabase SSOT',
+            punkty: Number(row.points ?? 1),
+            opisAktywnosci: row.activity_description || 'Obecność na spotkaniu'
+          });
+        }
       }
     }
 
@@ -318,15 +326,25 @@ export async function saveMeetingAttendanceToGAS({ kodSpotkania, dataSpotkania, 
     };
   }).filter(r => r.index_number);
 
-  if (rowsToInsert.length > 0) {
-    const { error } = await supabase.from('attendance').insert(rowsToInsert);
+  // Zabezpieczenie przed duplikatami wpisów na to samo spotkanie
+  const seenInsertKeys = new Set();
+  const uniqueRowsToInsert = [];
+  for (const row of rowsToInsert) {
+    const k = String(row.index_number || '').trim().toLowerCase();
+    if (!k || seenInsertKeys.has(k)) continue;
+    seenInsertKeys.add(k);
+    uniqueRowsToInsert.push(row);
+  }
+
+  if (uniqueRowsToInsert.length > 0) {
+    const { error } = await supabase.from('attendance').insert(uniqueRowsToInsert);
     if (error) {
       console.error('[saveMeetingAttendanceToGAS -> Supabase] Błąd zapisu attendance:', error);
       throw error;
     }
   }
 
-  return { status: 'success', count: rowsToInsert.length };
+  return { status: 'success', count: uniqueRowsToInsert.length };
 }
 
 /**

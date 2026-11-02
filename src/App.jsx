@@ -597,14 +597,21 @@ export default function App() {
             }
           }
 
-          // Rygorystyczna filtracja rekordów: weryfikuj dopasowanie do daty i roku spotkania
+          // Rygorystyczna filtracja rekordów: weryfikuj dopasowanie do daty i roku spotkania oraz unikaj duplikatów
+          let uniqueRecords = [];
           if (Array.isArray(sheetRecords) && sheetRecords.length > 0) {
-            sheetRecords = sheetRecords.filter(rec => isEwidencjaMatchForMeeting(rec, m));
-          } else {
-            sheetRecords = [];
+            const seenPersons = new Set();
+            for (const rec of sheetRecords) {
+              if (!isEwidencjaMatchForMeeting(rec, m)) continue;
+              const personId = String(rec.nrIndeksu || rec.index || rec.identyfikator || rec.fullName || '').trim().toLowerCase();
+              if (personId && !seenPersons.has(personId)) {
+                seenPersons.add(personId);
+                uniqueRecords.push(rec);
+              }
+            }
           }
 
-          const attendeesList = sheetRecords.map(p => p.index || p.nrIndeksu || p.fullName);
+          const attendeesList = uniqueRecords.map(p => p.index || p.nrIndeksu || p.fullName);
           const count = attendeesList.length;
           const acad = getAcademicYearFromDate(m.date || m.start_dt);
           return {
@@ -615,7 +622,7 @@ export default function App() {
             attendees: attendeesList,
             attendeesCount: count,
             attendanceCount: count,
-            participantRecords: sheetRecords,
+            participantRecords: uniqueRecords,
             status: count > 0 ? `Zakończone (${count})` : (m.isUpcoming ? 'Zaplanowane' : 'Nierozliczone'),
           };
         }
@@ -683,14 +690,21 @@ export default function App() {
             }
           }
 
-          // Rygorystyczna filtracja rekordów: weryfikuj dopasowanie do daty i roku spotkania
+          // Rygorystyczna filtracja rekordów: weryfikuj dopasowanie do daty i roku spotkania oraz unikaj duplikatów
+          let uniqueRecords = [];
           if (Array.isArray(sheetRecords) && sheetRecords.length > 0) {
-            sheetRecords = sheetRecords.filter(rec => isEwidencjaMatchForMeeting(rec, m));
-          } else {
-            sheetRecords = [];
+            const seenPersons = new Set();
+            for (const rec of sheetRecords) {
+              if (!isEwidencjaMatchForMeeting(rec, m)) continue;
+              const personId = String(rec.nrIndeksu || rec.index || rec.identyfikator || rec.fullName || '').trim().toLowerCase();
+              if (personId && !seenPersons.has(personId)) {
+                seenPersons.add(personId);
+                uniqueRecords.push(rec);
+              }
+            }
           }
 
-          const attendeesList = sheetRecords.map(p => p.index || p.nrIndeksu || p.fullName);
+          const attendeesList = uniqueRecords.map(p => p.index || p.nrIndeksu || p.fullName);
           const count = attendeesList.length;
           const acad = getAcademicYearFromDate(m.date || m.start_dt);
           return {
@@ -701,7 +715,7 @@ export default function App() {
             attendees: attendeesList,
             attendeesCount: count,
             attendanceCount: count,
-            participantRecords: sheetRecords,
+            participantRecords: uniqueRecords,
             status: count > 0 ? `Zakończone (${count})` : (m.isUpcoming ? 'Zaplanowane' : 'Nierozliczone'),
           };
         }
