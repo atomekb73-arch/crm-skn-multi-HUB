@@ -273,9 +273,10 @@ export async function saveQuarantineDecisionsBatchToGAS(decyzje = []) {
 }
 
 /**
- * Zapisuje frekwencję danego spotkania bezpośrednio w tabeli `attendance` w Supabase.
+ * Zapisuje frekwencję danego spotkania bezpośrednio i wyłącznie w tabeli `attendance` w Supabase.
+ * Całkowicie odcięte od zewnętrznych arkuszy Google Sheets.
  */
-export async function saveMeetingAttendanceToGAS({ kodSpotkania, dataSpotkania, obecnosci, orgId = 'skn_seksuologii' }) {
+export async function saveMeetingAttendanceToSupabase({ kodSpotkania, dataSpotkania, obecnosci, orgId = 'skn_seksuologii' }) {
   const cleanOrg = normalizeOrg(orgId);
   const listToSave = Array.isArray(obecnosci) ? obecnosci : [];
   const rawCode = String(kodSpotkania || 'M00').replace(/\s+/g, ' ').trim();
@@ -326,7 +327,7 @@ export async function saveMeetingAttendanceToGAS({ kodSpotkania, dataSpotkania, 
     };
   }).filter(r => r.index_number);
 
-  // Zabezpieczenie przed duplikatami wpisów na to samo spotkanie
+  // Zabezpieczenie przed duplikatami wpisów na to samo spotkanie (SSOT Uniqueness)
   const seenInsertKeys = new Set();
   const uniqueRowsToInsert = [];
   for (const row of rowsToInsert) {
@@ -339,13 +340,15 @@ export async function saveMeetingAttendanceToGAS({ kodSpotkania, dataSpotkania, 
   if (uniqueRowsToInsert.length > 0) {
     const { error } = await supabase.from('attendance').insert(uniqueRowsToInsert);
     if (error) {
-      console.error('[saveMeetingAttendanceToGAS -> Supabase] Błąd zapisu attendance:', error);
+      console.error('[saveMeetingAttendanceToSupabase] Błąd zapisu attendance:', error);
       throw error;
     }
   }
 
   return { status: 'success', count: uniqueRowsToInsert.length };
 }
+
+export const saveMeetingAttendanceToGAS = saveMeetingAttendanceToSupabase;
 
 /**
  * Zapisuje punkty z kadencji zarządu w Supabase.
@@ -512,9 +515,9 @@ export async function syncAllPointsToGAS({ boardTenures = [] }) {
 }
 
 /**
- * Usuwa frekwencję danego spotkania z tabeli `attendance` w Supabase.
+ * Usuwa frekwencję danego spotkania bezpośrednio z tabeli `attendance` w Supabase.
  */
-export async function deleteMeetingAttendanceFromGAS(kodSpotkania, orgId = null) {
+export async function deleteMeetingAttendanceFromSupabase(kodSpotkania, dateOrStart = null, orgId = null) {
   const rawCode = String(kodSpotkania || '').replace(/\s+/g, ' ').trim();
   const cleanCode = rawCode.replace(/^\[.*?\]\s*/, '').trim();
   const cleanOrg = orgId ? normalizeOrg(orgId) : (typeof window !== 'undefined' ? localStorage.getItem('crm_active_org_id') : null);
@@ -531,6 +534,8 @@ export async function deleteMeetingAttendanceFromGAS(kodSpotkania, orgId = null)
   }
   return { status: 'success' };
 }
+
+export const deleteMeetingAttendanceFromGAS = deleteMeetingAttendanceFromSupabase;
 
 export async function claimGuestAttendance(nazwiskoGoscia, nowyNrIndeksu) {
   const guestName = String(nazwiskoGoscia || '').trim();
@@ -920,7 +925,7 @@ export const parseAttendanceInput = parseAttendanceText;
 /**
  * Pobiera obecności na wybranym spotkaniu bezpośrednio z tabeli `attendance` w Supabase.
  */
-export async function fetchMeetingSheetAttendance(meetingCode, sheetId = '', members = [], orgId = null) {
+export async function fetchMeetingAttendanceFromSupabase(meetingCode, sheetId = '', members = [], orgId = null) {
   if (Array.isArray(sheetId)) {
     members = sheetId;
   }
@@ -970,8 +975,16 @@ export async function fetchMeetingSheetAttendance(meetingCode, sheetId = '', mem
     });
 
     if (matching.length > 0) {
-      const participants = matching.map((item, idx) => {
+      // Deduplikacja uczestników przy odczycie z Supabase
+      const seenAttendees = new Set();
+      const participants = [];
+
+      matching.forEach((item, idx) => {
         const idxStr = String(item.index_number || '').trim();
+        const dedupeKey = idxStr.toLowerCase();
+        if (seenAttendees.has(dedupeKey)) return;
+        seenAttendees.add(dedupeKey);
+
         const rolaStr = String(item.role || '').toLowerCase().trim();
 
         const isSupervisor = rolaStr === 'supervisor' || rolaStr === 'opiekun' ||
@@ -1014,7 +1027,7 @@ export async function fetchMeetingSheetAttendance(meetingCode, sheetId = '', mem
           formattedRawName = `${finalName} (${finalIndex})`;
         }
 
-        return {
+        participants.push({
           id: item.id || `p_sup_${idx}`,
           rawName: formattedRawName,
           fullName: finalName,
@@ -1034,13 +1047,13 @@ export async function fetchMeetingSheetAttendance(meetingCode, sheetId = '', mem
           joinTime: item.meeting_date || '18:00',
           durationStr: '60 min',
           durationMinutes: 60,
-        };
+        });
       });
 
       return { ok: true, tabName: 'Supabase (attendance)', participants };
     }
   } catch (err) {
-    console.warn('[fetchMeetingSheetAttendance -> Supabase] Błąd odczytu:', err);
+    console.warn('[fetchMeetingAttendanceFromSupabase -> Supabase] Błąd odczytu:', err);
   }
 
   return {
@@ -1048,6 +1061,8 @@ export async function fetchMeetingSheetAttendance(meetingCode, sheetId = '', mem
     error: 'Brak zapisanych obecności w bazie Supabase dla tego spotkania. Wklej listę z Google Meet i kliknij Przetwórz.',
   };
 }
+
+export const fetchMeetingSheetAttendance = fetchMeetingAttendanceFromSupabase;
 
 // ─── 4. EWIDENCJA POCZTY (Supabase Sync: Dziennik_Korespondencji) ────────────
 

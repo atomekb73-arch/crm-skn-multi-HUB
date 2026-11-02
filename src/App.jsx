@@ -548,7 +548,7 @@ export default function App() {
           return ov ? { ...m, ...ov, code: ov.code || m.code } : m;
         });
 
-      // Zastosuj frekwencję z Google Sheets / Supabase jako Jedyne Źródło Prawdy (SSOT)
+      // Zastosuj frekwencję z bazy Supabase jako Jedyne Źródło Prawdy (SSOT)
       let effectiveSheetAttendanceMap = sheetAttendanceMap;
       if (!effectiveSheetAttendanceMap && typeof window !== 'undefined' && window.localStorage) {
         try {

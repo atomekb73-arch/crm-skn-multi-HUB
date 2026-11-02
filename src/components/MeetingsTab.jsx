@@ -36,7 +36,13 @@ import {
   Maximize2,
 } from 'lucide-react';
 import { MEETING_TYPES, getMeetingType, isMeetingEligibleForDenominator, getMeetingStatusInfo } from '../utils/meetingTypes';
-import { parseAttendanceLine, parseDurationToMinutes, fetchMeetingSheetAttendance, saveMeetingAttendanceToGAS, deleteMeetingAttendanceFromGAS, sendToGAS } from '../services/googleSheets';
+import {
+  parseAttendanceLine,
+  parseDurationToMinutes,
+  fetchMeetingAttendanceFromSupabase,
+  saveMeetingAttendanceToSupabase,
+  deleteMeetingAttendanceFromSupabase
+} from '../services/googleSheets';
 import { isFacultySupervisor, isMonikaLyniewska, FACULTY_SUPERVISORS, PARTICIPANT_ROLES, detectParticipantRole, isFormerMemberRecord } from '../utils/specialRoles';
 import { matchMemberExact, matchSupervisorExact, resolveParticipantFromSavedIndex, parseAttendanceInput, parseAliasesList } from '../utils/meetingParser';
 import { useAuth } from '../context/AuthContext';
@@ -1344,16 +1350,15 @@ export default function MeetingsTab({
       .filter(p => p.nrIndeksu || p.name);
 
     const meetCode = String(selectedMeeting?.code || selectedMeeting?.id || "M00").replace(/\s+/g, ' ').trim();
-    const payload = {
-      action: "zapisz_obecnosci",
-      kodSpotkania: meetCode,
-      dataSpotkania: selectedMeeting?.date || new Date().toISOString().slice(0, 10),
-      obecnosci: verifiedList
-    };
 
     try {
-      const result = await sendToGAS(payload);
-      console.log("Wynik zapisu w GAS:", result);
+      // Bezpośredni zapis do tabeli attendance w Supabase (całkowicie odcięty od Google Sheets)
+      await saveMeetingAttendanceToSupabase({
+        kodSpotkania: meetCode,
+        dataSpotkania: selectedMeeting?.date || new Date().toISOString().slice(0, 10),
+        obecnosci: verifiedList,
+        orgId: currentOrg?.id || 'skn_seksuologii'
+      });
 
       const confirmedIndexes = verifiedList.map(item => item.nrIndeksu || item.name).filter(Boolean);
       setCustomMeetings(prev => prev.map(m => (m.id === selectedMeeting?.id || m.code === selectedMeeting?.code) ? { ...m, isNewlyCreated: false } : m));
@@ -1401,10 +1406,10 @@ export default function MeetingsTab({
       onMarkAttendance(selectedMeeting.id, confirmedIndexes, attendancePayload);
       // Bump version to force sidebar cards to reflect new count immediately
       setLocalStorageVersion(v => v + 1);
-      showToast("Obecności zostały zapisane w arkuszu Google!");
+      showToast("Obecności zostały zapisane bezpośrednio w bazie Supabase!");
     } catch (err) {
-      console.error("Błąd sieciowy podczas zapisu do GAS:", err);
-      showToast("Błąd połączenia z bazą Google Sheets: " + (err.message || err));
+      console.error("Błąd zapisu do bazy Supabase:", err);
+      showToast("Błąd zapisu do bazy Supabase: " + (err.message || err));
     } finally {
       setIsSavingAttendance(false);
     }
@@ -1515,17 +1520,17 @@ export default function MeetingsTab({
     setFetchingSheet(true);
     setSheetFeedback(null);
     try {
-      const res = await fetchMeetingSheetAttendance(selectedMeeting.code || selectedMeeting.id, null, members);
+      const res = await fetchMeetingAttendanceFromSupabase(selectedMeeting.code || selectedMeeting.id, null, members, currentOrg?.id);
 
       // Zabezpieczenie przed race condition: weryfikacja czy spotkanie jest nadal aktywne
       const currentActiveId = selectedMeetingRef.current?.id || selectedMeetingRef.current?.code || selectedMeetingRef.current?.date;
       if (currentActiveId !== requestedMeetingId) {
-        console.warn('[MeetingsTab] Zignorowano odpowiedź sieciową fetchMeetingSheetAttendance dla nieaktywnego już spotkania:', requestedMeetingId);
+        console.warn('[MeetingsTab] Zignorowano odpowiedź sieciową dla nieaktywnego już spotkania:', requestedMeetingId);
         return;
       }
 
       if (res.ok && res.participants?.length > 0) {
-        setSheetFeedback({ ok: true, message: `Wczytano ${res.participants.length} uczestników z arkusza "${res.tabName}"` });
+        setSheetFeedback({ ok: true, message: `Wczytano ${res.participants.length} uczestników z bazy Supabase` });
 
         // Map to lines
         const lines = res.participants.map(p => `${p.rawName}\t${p.joinTime}\t${p.durationStr}`);
@@ -1533,10 +1538,10 @@ export default function MeetingsTab({
         setRawList(rawText);
         await processAttendanceFromLines(lines, minDurationThreshold, selectedMeetingRef.current);
       } else {
-        setSheetFeedback({ ok: false, error: res.error || 'Nie odnaleziono zapisanych obecności w arkuszu.' });
+        setSheetFeedback({ ok: false, error: res.error || 'Nie odnaleziono zapisanych obecności w bazie Supabase.' });
       }
     } catch (err) {
-      setSheetFeedback({ ok: false, error: err.message || 'Błąd odczytu z arkusza' });
+      setSheetFeedback({ ok: false, error: err.message || 'Błąd odczytu z bazy Supabase' });
     } finally {
       setFetchingSheet(false);
     }
@@ -1557,8 +1562,8 @@ export default function MeetingsTab({
     setIsClearingAttendance(true);
 
     try {
-      // 1. Wysłanie żądania usunięcia do Google Apps Script z poprawnym kodem spotkania
-      await deleteMeetingAttendanceFromGAS(m.code || meetCode || m.id, m.date || m.start_dt);
+      // 1. Usunięcie obecności bezpośrednio z tabeli attendance w Supabase
+      await deleteMeetingAttendanceFromSupabase(m.code || meetCode || m.id, m.date || m.start_dt, currentOrg?.id);
 
       // 2. Aktualizacja wybranego spotkania w stanie lokalnym
       if (selectedMeeting && (selectedMeeting.id === m.id || selectedMeeting.code === m.code)) {
@@ -2446,7 +2451,7 @@ export default function MeetingsTab({
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
-                      Lista z Google Meet / Arkusza (Kol. B i C)
+                      Lista z Google Meet / Wklejona lista obecności
                     </span>
                     {(() => {
                       const currentSaved = selectedMeetingSavedAttendance;
@@ -2498,9 +2503,10 @@ export default function MeetingsTab({
                       onClick={handleFetchFromSheet}
                       disabled={fetchingSheet}
                       className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 px-2 py-1 rounded-lg transition border border-indigo-200/80 cursor-pointer disabled:opacity-50"
+                      title="Wczytaj zapisane obecności dla tego spotkania bezpośrednio z bazy Supabase"
                     >
                       <Download size={12} className={fetchingSheet ? 'animate-spin' : ''} />
-                      <span>{fetchingSheet ? 'Wczytywanie…' : 'Wczytaj z arkusza'}</span>
+                      <span>{fetchingSheet ? 'Wczytywanie…' : 'Wczytaj z bazy'}</span>
                     </button>
 
                     <button
@@ -2508,7 +2514,7 @@ export default function MeetingsTab({
                       onClick={() => setShowClearConfirmModal(true)}
                       disabled={isClearingAttendance || !selectedMeeting}
                       className="inline-flex items-center gap-1 text-[11px] font-semibold border border-rose-300 text-rose-700 bg-rose-50 hover:bg-rose-100 px-2 py-1 rounded-lg transition cursor-pointer disabled:opacity-50"
-                      title="Usuwa zapisane obecności dla tego spotkania z arkusza Google"
+                      title="Usuwa zapisane obecności dla tego spotkania z bazy danych Supabase"
                     >
                       <Trash2 size={12} className={isClearingAttendance ? 'animate-spin' : ''} />
                       <span>{isClearingAttendance ? 'Usuwanie…' : 'Wyczyść bazę'}</span>
@@ -2690,7 +2696,7 @@ export default function MeetingsTab({
                   <Clock size={24} className="mx-auto mb-1.5 text-slate-300" />
                   <p className="font-medium text-slate-600 text-xs">Brak wczytanych obecności</p>
                   <p className="text-[10px] text-slate-400 mt-1 leading-snug">
-                    Wklej listę z Google Meet w środkowym panelu lub kliknij &bdquo;Wczytaj z arkusza&rdquo;.
+                    Wklej listę z Google Meet w środkowym panelu lub kliknij &bdquo;Wczytaj z bazy&rdquo;.
                   </p>
                 </div>
               ) : (
@@ -2825,7 +2831,7 @@ export default function MeetingsTab({
                     className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold transition shadow-sm cursor-pointer"
                   >
                     {isSavingAttendance ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-                    <span>{isSavingAttendance ? 'Zapisywanie...' : `Zapisz (${approvedParticipantsCount}) w Google Sheets`}</span>
+                    <span>{isSavingAttendance ? 'Zapisywanie...' : `Zapisz (${approvedParticipantsCount}) w Supabase`}</span>
                   </button>
 
                   <button
@@ -3540,7 +3546,7 @@ export default function MeetingsTab({
                   Wyczyścić bazę obecności dla tego spotkania?
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Operacja trwale usunie zarejestrowane obecności z arkusza Google Sheets i bazy koła.
+                  Operacja trwale usunie zarejestrowane obecności z bazy danych Supabase.
                 </p>
               </div>
             </div>
@@ -3598,7 +3604,7 @@ export default function MeetingsTab({
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-50"
               >
                 {isClearingAttendance ? <Loader2 className="animate-spin" size={13} /> : <Trash2 size={13} />}
-                <span>{isClearingAttendance ? 'Usuwanie z arkusza…' : 'Tak, wyczyść trwale'}</span>
+                <span>{isClearingAttendance ? 'Usuwanie z bazy…' : 'Tak, wyczyść trwale'}</span>
               </button>
             </div>
           </div>

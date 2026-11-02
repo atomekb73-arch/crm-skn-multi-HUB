@@ -49,7 +49,7 @@ import { useSettings } from '../context/SettingsContext';
 import { useOrg } from '../context/OrgContext';
 import { ACTIVITY_OPTIONS } from '../utils/activityRegistry';
 import { calculateEventDays, calculateEventPointsBreakdown } from '../utils/pointsCalculator';
-import { saveMeetingAttendanceToGAS, parseAttendanceLine, updateMemberAliasesInGAS } from '../services/googleSheets';
+import { saveMeetingAttendanceToSupabase, parseAttendanceLine, updateMemberAliasesInGAS } from '../services/googleSheets';
 import { getAliasesFromStorage, saveAliasesToStorage } from '../utils/storage';
 import { matchMemberExact, matchSupervisorExact, isMetadataOrHeaderLine } from '../utils/meetingParser';
 
@@ -1470,16 +1470,17 @@ export default function AttendanceModal({
 
       const confirmedIndexes = allVerifiedList.map(m => m.nrIndeksu || m.name).filter(Boolean);
 
-      // Call GAS Backend
+      // Zapis bezpośrednio do tabeli attendance w Supabase (bez Google Sheets)
       try {
-        await saveMeetingAttendanceToGAS({
+        await saveMeetingAttendanceToSupabase({
           kodSpotkania: meeting.code || "M00",
           dataSpotkania: meeting.date || new Date().toISOString().slice(0, 10),
           obecnosci: allVerifiedList,
           aliasy: aliasesMap,
+          orgId: currentOrg?.id || 'skn_seksuologii'
         });
       } catch (e) {
-        console.warn("Błąd zapisu obecności w GAS:", e);
+        console.warn("Błąd zapisu obecności w Supabase:", e);
       }
 
       // Wzbogać obiekty uczestników o obliczone punkty za to spotkanie (w tym dodatkowe aktywności)
@@ -2413,7 +2414,7 @@ export default function AttendanceModal({
             >
               {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
               {isSaving ? (
-                <span>Zapisywanie w arkuszu...</span>
+                <span>Zapisywanie w Supabase...</span>
               ) : (
                 <>
                   <span className="sm:hidden">Zapisz ({countApprovedTotal})</span>
