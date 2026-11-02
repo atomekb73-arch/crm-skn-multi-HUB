@@ -1232,8 +1232,7 @@ export default function ManagementTab({
               }`}
             >
               <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
-              <span className="sm:hidden">Goście ({guestCount})</span>
-              <span className="hidden sm:inline">Goście & Wolni słuchacze ({guestCount})</span>
+              <span>Goście ({guestCount})</span>
             </button>
 
             <button
@@ -1264,18 +1263,6 @@ export default function ManagementTab({
                 <span>Absolwenci ({graduatesCount})</span>
               </button>
             )}
-
-            <button
-              type="button"
-              onClick={() => startTransition(() => setStatusFilter('all'))}
-              className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition-all cursor-pointer shrink-0 ${
-                statusFilter === 'all'
-                  ? 'bg-white text-indigo-700 shadow-xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Wszyscy ({totalCount})
-            </button>
           </div>
 
           {/* Export XLSX Button (Icon-Only on Mobile, Full on Desktop) */}
@@ -1297,7 +1284,7 @@ export default function ManagementTab({
             title="Wydrukuj wykaz członków na potrzeby Dziekanatu"
           >
             <Printer size={16} />
-            <span className="hidden sm:inline">Drukuj listę</span>
+            <span className="hidden sm:inline">Drukuj</span>
           </button>
         </div>
       </div>
