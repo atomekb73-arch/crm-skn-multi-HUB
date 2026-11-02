@@ -1983,7 +1983,7 @@ export default function AttendanceModal({
               tabIndex={0}
               role="region"
               aria-label="Tabela obecności i logów spotkania"
-              className="table-wrapper border border-slate-200 rounded-2xl overflow-x-auto block w-full max-w-full shadow-2xs bg-white touch-pan-x focus:outline-none focus:ring-1 focus:ring-indigo-400/50"
+              className="table-wrapper border border-slate-200 rounded-2xl overflow-x-auto block w-full max-w-full shadow-2xs bg-white touch-auto focus:outline-none focus:ring-1 focus:ring-indigo-400/50"
             >
               <table className="w-full text-xs text-left border-collapse">
                 <thead className="sticky top-0 bg-slate-100/95 backdrop-blur-xs text-slate-600 font-semibold border-b border-slate-200 z-20">

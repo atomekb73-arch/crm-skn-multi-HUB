@@ -1614,7 +1614,7 @@ export default function DocumentsRepositoryTab() {
                   tabIndex={0}
                   role="region"
                   aria-label="Tabela oficjalnych dokumentów i uchwał koła"
-                  className="table-wrapper w-full overflow-x-auto block touch-pan-x focus:outline-none focus:ring-1 focus:ring-indigo-400/50"
+                  className="table-wrapper w-full overflow-x-auto block touch-auto focus:outline-none focus:ring-1 focus:ring-indigo-400/50"
                 >
                   <table className="w-full text-left text-xs">
                     <thead className="bg-slate-100/80 text-slate-700 font-bold uppercase tracking-wider text-[10.5px] border-b border-slate-200">
@@ -1886,7 +1886,7 @@ export default function DocumentsRepositoryTab() {
                   tabIndex={0}
                   role="region"
                   aria-label="Tabela elektronicznego dziennika podawczego i pism"
-                  className="table-wrapper w-full overflow-x-auto block touch-pan-x focus:outline-none focus:ring-1 focus:ring-indigo-400/50"
+                  className="table-wrapper w-full overflow-x-auto block touch-auto focus:outline-none focus:ring-1 focus:ring-indigo-400/50"
                 >
                   <table className="w-full text-left text-xs border-collapse">
                     <thead className="bg-slate-100/80 text-slate-700 font-bold uppercase tracking-wider text-[10.5px] border-b border-slate-200">

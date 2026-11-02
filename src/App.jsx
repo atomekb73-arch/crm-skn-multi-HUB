@@ -3051,7 +3051,7 @@ export default function App() {
       )}
 
       {/* ── Main Content Area with Protected Top Padding ───────────────────── */}
-      <main className="w-full max-w-[1850px] mx-auto px-3 sm:px-4 md:px-6 pt-5 sm:pt-6 md:pt-8 pb-12 space-y-4 sm:space-y-6 min-h-[calc(100vh-80px)] overflow-x-hidden">
+      <main className="w-full max-w-[1850px] mx-auto px-3 sm:px-4 md:px-6 pt-5 sm:pt-6 md:pt-8 pb-12 space-y-4 sm:space-y-6 min-h-[calc(100vh-80px)] overflow-x-clip">
 
         {/* Navigation Bar with Condensed 5 Tabs and Sub-Tabs */}
         <Navbar

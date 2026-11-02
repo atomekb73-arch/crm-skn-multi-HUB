@@ -1368,7 +1368,7 @@ export default function QuarantineTab({
               tabIndex={0}
               role="region"
               aria-label="Tabela zgłoszeń i kwarantanny kandydatów"
-              className="table-wrapper w-full overflow-x-auto block touch-pan-x focus:outline-none focus:ring-1 focus:ring-indigo-400/50 print:overflow-visible"
+              className="table-wrapper w-full overflow-x-auto block touch-auto focus:outline-none focus:ring-1 focus:ring-indigo-400/50 print:overflow-visible"
             >
               <table className="print-table w-full text-sm border-collapse">
                 <thead>
@@ -1636,7 +1636,7 @@ export default function QuarantineTab({
               tabIndex={0}
               role="region"
               aria-label="Tabela zarchiwizowanych zgłoszeń"
-              className="table-wrapper w-full overflow-x-auto block touch-pan-x focus:outline-none focus:ring-1 focus:ring-indigo-400/50 print:overflow-visible"
+              className="table-wrapper w-full overflow-x-auto block touch-auto focus:outline-none focus:ring-1 focus:ring-indigo-400/50 print:overflow-visible"
             >
               <table className="print-table w-full text-sm table-fixed border-collapse">
               <thead>

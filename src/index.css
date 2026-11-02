@@ -38,17 +38,25 @@ html,
 body {
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  -webkit-overflow-scrolling: touch;
 }
 
 #root {
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
   min-height: 100vh;
+}
+
+/* ── Global Touch & Momentum Scroll for Tables ── */
+.table-wrapper {
+  -webkit-overflow-scrolling: touch;
+  touch-action: auto !important;
+  overscroll-behavior-y: auto;
 }
 
 *, *::before, *::after {

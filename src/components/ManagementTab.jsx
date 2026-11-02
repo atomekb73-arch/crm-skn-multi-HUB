@@ -1049,7 +1049,7 @@ export default function ManagementTab({
   };
 
   return (
-    <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6 relative printable-area">
+    <div className="w-full max-w-full overflow-x-clip space-y-4 sm:space-y-6 relative printable-area">
 
       {/* ── Print Page Margin Optimization CSS ─────────────────────────────── */}
       <style>{`
@@ -1346,7 +1346,7 @@ export default function ManagementTab({
         tabIndex={0}
         role="region"
         aria-label="Tabela ewidencji członków koła naukowego"
-        className="table-wrapper printable-area w-full max-w-full bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-x-auto overflow-y-auto block max-h-[calc(100vh-230px)] scrollbar-thin scrollbar-thumb-indigo-200 touch-pan-x focus:outline-none focus:ring-1 focus:ring-indigo-400/50 print:max-h-none print:overflow-visible print:shadow-none print:border-none print:rounded-none"
+        className="table-wrapper printable-area w-full max-w-full bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-x-auto overflow-y-auto block max-h-[72vh] sm:max-h-[78vh] md:max-h-[calc(100dvh-220px)] xl:max-h-[calc(100vh-230px)] scrollbar-thin scrollbar-thumb-indigo-200 touch-auto overscroll-y-auto focus:outline-none focus:ring-1 focus:ring-indigo-400/50 print:max-h-none print:overflow-visible print:shadow-none print:border-none print:rounded-none"
       >
         <table className="print-table w-full min-w-full xl:min-w-[1380px] text-xs table-fixed border-collapse">
           <thead className="sticky top-0 z-10 bg-slate-200/90 backdrop-blur-xs border-b-2 border-slate-300 shadow-sm">
@@ -1506,7 +1506,7 @@ export default function ManagementTab({
               return (
                 <tr
                   key={m.id}
-                  style={{ pageBreakInside: 'avoid', breakInside: 'avoid', contentVisibility: 'auto', containIntrinsicSize: '0 46px' }}
+                  style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}
                   className={`group/row transition-all duration-150 ease-in-out cursor-pointer print:break-inside-avoid print:page-break-inside-avoid ${
                     isNonActive
                       ? 'opacity-65 bg-slate-50/60 hover:opacity-90 hover:bg-slate-100/80 text-slate-500 print:opacity-100 print:bg-white'
