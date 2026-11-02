@@ -1333,7 +1333,12 @@ export default function ManagementTab({
       )}
 
       {/* ── Table Container with Independent Scrolling & Sticky Thead ── */}
-      <div className="printable-area w-full max-w-full bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-x-auto overflow-y-auto max-h-[calc(100vh-230px)] scrollbar-thin scrollbar-thumb-indigo-200 print:max-h-none print:overflow-visible print:shadow-none print:border-none print:rounded-none">
+      <div
+        tabIndex={0}
+        role="region"
+        aria-label="Tabela ewidencji członków koła naukowego"
+        className="table-wrapper printable-area w-full max-w-full bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-x-auto overflow-y-auto block max-h-[calc(100vh-230px)] scrollbar-thin scrollbar-thumb-indigo-200 touch-pan-x focus:outline-none focus:ring-1 focus:ring-indigo-400/50 print:max-h-none print:overflow-visible print:shadow-none print:border-none print:rounded-none"
+      >
         <table className="print-table w-full text-xs table-fixed border-collapse">
           <thead className="sticky top-0 z-10 bg-slate-200/90 backdrop-blur-xs border-b-2 border-slate-300 shadow-sm">
             <tr className="text-left select-none print:bg-slate-100 print:border-slate-900">
@@ -1343,7 +1348,7 @@ export default function ManagementTab({
               {/* 2. Imię i Nazwisko / Email - Print: 35% */}
               <th
                 onClick={() => handleSort('fullName')}
-                className="min-w-[280px] px-3 py-2 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group bg-slate-200/90 backdrop-blur-xs print:w-[35%] print:min-w-0 print:text-slate-900 print:cursor-default"
+                className="min-w-[190px] sm:min-w-[240px] md:min-w-[280px] px-3 py-2 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group bg-slate-200/90 backdrop-blur-xs print:w-[35%] print:min-w-0 print:text-slate-900 print:cursor-default"
               >
                 <div className="flex items-center justify-between gap-1.5">
                   <div className="flex flex-col items-start leading-tight">
@@ -1368,7 +1373,7 @@ export default function ManagementTab({
               {/* 4. Kierunek / Rok - Print: 45% */}
               <th
                 onClick={() => handleSort('field')}
-                className="min-w-[240px] px-3 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group bg-slate-200/90 backdrop-blur-xs print:w-[45%] print:min-w-0 print:text-slate-900"
+                className="min-w-[160px] sm:min-w-[200px] md:min-w-[240px] px-3 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group bg-slate-200/90 backdrop-blur-xs print:w-[45%] print:min-w-0 print:text-slate-900"
               >
                 <div className="flex items-center">
                   <span className="text-xs font-bold text-slate-800 uppercase tracking-wider whitespace-nowrap print:text-[8pt]">Kierunek / Rok studiów</span>
@@ -1497,7 +1502,7 @@ export default function ManagementTab({
                   <td className="w-12 px-2 py-2.5 text-slate-400 text-xs font-mono text-center align-middle whitespace-nowrap print:w-[5%] print:text-slate-900 print:font-mono print:text-center">{i + 1}</td>
                   
                   {/* 2. Name + Email - Print: 35% */}
-                  <td className="min-w-[280px] px-3 py-2.5 align-middle text-left whitespace-nowrap print:w-[35%] print:min-w-0 print:whitespace-normal">
+                  <td className="min-w-[190px] sm:min-w-[240px] md:min-w-[280px] px-3 py-2.5 align-middle text-left whitespace-nowrap print:w-[35%] print:min-w-0 print:whitespace-normal">
                     <div className="flex items-center gap-1.5 font-semibold text-slate-900 text-xs truncate print:whitespace-normal print:overflow-visible print:text-slate-900 print:leading-tight" title={name}>
                       <span
                         onClick={() => setDecisionModalMember(m)}
@@ -1548,7 +1553,7 @@ export default function ManagementTab({
                   </td>
 
                   {/* 4. Kierunek / Rok z dynamiczną auto-progresją i statusem absolwenta - Print: 45% */}
-                  <td className="min-w-[240px] px-3 py-2.5 text-xs text-slate-900 whitespace-nowrap align-middle print:w-[45%] print:min-w-0 print:whitespace-normal print:text-slate-900">
+                  <td className="min-w-[160px] sm:min-w-[200px] md:min-w-[240px] px-3 py-2.5 text-xs text-slate-900 whitespace-nowrap align-middle print:w-[45%] print:min-w-0 print:whitespace-normal print:text-slate-900">
                     <div className="truncate font-semibold text-slate-900 text-xs print:whitespace-normal print:overflow-visible print:text-[8pt] print:leading-snug">{m.field || '—'}</div>
                     <div className="print-subtext flex items-center gap-1.5 mt-0.5 whitespace-nowrap print:whitespace-normal">
                       {isGrad || studyInfo.isGraduate ? (

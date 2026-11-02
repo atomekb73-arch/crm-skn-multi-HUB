@@ -1366,7 +1366,12 @@ export default function QuarantineTab({
 
           {/* Table Container */}
           <div className="printable-area bg-white rounded-2xl border border-purple-100 shadow-sm overflow-hidden print:border-none print:shadow-none print:rounded-none">
-            <div className="w-full overflow-x-auto print:overflow-visible">
+            <div
+              tabIndex={0}
+              role="region"
+              aria-label="Tabela zgłoszeń i kwarantanny kandydatów"
+              className="table-wrapper w-full overflow-x-auto block touch-pan-x focus:outline-none focus:ring-1 focus:ring-indigo-400/50 print:overflow-visible"
+            >
               <table className="print-table w-full text-sm border-collapse">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50/80 text-left select-none">
@@ -1629,7 +1634,13 @@ export default function QuarantineTab({
           )}
 
           <div className="printable-area bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden print:border-none print:shadow-none">
-            <table className="print-table w-full text-sm table-fixed border-collapse">
+            <div
+              tabIndex={0}
+              role="region"
+              aria-label="Tabela zarchiwizowanych zgłoszeń"
+              className="table-wrapper w-full overflow-x-auto block touch-pan-x focus:outline-none focus:ring-1 focus:ring-indigo-400/50 print:overflow-visible"
+            >
+              <table className="print-table w-full text-sm table-fixed border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/80 text-left select-none">
                   <th className="w-10 px-3 py-2.5 text-center print:w-[6%] print:text-center">
@@ -1718,6 +1729,7 @@ export default function QuarantineTab({
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}

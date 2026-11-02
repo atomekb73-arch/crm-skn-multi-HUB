@@ -1979,14 +1979,19 @@ export default function AttendanceModal({
               <p className="text-xs text-slate-400 mt-1">Zmień filtr lub wpisaną frazę w wyszukiwarce</p>
             </div>
           ) : (
-            <div className="border border-slate-200 rounded-2xl overflow-visible shadow-2xs bg-white">
+            <div
+              tabIndex={0}
+              role="region"
+              aria-label="Tabela obecności i logów spotkania"
+              className="table-wrapper border border-slate-200 rounded-2xl overflow-x-auto block w-full max-w-full shadow-2xs bg-white touch-pan-x focus:outline-none focus:ring-1 focus:ring-indigo-400/50"
+            >
               <table className="w-full text-xs text-left border-collapse">
                 <thead className="sticky top-0 bg-slate-100/95 backdrop-blur-xs text-slate-600 font-semibold border-b border-slate-200 z-20">
                   <tr>
                     <th className="p-3 w-10 text-center">LP.</th>
-                    <th className="p-3 min-w-[170px]">Wpis z Meet / Uczestnik</th>
+                    <th className="p-3 min-w-[150px] sm:min-w-[170px]">Wpis z Meet / Uczestnik</th>
                     <th className="p-3 w-32">Rola na Spotkaniu</th>
-                    <th className="p-3 min-w-[190px]">Powiązany Profil z bazy SKN</th>
+                    <th className="p-3 min-w-[160px] sm:min-w-[190px]">Powiązany Profil z bazy SKN</th>
                     <th className="p-3 text-center w-20">Wejście</th>
                     <th className="p-3 text-center w-24">Czas</th>
                     <th className="p-3 text-center w-24">Status</th>

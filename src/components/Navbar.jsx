@@ -63,31 +63,40 @@ export default function Navbar({
 
   return (
     <div className="space-y-2.5 sm:space-y-3 print:hidden w-full max-w-full overflow-x-hidden">
-      {/* ── Main 5 Condensed Navigation Bar ───────────────────────────────── */}
-      <div className="w-full max-w-full flex items-center gap-1 sm:gap-1.5 justify-start overflow-x-auto py-1 px-1.5 sm:px-2 bg-slate-200/90 rounded-2xl border border-slate-300 shadow-xs h-11 min-h-[44px] shrink-0 scrollbar-none">
-        {MAIN_TABS.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = isMainTabActive(tab);
-          return (
-            <button
-              key={tab.id}
-              onClick={() => handleMainTabClick(tab.id)}
-              className={`group flex items-center gap-2 text-xs md:text-sm px-3 sm:px-3.5 py-1.5 rounded-xl transition-colors duration-150 whitespace-nowrap cursor-pointer font-semibold ${
-                isActive
-                  ? 'bg-white text-slate-950 shadow-sm border border-slate-300'
-                  : 'text-slate-700 hover:text-slate-950 hover:bg-slate-300/70'
-              }`}
-            >
-              <Icon
-                size={16}
-                className={`transition-colors shrink-0 w-4 h-4 ${
-                  isActive ? (theme?.navActiveTabIcon || 'text-indigo-600') : 'text-slate-600 group-hover:text-slate-900'
+      {/* ── Main 5 Condensed Navigation Bar with Touch Scroll & Edge Gradient ── */}
+      <div className="relative w-full max-w-full group">
+        <div
+          tabIndex={0}
+          role="region"
+          aria-label="Główne menu zakładek systemu CRM"
+          className="w-full max-w-full flex items-center gap-1 sm:gap-1.5 justify-start overflow-x-auto whitespace-nowrap py-1 px-1.5 sm:px-2 bg-slate-200/90 rounded-2xl border border-slate-300 shadow-xs h-11 min-h-[44px] shrink-0 scrollbar-none scroll-smooth touch-pan-x focus:outline-none focus:ring-1 focus:ring-indigo-400/50"
+        >
+          {MAIN_TABS.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = isMainTabActive(tab);
+            return (
+              <button
+                key={tab.id}
+                onClick={() => handleMainTabClick(tab.id)}
+                className={`group flex items-center gap-2 text-xs md:text-sm px-3 sm:px-3.5 py-1.5 rounded-xl transition-colors duration-150 whitespace-nowrap cursor-pointer font-semibold shrink-0 ${
+                  isActive
+                    ? 'bg-white text-slate-950 shadow-sm border border-slate-300'
+                    : 'text-slate-700 hover:text-slate-950 hover:bg-slate-300/70'
                 }`}
-              />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
+              >
+                <Icon
+                  size={16}
+                  className={`transition-colors shrink-0 w-4 h-4 ${
+                    isActive ? (theme?.navActiveTabIcon || 'text-indigo-600') : 'text-slate-600 group-hover:text-slate-900'
+                  }`}
+                />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+        {/* Delikatny gradient krawędziowy dla urządzeń mobilnych sygnalizujący przewijanie */}
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-slate-200 to-transparent rounded-r-2xl sm:hidden" />
       </div>
 
       {/* ── Sub-Navigation Bars per Main Tab ──────────────────────────────── */}
@@ -95,74 +104,80 @@ export default function Navbar({
       {/* Sub-bar for Członkowie with inline compact metrics */}
       {currentTab === 'members' && (
         <div className="flex items-center justify-between gap-2 sm:gap-3 w-full max-w-full flex-wrap min-h-[40px] animate-in fade-in duration-150">
-          <div className="flex items-center gap-1 bg-slate-200/90 p-1 rounded-xl w-fit max-w-full overflow-x-auto border border-slate-300 shrink-0 shadow-2xs h-9 min-h-[36px] scrollbar-none">
-            <button
-              onClick={() => {
-                startTransition(() => {
-                  setActiveTab('members');
-                  setMembersSubTab('management');
-                });
-              }}
-              className={`group px-3 py-1 rounded-lg text-xs transition-colors duration-150 cursor-pointer flex items-center gap-1.5 font-semibold ${
-                membersSubTab === 'management' || activeTab === 'management'
-                  ? `bg-white ${theme?.navActiveSubtabText || 'text-indigo-950'} shadow-xs border border-slate-300/80`
-                  : 'text-slate-700 hover:text-slate-950 hover:bg-white/60'
-              }`}
-            >
-              <Users size={13} className={`w-3.5 h-3.5 shrink-0 ${membersSubTab === 'management' || activeTab === 'management' ? (theme?.navActiveTabIcon || 'text-indigo-600') : 'text-slate-600 group-hover:text-slate-900'}`} />
-              <span>Główna lista członków</span>
-            </button>
+          <div className="relative max-w-full">
+            <div className="flex items-center gap-1 bg-slate-200/90 p-1 rounded-xl w-fit max-w-full overflow-x-auto whitespace-nowrap border border-slate-300 shrink-0 shadow-2xs h-9 min-h-[36px] scrollbar-none scroll-smooth touch-pan-x">
+              <button
+                onClick={() => {
+                  startTransition(() => {
+                    setActiveTab('members');
+                    setMembersSubTab('management');
+                  });
+                }}
+                className={`group px-3 py-1 rounded-lg text-xs transition-colors duration-150 cursor-pointer flex items-center gap-1.5 font-semibold shrink-0 ${
+                  membersSubTab === 'management' || activeTab === 'management'
+                    ? `bg-white ${theme?.navActiveSubtabText || 'text-indigo-950'} shadow-xs border border-slate-300/80`
+                    : 'text-slate-700 hover:text-slate-950 hover:bg-white/60'
+                }`}
+              >
+                <Users size={13} className={`w-3.5 h-3.5 shrink-0 ${membersSubTab === 'management' || activeTab === 'management' ? (theme?.navActiveTabIcon || 'text-indigo-600') : 'text-slate-600 group-hover:text-slate-900'}`} />
+                <span>Główna lista członków</span>
+              </button>
 
-            <button
-              onClick={() => {
-                startTransition(() => {
-                  setActiveTab('members');
-                  setMembersSubTab('quarantine');
-                });
-              }}
-              className={`group px-3 py-1 rounded-lg text-xs transition-colors duration-150 cursor-pointer flex items-center gap-1.5 font-semibold ${
-                membersSubTab === 'quarantine' || activeTab === 'quarantine'
-                  ? 'bg-white text-amber-950 shadow-xs border border-slate-300/80'
-                  : 'text-slate-700 hover:text-slate-950 hover:bg-white/60'
-              }`}
-            >
-              <ShieldAlert size={13} className={`w-3.5 h-3.5 shrink-0 ${membersSubTab === 'quarantine' || activeTab === 'quarantine' ? 'text-amber-600' : 'text-slate-600 group-hover:text-slate-900'}`} />
-              <span>Kwarantanna & Zgłoszenia</span>
-              {pendingCount > 0 && (
-                <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 text-[11px] font-semibold leading-none text-white bg-amber-500 rounded-full select-none translate-y-[1px]">
-                  {pendingCount}
-                </span>
-              )}
-            </button>
+              <button
+                onClick={() => {
+                  startTransition(() => {
+                    setActiveTab('members');
+                    setMembersSubTab('quarantine');
+                  });
+                }}
+                className={`group px-3 py-1 rounded-lg text-xs transition-colors duration-150 cursor-pointer flex items-center gap-1.5 font-semibold shrink-0 ${
+                  membersSubTab === 'quarantine' || activeTab === 'quarantine'
+                    ? 'bg-white text-amber-950 shadow-xs border border-slate-300/80'
+                    : 'text-slate-700 hover:text-slate-950 hover:bg-white/60'
+                }`}
+              >
+                <ShieldAlert size={13} className={`w-3.5 h-3.5 shrink-0 ${membersSubTab === 'quarantine' || activeTab === 'quarantine' ? 'text-amber-600' : 'text-slate-600 group-hover:text-slate-900'}`} />
+                <span>Kwarantanna & Zgłoszenia</span>
+                {pendingCount > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 text-[11px] font-semibold leading-none text-white bg-amber-500 rounded-full select-none translate-y-[1px]">
+                    {pendingCount}
+                  </span>
+                )}
+              </button>
+            </div>
+            <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-slate-200 to-transparent rounded-r-xl sm:hidden" />
           </div>
 
           {/* Compact 4 Metric Badges in single row */}
           {membersMetrics && (
-            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto max-w-full py-0.5 scrollbar-none sm:ml-auto h-9 min-h-[36px]">
-              {/* 1) Aktywni */}
-              <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                <span className="font-bold text-xs text-slate-900 font-mono">{membersMetrics.activeCount}</span>
-                <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">Aktywni członkowie</span>
-              </div>
+            <div className="relative max-w-full sm:ml-auto">
+              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto whitespace-nowrap max-w-full py-0.5 scrollbar-none scroll-smooth touch-pan-x sm:ml-auto h-9 min-h-[36px]">
+                {/* 1) Aktywni */}
+                <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                  <span className="font-bold text-xs text-slate-900 font-mono">{membersMetrics.activeCount}</span>
+                  <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">Aktywni członkowie</span>
+                </div>
 
-              {/* 2) Frekwencja */}
-              <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0">
-                <span className="font-bold text-xs text-slate-900 font-mono">{isNaN(membersMetrics.avgFreq) ? 0 : membersMetrics.avgFreq}%</span>
-                <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">Średnia frekwencja</span>
-              </div>
+                {/* 2) Frekwencja */}
+                <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0">
+                  <span className="font-bold text-xs text-slate-900 font-mono">{isNaN(membersMetrics.avgFreq) ? 0 : membersMetrics.avgFreq}%</span>
+                  <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">Średnia frekwencja</span>
+                </div>
 
-              {/* 3) Zaświadczenia */}
-              <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0">
-                <span className="font-bold text-xs text-slate-900 font-mono">{membersMetrics.certReady}</span>
-                <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">Gotowe zaświadczenia</span>
-              </div>
+                {/* 3) Zaświadczenia */}
+                <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0">
+                  <span className="font-bold text-xs text-slate-900 font-mono">{membersMetrics.certReady}</span>
+                  <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">Gotowe zaświadczenia</span>
+                </div>
 
-              {/* 4) Mailing */}
-              <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0">
-                <span className="font-bold text-xs text-slate-900 font-mono">{membersMetrics.mailingConsentsCount}</span>
-                <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">Zgody na mailing</span>
+                {/* 4) Mailing */}
+                <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0">
+                  <span className="font-bold text-xs text-slate-900 font-mono">{membersMetrics.mailingConsentsCount}</span>
+                  <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">Zgody na mailing</span>
+                </div>
               </div>
+              <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-slate-100 to-transparent rounded-r-xl sm:hidden" />
             </div>
           )}
         </div>
@@ -170,79 +185,85 @@ export default function Navbar({
 
       {/* Sub-bar for Dokumentacja */}
       {currentTab === 'documentation' && (
-        <div className="flex items-center gap-1 bg-slate-200/90 p-1 rounded-xl w-fit border border-slate-300 shadow-2xs animate-in fade-in duration-150 h-9 min-h-[36px]">
-          <button
-            onClick={() => {
-              startTransition(() => {
-                setActiveTab('documentation');
-                setDocumentationSubTab('reports');
-              });
-            }}
-            className={`group px-3 py-1 rounded-lg text-xs transition-colors duration-150 cursor-pointer flex items-center gap-1.5 font-semibold ${
-              documentationSubTab === 'reports' || activeTab === 'reports'
-                ? `bg-white ${theme?.navActiveSubtabText || 'text-indigo-950'} shadow-xs border border-slate-300/80`
-                : 'text-slate-700 hover:text-slate-950 hover:bg-white/60'
-            }`}
-          >
-            <FileText size={13} className={`w-3.5 h-3.5 shrink-0 ${documentationSubTab === 'reports' || activeTab === 'reports' ? (theme?.navActiveTabIcon || 'text-indigo-600') : 'text-slate-600 group-hover:text-slate-900'}`} />
-            <span>Certyfikaty & Sprawozdania</span>
-          </button>
+        <div className="relative max-w-full">
+          <div className="flex items-center gap-1 bg-slate-200/90 p-1 rounded-xl w-fit max-w-full overflow-x-auto whitespace-nowrap border border-slate-300 shadow-2xs animate-in fade-in duration-150 h-9 min-h-[36px] scrollbar-none scroll-smooth touch-pan-x">
+            <button
+              onClick={() => {
+                startTransition(() => {
+                  setActiveTab('documentation');
+                  setDocumentationSubTab('reports');
+                });
+              }}
+              className={`group px-3 py-1 rounded-lg text-xs transition-colors duration-150 cursor-pointer flex items-center gap-1.5 font-semibold shrink-0 ${
+                documentationSubTab === 'reports' || activeTab === 'reports'
+                  ? `bg-white ${theme?.navActiveSubtabText || 'text-indigo-950'} shadow-xs border border-slate-300/80`
+                  : 'text-slate-700 hover:text-slate-950 hover:bg-white/60'
+              }`}
+            >
+              <FileText size={13} className={`w-3.5 h-3.5 shrink-0 ${documentationSubTab === 'reports' || activeTab === 'reports' ? (theme?.navActiveTabIcon || 'text-indigo-600') : 'text-slate-600 group-hover:text-slate-900'}`} />
+              <span>Certyfikaty & Sprawozdania</span>
+            </button>
 
-          <button
-            onClick={() => {
-              startTransition(() => {
-                setActiveTab('documentation');
-                setDocumentationSubTab('documents');
-              });
-            }}
-            className={`group px-3 py-1 rounded-lg text-xs transition-colors duration-150 cursor-pointer flex items-center gap-1.5 font-semibold ${
-              documentationSubTab === 'documents' || activeTab === 'documents' || activeTab === 'repository'
-                ? `bg-white ${theme?.navActiveSubtabText || 'text-indigo-950'} shadow-xs border border-slate-300/80`
-                : 'text-slate-700 hover:text-slate-950 hover:bg-white/60'
-            }`}
-          >
-            <FolderKanban size={13} className={`w-3.5 h-3.5 shrink-0 ${documentationSubTab === 'documents' || activeTab === 'documents' || activeTab === 'repository' ? (theme?.navActiveTabIcon || 'text-indigo-600') : 'text-slate-600 group-hover:text-slate-900'}`} />
-            <span>Rejestr Uchwał & Statut</span>
-          </button>
+            <button
+              onClick={() => {
+                startTransition(() => {
+                  setActiveTab('documentation');
+                  setDocumentationSubTab('documents');
+                });
+              }}
+              className={`group px-3 py-1 rounded-lg text-xs transition-colors duration-150 cursor-pointer flex items-center gap-1.5 font-semibold shrink-0 ${
+                documentationSubTab === 'documents' || activeTab === 'documents' || activeTab === 'repository'
+                  ? `bg-white ${theme?.navActiveSubtabText || 'text-indigo-950'} shadow-xs border border-slate-300/80`
+                  : 'text-slate-700 hover:text-slate-950 hover:bg-white/60'
+              }`}
+            >
+              <FolderKanban size={13} className={`w-3.5 h-3.5 shrink-0 ${documentationSubTab === 'documents' || activeTab === 'documents' || activeTab === 'repository' ? (theme?.navActiveTabIcon || 'text-indigo-600') : 'text-slate-600 group-hover:text-slate-900'}`} />
+              <span>Rejestr Uchwał & Statut</span>
+            </button>
+          </div>
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-slate-200 to-transparent rounded-r-xl sm:hidden" />
         </div>
       )}
 
       {/* Sub-bar for Ustawienia & Narzędzia */}
       {currentTab === 'settings_tools' && (
-        <div className="flex items-center gap-1 bg-slate-200/90 p-1 rounded-xl w-fit border border-slate-300 shadow-2xs animate-in fade-in duration-150 h-9 min-h-[36px]">
-          <button
-            onClick={() => {
-              startTransition(() => {
-                setActiveTab('settings_tools');
-                setSettingsToolsSubTab('settings');
-              });
-            }}
-            className={`group px-3 py-1 rounded-lg text-xs transition-colors duration-150 cursor-pointer flex items-center gap-1.5 font-semibold ${
-              settingsToolsSubTab === 'settings' || activeTab === 'settings'
-                ? `bg-white ${theme?.navActiveSubtabText || 'text-indigo-950'} shadow-xs border border-slate-300/80`
-                : 'text-slate-700 hover:text-slate-950 hover:bg-white/60'
-            }`}
-          >
-            <Settings size={13} className={`w-3.5 h-3.5 shrink-0 ${settingsToolsSubTab === 'settings' || activeTab === 'settings' ? (theme?.navActiveTabIcon || 'text-indigo-600') : 'text-slate-600 group-hover:text-slate-900'}`} />
-            <span>Konfiguracja Koła</span>
-          </button>
+        <div className="relative max-w-full">
+          <div className="flex items-center gap-1 bg-slate-200/90 p-1 rounded-xl w-fit max-w-full overflow-x-auto whitespace-nowrap border border-slate-300 shadow-2xs animate-in fade-in duration-150 h-9 min-h-[36px] scrollbar-none scroll-smooth touch-pan-x">
+            <button
+              onClick={() => {
+                startTransition(() => {
+                  setActiveTab('settings_tools');
+                  setSettingsToolsSubTab('settings');
+                });
+              }}
+              className={`group px-3 py-1 rounded-lg text-xs transition-colors duration-150 cursor-pointer flex items-center gap-1.5 font-semibold shrink-0 ${
+                settingsToolsSubTab === 'settings' || activeTab === 'settings'
+                  ? `bg-white ${theme?.navActiveSubtabText || 'text-indigo-950'} shadow-xs border border-slate-300/80`
+                  : 'text-slate-700 hover:text-slate-950 hover:bg-white/60'
+              }`}
+            >
+              <Settings size={13} className={`w-3.5 h-3.5 shrink-0 ${settingsToolsSubTab === 'settings' || activeTab === 'settings' ? (theme?.navActiveTabIcon || 'text-indigo-600') : 'text-slate-600 group-hover:text-slate-900'}`} />
+              <span>Konfiguracja Koła</span>
+            </button>
 
-          <button
-            onClick={() => {
-              startTransition(() => {
-                setActiveTab('settings_tools');
-                setSettingsToolsSubTab('tools');
-              });
-            }}
-            className={`group px-3 py-1 rounded-lg text-xs transition-colors duration-150 cursor-pointer flex items-center gap-1.5 font-semibold ${
-              settingsToolsSubTab === 'tools' || activeTab === 'tools'
-                ? `bg-white ${theme?.navActiveSubtabText || 'text-indigo-950'} shadow-xs border border-slate-300/80`
-                : 'text-slate-700 hover:text-slate-950 hover:bg-white/60'
-            }`}
-          >
-            <Wrench size={13} className={`w-3.5 h-3.5 shrink-0 ${settingsToolsSubTab === 'tools' || activeTab === 'tools' ? (theme?.navActiveTabIcon || 'text-indigo-600') : 'text-slate-600 group-hover:text-slate-900'}`} />
-            <span>Narzędzia & Mailing</span>
-          </button>
+            <button
+              onClick={() => {
+                startTransition(() => {
+                  setActiveTab('settings_tools');
+                  setSettingsToolsSubTab('tools');
+                });
+              }}
+              className={`group px-3 py-1 rounded-lg text-xs transition-colors duration-150 cursor-pointer flex items-center gap-1.5 font-semibold shrink-0 ${
+                settingsToolsSubTab === 'tools' || activeTab === 'tools'
+                  ? `bg-white ${theme?.navActiveSubtabText || 'text-indigo-950'} shadow-xs border border-slate-300/80`
+                  : 'text-slate-700 hover:text-slate-950 hover:bg-white/60'
+              }`}
+            >
+              <Wrench size={13} className={`w-3.5 h-3.5 shrink-0 ${settingsToolsSubTab === 'tools' || activeTab === 'tools' ? (theme?.navActiveTabIcon || 'text-indigo-600') : 'text-slate-600 group-hover:text-slate-900'}`} />
+              <span>Narzędzia & Mailing</span>
+            </button>
+          </div>
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-slate-200 to-transparent rounded-r-xl sm:hidden" />
         </div>
       )}
     </div>
