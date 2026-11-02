@@ -27,6 +27,7 @@ import {
   GraduationCap,
   Archive,
   Zap,
+  Clock,
 } from 'lucide-react';
 import { VectorRingIndicator } from './VectorIcons';
 import { calcFrequency, getFrequencyBadge, getCertificateStatus, getRecordKey } from '../utils/helpers';
@@ -889,6 +890,14 @@ export default function ManagementTab({
         return (aVal - bVal) * dir;
       }
 
+      if (key === 'cert' || key === 'canIssue' || key === 'certificate') {
+        const statsA = membersStatsMap.get(a.id || a.nrIndeksu) || membersStatsMap.get(a.memberKey);
+        const statsB = membersStatsMap.get(b.id || b.nrIndeksu) || membersStatsMap.get(b.memberKey);
+        const aCert = Boolean(statsA?.canCert ?? statsA?.canIssueCertificate) ? 1 : 0;
+        const bCert = Boolean(statsB?.canCert ?? statsB?.canIssueCertificate) ? 1 : 0;
+        return (aCert - bCert) * dir;
+      }
+
       const aVal = String(a?.[key] || '').toLowerCase();
       const bVal = String(b?.[key] || '').toLowerCase();
       return aVal.localeCompare(bVal, 'pl') * dir;
@@ -919,13 +928,13 @@ export default function ManagementTab({
   const renderSortIcon = (colKey) => {
     if (sortConfig.key !== colKey) {
       return (
-        <span className="inline-flex items-center justify-center ml-1.5 p-0.5 rounded text-slate-500 hover:text-slate-800 group-hover:text-slate-800 transition-colors print:hidden">
+        <span className="inline-flex items-center justify-center ml-1 p-0.5 rounded text-slate-500 hover:text-slate-800 group-hover:text-slate-800 transition-colors print:hidden shrink-0">
           <ArrowUpDown size={12} />
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center justify-center ml-1.5 p-0.5 rounded bg-indigo-100 text-indigo-600 font-black border border-indigo-200 shadow-2xs print:hidden">
+      <span className="inline-flex items-center justify-center ml-1 p-0.5 rounded bg-indigo-100 text-indigo-600 font-black border border-indigo-200 shadow-2xs print:hidden shrink-0">
         {sortConfig.direction === 'asc' ? <ChevronUp size={13} strokeWidth={2.5} /> : <ChevronDown size={13} strokeWidth={2.5} />}
       </span>
     );
@@ -1406,17 +1415,23 @@ export default function ManagementTab({
               {/* Hidden on Print: Ob. / Nieob. */}
               <th
                 onClick={() => handleSort('present')}
-                className="hidden lg:table-cell w-24 px-2 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group text-center bg-slate-200/90 backdrop-blur-xs print:hidden"
+                className="hidden lg:table-cell w-32 xl:w-36 px-2.5 sm:px-3 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group text-center bg-slate-200/90 backdrop-blur-xs print:hidden"
               >
-                <div className="flex items-center justify-center">
-                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wider whitespace-nowrap">Ob. / Nieob.</span>
+                <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
+                  <span>Ob. / Nieob.</span>
                   {renderSortIcon('present')}
                 </div>
               </th>
 
               {/* Hidden on Print: Zaświadczenie */}
-              <th className="hidden xl:table-cell w-32 px-2 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider text-center whitespace-nowrap bg-slate-200/90 backdrop-blur-xs print:hidden">
-                Zaświadczenie
+              <th
+                onClick={() => handleSort('cert')}
+                className="hidden xl:table-cell w-36 xl:w-44 px-2.5 sm:px-3 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group text-center whitespace-nowrap bg-slate-200/90 backdrop-blur-xs print:hidden"
+              >
+                <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
+                  <span>Zaświadczenie</span>
+                  {renderSortIcon('cert')}
+                </div>
               </th>
 
               {/* Hidden on Print: Punkty Aktywności */}
@@ -1653,7 +1668,7 @@ export default function ManagementTab({
                   </td>
 
                   {/* Hidden on Print: Combined Present / Absent ({present} / {absent}) */}
-                  <td className="hidden lg:table-cell w-24 px-2 py-2.5 text-center align-middle whitespace-nowrap font-mono text-xs font-bold print:hidden">
+                  <td className="hidden lg:table-cell w-32 xl:w-36 px-2.5 sm:px-3 py-2.5 text-center align-middle whitespace-nowrap font-mono text-xs font-bold print:hidden">
                     <div className="flex items-center justify-center gap-1.5 font-medium whitespace-nowrap">
                       {/* Główna liczba: łączna liczba obecności / nieobecności obowiązkowe */}
                       <span className="text-slate-900 font-semibold font-mono">
@@ -1677,24 +1692,29 @@ export default function ManagementTab({
                   </td>
 
                   {/* Hidden on Print: Zaświadczenie Status */}
-                  <td className="hidden xl:table-cell w-32 px-2 py-2.5 text-center align-middle whitespace-nowrap print:hidden">
+                  <td className="hidden xl:table-cell w-36 xl:w-44 px-2.5 sm:px-3 py-2.5 text-center align-middle whitespace-nowrap print:hidden">
                     <button
-                      onClick={() => {
-                        if (onNavigateToReports) {
-                          onNavigateToReports(m, 'membership');
-                        } else {
-                          handleOpenCertificate(m, 'membership');
-                        }
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenCertificate(m, 'membership');
                       }}
-                      className={`inline-flex items-center justify-center text-center text-xs font-bold transition-all cursor-pointer hover:underline ${
-                        cert.canIssue ? 'text-emerald-600' : 'text-slate-500'
+                      className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-2xs border cursor-pointer ${
+                        cert.canIssue
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:text-emerald-800 hover:shadow-xs'
+                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
                       }`}
                       title={
                         cert.canIssue
-                          ? `Spełniono wymogi zaświadczenia (${freq}%, ${absences} nieob.). Kliknij, aby przejść do generatora dokumentów.`
-                          : `Frekwencja w toku (${freq}%, ${absences} nieob.). Kliknij, aby przejść do generatora.`
+                          ? `Spełniono wymogi zaświadczenia (${freq}%, ${absences} nieob.). Kliknij, aby przejść do generatora i wyświetlić dokument.`
+                          : `Frekwencja w toku (${freq}%, ${absences} nieob.). Kliknij, aby przejść do generatora i sprawdzić szczegóły.`
                       }
                     >
+                      {cert.canIssue ? (
+                        <FileCheck2 size={13} className="text-emerald-600 shrink-0" />
+                      ) : (
+                        <Clock size={13} className="text-slate-400 shrink-0" />
+                      )}
                       <span>{cert.label}</span>
                     </button>
                   </td>
