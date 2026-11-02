@@ -1048,6 +1048,14 @@ export default function ManagementTab({
     exportArrayToXlsx(exportData, `Wykaz_czlonkow_${safeYearSlug}_${new Date().toISOString().slice(0, 10)}`);
   };
 
+  useEffect(() => {
+    const handleTriggerExport = () => {
+      handleExportMainListXlsx();
+    };
+    window.addEventListener('crm:export-main-xlsx', handleTriggerExport);
+    return () => window.removeEventListener('crm:export-main-xlsx', handleTriggerExport);
+  }, [handleExportMainListXlsx]);
+
   return (
     <div className="w-full max-w-full overflow-x-clip space-y-4 sm:space-y-6 relative printable-area">
 
@@ -1265,26 +1273,26 @@ export default function ManagementTab({
             )}
           </div>
 
-          {/* Export XLSX Button (Icon-Only on Mobile, Full on Desktop) */}
+          {/* Export XLSX Button (Hidden on Mobile < md, Full on Desktop >= md) */}
           <button
             type="button"
             onClick={handleExportMainListXlsx}
-            className="p-2 sm:px-3.5 sm:py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl sm:rounded-lg shadow-sm transition-colors cursor-pointer shrink-0 inline-flex items-center justify-center gap-1.5 min-w-[36px] sm:min-w-0 h-9 sm:h-auto"
+            className="hidden md:inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer shrink-0"
             title="Pobierz zestawienie do pliku Excel (.xlsx)"
           >
             <FileSpreadsheet size={16} />
-            <span className="hidden sm:inline">Eksportuj XLSX</span>
+            <span>Eksportuj XLSX</span>
           </button>
 
-          {/* Print List Button (Icon-Only on Mobile, Full on Desktop) */}
+          {/* Print List Button (Hidden on Mobile < md, Full on Desktop >= md) */}
           <button
             type="button"
             onClick={() => window.print()}
-            className="p-2 sm:px-3.5 sm:py-1.5 bg-slate-900 hover:bg-black text-white text-xs font-semibold rounded-xl sm:rounded-lg shadow-sm transition-colors cursor-pointer shrink-0 inline-flex items-center justify-center gap-1.5 min-w-[36px] sm:min-w-0 h-9 sm:h-auto"
+            className="hidden md:inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-black text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer shrink-0"
             title="Wydrukuj wykaz członków na potrzeby Dziekanatu"
           >
             <Printer size={16} />
-            <span className="hidden sm:inline">Drukuj</span>
+            <span>Drukuj</span>
           </button>
         </div>
       </div>

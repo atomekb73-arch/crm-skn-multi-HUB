@@ -12,6 +12,8 @@ import {
   Wrench,
   Sparkles,
   FolderOpen,
+  FileSpreadsheet,
+  Printer,
 } from 'lucide-react';
 
 const ResearchIcon = Microscope || GraduationCap;
@@ -104,8 +106,8 @@ export default function Navbar({
       {/* Sub-bar for Członkowie with inline compact metrics */}
       {currentTab === 'members' && (
         <div className="flex items-center justify-between gap-2 sm:gap-3 w-full max-w-full flex-wrap min-h-[40px] animate-in fade-in duration-150">
-          <div className="relative max-w-full">
-            <div className="flex items-center gap-1 bg-slate-200/90 p-1 rounded-xl w-fit max-w-full overflow-x-auto whitespace-nowrap border border-slate-300 shrink-0 shadow-2xs h-9 min-h-[36px] scrollbar-none scroll-smooth touch-pan-x">
+          <div className="relative max-w-full flex items-center">
+            <div className="flex items-center gap-1 bg-slate-200/90 p-1 rounded-xl w-fit max-w-full overflow-x-auto whitespace-nowrap border border-slate-300 shrink-0 shadow-2xs h-9 min-h-[36px] scrollbar-none scroll-smooth touch-auto">
               <button
                 onClick={() => {
                   startTransition(() => {
@@ -120,8 +122,8 @@ export default function Navbar({
                 }`}
               >
                 <Users size={13} className={`w-3.5 h-3.5 shrink-0 ${membersSubTab === 'management' || activeTab === 'management' ? (theme?.navActiveTabIcon || 'text-indigo-600') : 'text-slate-600 group-hover:text-slate-900'}`} />
-                <span className="sm:hidden">Główna lista</span>
-                <span className="hidden sm:inline">Główna lista członków</span>
+                <span className="md:hidden">Główna lista</span>
+                <span className="hidden md:inline">Główna lista członków</span>
               </button>
 
               <button
@@ -138,8 +140,8 @@ export default function Navbar({
                 }`}
               >
                 <ShieldAlert size={13} className={`w-3.5 h-3.5 shrink-0 ${membersSubTab === 'quarantine' || activeTab === 'quarantine' ? 'text-amber-600' : 'text-slate-600 group-hover:text-slate-900'}`} />
-                <span className="sm:hidden">Kwarantanna</span>
-                <span className="hidden sm:inline">Kwarantanna & Zgłoszenia</span>
+                <span className="md:hidden">Kwarantanna</span>
+                <span className="hidden md:inline">Kwarantanna & Zgłoszenia</span>
                 {pendingCount > 0 && (
                   <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 text-[11px] font-semibold leading-none text-white bg-amber-500 rounded-full select-none translate-y-[1px]">
                     {pendingCount}
@@ -147,7 +149,35 @@ export default function Navbar({
                 )}
               </button>
             </div>
-            <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-slate-200 to-transparent rounded-r-xl sm:hidden" />
+
+            {/* Mobile Action Buttons (< md / 768px): Directly beside Kwarantanna */}
+            <div className="flex md:hidden items-center gap-1 shrink-0 ml-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  if (membersSubTab === 'quarantine' || activeTab === 'quarantine') {
+                    window.dispatchEvent(new CustomEvent('crm:export-quarantine-xlsx'));
+                  } else {
+                    window.dispatchEvent(new CustomEvent('crm:export-main-xlsx'));
+                  }
+                }}
+                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-2xs transition-colors cursor-pointer inline-flex items-center justify-center gap-1 h-9 min-h-[36px] shrink-0"
+                title="Pobierz zestawienie do pliku Excel (.xlsx)"
+              >
+                <FileSpreadsheet size={15} />
+                <span className="text-[11px] font-bold">XLSX</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-2.5 py-1 bg-slate-900 hover:bg-black text-white text-xs font-semibold rounded-xl shadow-2xs transition-colors cursor-pointer inline-flex items-center justify-center gap-1 h-9 min-h-[36px] shrink-0"
+                title="Drukuj wykaz"
+              >
+                <Printer size={15} />
+                <span className="text-[11px] font-bold">Drukuj</span>
+              </button>
+            </div>
           </div>
 
           {/* Compact Metric Badges in single row */}
@@ -159,8 +189,8 @@ export default function Navbar({
                   <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                   <span className="font-bold text-xs text-slate-900 font-mono">{membersMetrics.activeCount}</span>
                   <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">
-                    <span className="sm:hidden">Aktywni</span>
-                    <span className="hidden sm:inline">Aktywni członkowie</span>
+                    <span className="md:hidden">Aktywni</span>
+                    <span className="hidden md:inline">Aktywni członkowie</span>
                   </span>
                 </div>
 
@@ -186,8 +216,8 @@ export default function Navbar({
                 <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0">
                   <span className="font-bold text-xs text-slate-900 font-mono">{isNaN(membersMetrics.avgFreq) ? 0 : membersMetrics.avgFreq}%</span>
                   <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">
-                    <span className="sm:hidden">Frekwencja</span>
-                    <span className="hidden sm:inline">Średnia frekwencja</span>
+                    <span className="md:hidden">Średnia</span>
+                    <span className="hidden md:inline">Średnia frekwencja</span>
                   </span>
                 </div>
 
@@ -195,8 +225,8 @@ export default function Navbar({
                 <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0">
                   <span className="font-bold text-xs text-slate-900 font-mono">{membersMetrics.certReady}</span>
                   <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">
-                    <span className="sm:hidden">Zaświadczenia</span>
-                    <span className="hidden sm:inline">Gotowe zaświadczenia</span>
+                    <span className="md:hidden">Zaświadczenia</span>
+                    <span className="hidden md:inline">Gotowe zaświadczenia</span>
                   </span>
                 </div>
 
@@ -204,8 +234,8 @@ export default function Navbar({
                 <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0">
                   <span className="font-bold text-xs text-slate-900 font-mono">{membersMetrics.mailingConsentsCount}</span>
                   <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">
-                    <span className="sm:hidden">Mailing</span>
-                    <span className="hidden sm:inline">Zgody na mailing</span>
+                    <span className="md:hidden">Mailing</span>
+                    <span className="hidden md:inline">Zgody na mailing</span>
                   </span>
                 </div>
               </div>

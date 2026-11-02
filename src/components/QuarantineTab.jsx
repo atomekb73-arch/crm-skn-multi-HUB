@@ -694,6 +694,14 @@ export default function QuarantineTab({
     exportArrayToXlsx(exportData, `SKN_Zgloszenia_Kwarantanna_${new Date().toISOString().slice(0, 10)}`);
   };
 
+  useEffect(() => {
+    const handleTriggerExport = () => {
+      handleExportQuarantineXlsx();
+    };
+    window.addEventListener('crm:export-quarantine-xlsx', handleTriggerExport);
+    return () => window.removeEventListener('crm:export-quarantine-xlsx', handleTriggerExport);
+  }, [handleExportQuarantineXlsx]);
+
   return (
     <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6 relative printable-area">
 
@@ -1296,8 +1304,8 @@ export default function QuarantineTab({
           </div>
         )}
 
-        {/* Export XLSX & Print Quarantine Buttons (Right-aligned in toolbar, compact on mobile) */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-auto w-auto">
+        {/* Export XLSX & Print Quarantine Buttons (Hidden on Mobile < md, Full on Desktop >= md) */}
+        <div className="hidden md:flex items-center gap-1.5 sm:gap-2 shrink-0 ml-auto w-auto">
           <button
             type="button"
             onClick={handleExportQuarantineXlsx}
