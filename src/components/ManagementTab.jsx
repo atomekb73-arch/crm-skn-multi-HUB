@@ -1348,7 +1348,7 @@ export default function ManagementTab({
         aria-label="Tabela ewidencji członków koła naukowego"
         className="table-wrapper printable-area w-full max-w-full bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-x-auto overflow-y-auto block max-h-[calc(100vh-230px)] scrollbar-thin scrollbar-thumb-indigo-200 touch-pan-x focus:outline-none focus:ring-1 focus:ring-indigo-400/50 print:max-h-none print:overflow-visible print:shadow-none print:border-none print:rounded-none"
       >
-        <table className="print-table w-full text-xs table-fixed border-collapse">
+        <table className="print-table w-full min-w-full xl:min-w-[1380px] text-xs table-fixed border-collapse">
           <thead className="sticky top-0 z-10 bg-slate-200/90 backdrop-blur-xs border-b-2 border-slate-300 shadow-sm">
             <tr className="text-left select-none print:bg-slate-100 print:border-slate-900">
               {/* 1. LP. (Liczba porządkowa) - Print: 5% */}
@@ -1364,7 +1364,7 @@ export default function ManagementTab({
                     <span className="text-xs font-bold text-slate-800 uppercase tracking-wider whitespace-nowrap print:text-[8pt]">Imię i Nazwisko</span>
                     <span className="print-subtext text-[10px] font-semibold text-slate-600 hidden sm:block mt-0.5 normal-case tracking-normal">Adres e-mail</span>
                   </div>
-                  {renderSortIcon('fullName')}
+                  <span className="shrink-0">{renderSortIcon('fullName')}</span>
                 </div>
               </th>
 
@@ -1373,9 +1373,9 @@ export default function ManagementTab({
                 onClick={() => handleSort('index')}
                 className="w-16 sm:w-28 px-1 sm:px-2 py-2 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group text-center bg-slate-200/90 backdrop-blur-xs print:w-[15%] print:min-w-0 print:text-slate-900 print:text-center"
               >
-                <div className="flex items-center justify-center">
+                <div className="flex items-center justify-center gap-1">
                   <span className="text-xs font-bold text-slate-800 uppercase tracking-wider whitespace-nowrap print:text-[8pt]">Indeks</span>
-                  {renderSortIcon('index')}
+                  <span className="shrink-0">{renderSortIcon('index')}</span>
                 </div>
               </th>
 
@@ -1384,9 +1384,9 @@ export default function ManagementTab({
                 onClick={() => handleSort('field')}
                 className="hidden md:table-cell min-w-[140px] sm:min-w-[180px] md:min-w-[200px] px-3 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group bg-slate-200/90 backdrop-blur-xs print:table-cell print:w-[45%] print:min-w-0 print:text-slate-900"
               >
-                <div className="flex items-center">
+                <div className="flex items-center justify-start gap-1">
                   <span className="text-xs font-bold text-slate-800 uppercase tracking-wider whitespace-nowrap print:text-[8pt]">Kierunek / Rok</span>
-                  {renderSortIcon('field')}
+                  <span className="shrink-0">{renderSortIcon('field')}</span>
                 </div>
               </th>
 
@@ -1395,9 +1395,9 @@ export default function ManagementTab({
                 onClick={() => handleSort('status')}
                 className="w-20 sm:w-28 px-1 sm:px-2 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group text-center bg-slate-200/90 backdrop-blur-xs print:hidden no-print"
               >
-                <div className="flex items-center justify-center">
+                <div className="flex items-center justify-center gap-1">
                   <span className="text-xs font-bold text-slate-800 uppercase tracking-wider whitespace-nowrap">Status</span>
-                  {renderSortIcon('status')}
+                  <span className="shrink-0">{renderSortIcon('status')}</span>
                 </div>
               </th>
 
@@ -1406,31 +1406,31 @@ export default function ManagementTab({
                 onClick={() => handleSort('freq')}
                 className="hidden lg:table-cell w-36 xl:w-44 px-2 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group text-center bg-slate-200/90 backdrop-blur-xs print:hidden"
               >
-                <div className="flex items-center justify-center">
-                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wider whitespace-nowrap">Frekwencja</span>
-                  {renderSortIcon('freq')}
+                <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
+                  <span>Frekwencja</span>
+                  <span className="shrink-0">{renderSortIcon('freq')}</span>
                 </div>
               </th>
 
               {/* Hidden on Print: Ob. / Nieob. */}
               <th
                 onClick={() => handleSort('present')}
-                className="hidden lg:table-cell w-32 xl:w-36 px-2.5 sm:px-3 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group text-center bg-slate-200/90 backdrop-blur-xs print:hidden"
+                className="hidden lg:table-cell w-36 xl:w-40 px-3 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group text-center bg-slate-200/90 backdrop-blur-xs print:hidden"
               >
-                <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
+                <div className="flex items-center justify-center gap-2 whitespace-nowrap">
                   <span>Ob. / Nieob.</span>
-                  {renderSortIcon('present')}
+                  <span className="shrink-0">{renderSortIcon('present')}</span>
                 </div>
               </th>
 
               {/* Hidden on Print: Zaświadczenie */}
               <th
                 onClick={() => handleSort('cert')}
-                className="hidden xl:table-cell w-36 xl:w-44 px-2.5 sm:px-3 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group text-center whitespace-nowrap bg-slate-200/90 backdrop-blur-xs print:hidden"
+                className="hidden xl:table-cell w-44 xl:w-48 px-3 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group text-center whitespace-nowrap bg-slate-200/90 backdrop-blur-xs print:hidden"
               >
-                <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
+                <div className="flex items-center justify-center gap-2 whitespace-nowrap">
                   <span>Zaświadczenie</span>
-                  {renderSortIcon('cert')}
+                  <span className="shrink-0">{renderSortIcon('cert')}</span>
                 </div>
               </th>
 
@@ -1439,9 +1439,9 @@ export default function ManagementTab({
                 onClick={() => handleSort('points')}
                 className="hidden sm:table-cell w-20 sm:w-24 px-2 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group text-center bg-slate-200/90 backdrop-blur-xs print:hidden"
               >
-                <div className="flex items-center justify-center">
+                <div className="flex items-center justify-center gap-1">
                   <span className="text-xs font-bold text-slate-800 uppercase tracking-wider whitespace-nowrap">Punkty</span>
-                  {renderSortIcon('points')}
+                  <span className="shrink-0">{renderSortIcon('points')}</span>
                 </div>
               </th>
 
@@ -1450,9 +1450,9 @@ export default function ManagementTab({
                 onClick={() => handleSort('mailingConsent')}
                 className="hidden xl:table-cell w-16 px-2 py-2.5 text-xs font-bold text-slate-800 uppercase tracking-wider cursor-pointer hover:bg-slate-300/60 transition-colors group text-center bg-slate-200/90 backdrop-blur-xs print:hidden"
               >
-                <div className="flex items-center justify-center">
+                <div className="flex items-center justify-center gap-1">
                   <span className="text-xs font-bold text-slate-800 uppercase tracking-wider whitespace-nowrap">Mailing</span>
-                  {renderSortIcon('mailingConsent')}
+                  <span className="shrink-0">{renderSortIcon('mailingConsent')}</span>
                 </div>
               </th>
 
@@ -1668,7 +1668,7 @@ export default function ManagementTab({
                   </td>
 
                   {/* Hidden on Print: Combined Present / Absent ({present} / {absent}) */}
-                  <td className="hidden lg:table-cell w-32 xl:w-36 px-2.5 sm:px-3 py-2.5 text-center align-middle whitespace-nowrap font-mono text-xs font-bold print:hidden">
+                  <td className="hidden lg:table-cell w-36 xl:w-40 px-3 py-2.5 text-center align-middle whitespace-nowrap font-mono text-xs font-bold print:hidden">
                     <div className="flex items-center justify-center gap-1.5 font-medium whitespace-nowrap">
                       {/* Główna liczba: łączna liczba obecności / nieobecności obowiązkowe */}
                       <span className="text-slate-900 font-semibold font-mono">
@@ -1692,17 +1692,17 @@ export default function ManagementTab({
                   </td>
 
                   {/* Hidden on Print: Zaświadczenie Status */}
-                  <td className="hidden xl:table-cell w-36 xl:w-44 px-2.5 sm:px-3 py-2.5 text-center align-middle whitespace-nowrap print:hidden">
+                  <td className="hidden xl:table-cell w-44 xl:w-48 px-3 py-2.5 text-center align-middle whitespace-nowrap print:hidden">
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleOpenCertificate(m, 'membership');
                       }}
-                      className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-2xs border cursor-pointer ${
+                      className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-2xs border cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${
                         cert.canIssue
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:text-emerald-800 hover:shadow-xs'
-                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
+                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-800 hover:shadow-xs'
                       }`}
                       title={
                         cert.canIssue
