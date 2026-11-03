@@ -266,7 +266,6 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
           setBoardTenures(res.tenures);
           try {
             localStorage.setItem(`skn_board_tenures_${orgId}`, JSON.stringify(res.tenures));
-            localStorage.setItem('skn_board_tenures', JSON.stringify(res.tenures));
           } catch {}
         }
       }).catch(console.warn);
@@ -539,7 +538,7 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
   // ── Sektor 3: Board Tenures State ───────────────────────────────────────────
   const [boardTenures, setBoardTenures] = useState(() => {
     try {
-      const saved = localStorage.getItem(`skn_board_tenures_${orgId}`) || localStorage.getItem('skn_board_tenures');
+      const saved = localStorage.getItem(`skn_board_tenures_${orgId}`);
       if (saved) return JSON.parse(saved);
     } catch {}
     return DEFAULT_BOARD_TENURES;
@@ -638,7 +637,6 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
     setBoardTenures(updated);
     try {
       localStorage.setItem(`skn_board_tenures_${orgId}`, JSON.stringify(updated));
-      localStorage.setItem('skn_board_tenures', JSON.stringify(updated));
     } catch {}
     saveBoardTenuresToDB(orgId, updated).catch(console.warn);
   };
@@ -951,7 +949,7 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
       let currentTenures = boardTenures || [];
       if (currentTenures.length === 0 && typeof window !== 'undefined' && window.localStorage) {
         try {
-          const raw = localStorage.getItem('skn_board_tenures');
+          const raw = localStorage.getItem(`skn_board_tenures_${orgId}`);
           if (raw) currentTenures = JSON.parse(raw);
         } catch {}
       }

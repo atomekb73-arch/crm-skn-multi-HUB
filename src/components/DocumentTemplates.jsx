@@ -1151,7 +1151,7 @@ export function MembersRegistryTemplate({
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
         const ewKey = getOrgKey(resolvedOrg.id, 'crm_ewidencja');
-        const s = localStorage.getItem(ewKey) || localStorage.getItem('crm_ewidencja');
+        const s = localStorage.getItem(ewKey);
         if (s) raw = JSON.parse(s);
       } catch {}
     }

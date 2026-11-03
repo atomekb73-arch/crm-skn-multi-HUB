@@ -218,15 +218,16 @@ export default function EditMemberModal({
   const ewidencjaList = useMemo(() => {
     if (typeof window === 'undefined') return [];
     try {
-      const ewKey = getStorageKey ? getStorageKey('crm_ewidencja') : 'crm_ewidencja';
-      const raw = localStorage.getItem(ewKey) || localStorage.getItem('crm_ewidencja');
+      const orgId = currentOrg?.id || member?.organization_id || 'skn_seksuologii';
+      const ewKey = getStorageKey ? getStorageKey('crm_ewidencja') : `crm_ewidencja_${orgId}`;
+      const raw = localStorage.getItem(ewKey) || localStorage.getItem(`crm_ewidencja_${orgId}`);
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) return parsed;
       }
     } catch {}
     return [];
-  }, [getStorageKey, currentOrg?.id]);
+  }, [getStorageKey, currentOrg?.id, member?.organization_id]);
 
   // Filter student attendance directly from ewidencja
   const studentAttendanceRecords = useMemo(() => {
@@ -252,9 +253,10 @@ export default function EditMemberModal({
   const memberTenures = useMemo(() => {
     if (!member) return [];
     let rawTenures = [];
+    const orgId = currentOrg?.id || member?.organization_id || 'skn_seksuologii';
+    const isSknSeks = orgId === 'skn_seksuologii';
     try {
-      const orgId = currentOrg?.id || 'skn_seksuologii';
-      const saved = localStorage.getItem(`skn_board_tenures_${orgId}`) || localStorage.getItem('skn_board_tenures');
+      const saved = localStorage.getItem(`skn_board_tenures_${orgId}`);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) rawTenures = parsed;
@@ -268,6 +270,7 @@ export default function EditMemberModal({
 
     return rawTenures.filter(t => {
       if (!t) return false;
+      if (t.organization_id && t.organization_id !== orgId) return false;
       const tIdx = String(t.memberIndex || t.index || '').replace(/\D/g, '').replace(/^0+/, '').trim();
       const tEmail = String(t.memberEmail || t.email || '').trim().toLowerCase();
       const tName = String(t.memberName || t.name || '').trim().toLowerCase();
@@ -276,10 +279,12 @@ export default function EditMemberModal({
       if (cleanMemberEmail && tEmail && cleanMemberEmail === tEmail) return true;
       if (cleanMemberName && tName && (cleanMemberName === tName || tName.includes(cleanMemberName) || cleanMemberName.includes(tName))) return true;
       if (cleanMemberAliases && tName && (cleanMemberAliases.includes(tName) || tName.includes(cleanMemberAliases))) return true;
-      if (tName && cleanMemberIdx === '11654' && (tName.includes('rodak') || tEmail.includes('gabriel.creart'))) return true;
-      if (tName && (tName.includes('rodak') && (cleanMemberName.includes('rodak') || cleanMemberAliases.includes('rodak') || cleanMemberEmail.includes('gabriel.creart')))) return true;
+      if (isSknSeks) {
+        if (tName && cleanMemberIdx === '11654' && (tName.includes('rodak') || tEmail.includes('gabriel.creart'))) return true;
+        if (tName && (tName.includes('rodak') && (cleanMemberName.includes('rodak') || cleanMemberAliases.includes('rodak') || cleanMemberEmail.includes('gabriel.creart')))) return true;
+        if (tName && (tName.includes('bratkow') && (cleanMemberName.includes('bratkow') || cleanMemberIdx === '15998' || cleanMemberEmail.includes('bratkow') || cleanMemberEmail.includes('15998')))) return true;
+      }
       if (tName && (tName.includes('czepir') && (cleanMemberName.includes('czepir') || cleanMemberIdx === '26535' || cleanMemberEmail.includes('czepir')))) return true;
-      if (tName && (tName.includes('bratkow') && (cleanMemberName.includes('bratkow') || cleanMemberIdx === '15998' || cleanMemberEmail.includes('bratkow') || cleanMemberEmail.includes('15998')))) return true;
       return false;
     }).map(t => {
       // Oblicz punkty w wybranym roku akademickim (SSOT)
@@ -317,9 +322,9 @@ export default function EditMemberModal({
   const freqData = useMemo(() => {
     if (!member) return { freq: 0, present: 0, absent: 0, presentMandatory: 0, mandatoryTotal: 0, optionalBonus: 0, totalAttended: 0, totalPoints: 0, meetingPoints: 0, tenurePoints: 0 };
     let rawTenures = [];
+    const orgId = currentOrg?.id || member?.organization_id || 'skn_seksuologii';
     try {
-      const orgId = currentOrg?.id || 'skn_seksuologii';
-      const saved = localStorage.getItem(`skn_board_tenures_${orgId}`) || localStorage.getItem('skn_board_tenures');
+      const saved = localStorage.getItem(`skn_board_tenures_${orgId}`);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) rawTenures = parsed;
@@ -338,6 +343,8 @@ export default function EditMemberModal({
         endDate: currentScope?.endDate,
         scope: currentScope,
         boardTenures: rawTenures,
+        orgId: orgId,
+        organization_id: orgId,
       }
     );
   }, [member, meetings, customMeetingTypes, ewidencjaList, attendanceConfig, academicYear, currentScope, currentOrg?.id]);

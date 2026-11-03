@@ -552,7 +552,7 @@ export default function App() {
       let effectiveSheetAttendanceMap = sheetAttendanceMap;
       if (!effectiveSheetAttendanceMap && typeof window !== 'undefined' && window.localStorage) {
         try {
-          const rawEw = localStorage.getItem(getOrgKey(currentOrg.id, 'crm_ewidencja')) || localStorage.getItem('crm_ewidencja');
+          const rawEw = localStorage.getItem(getOrgKey(currentOrg.id, 'crm_ewidencja'));
           if (rawEw) {
             const parsedEw = JSON.parse(rawEw);
             if (Array.isArray(parsedEw) && parsedEw.length > 0) {
@@ -1074,7 +1074,6 @@ export default function App() {
         try {
           const ewJson = JSON.stringify(supabaseEwidencja);
           localStorage.setItem(getOrgKey(orgId, 'crm_ewidencja'), ewJson);
-          localStorage.setItem('crm_ewidencja', ewJson);
 
           localStorage.setItem(getOrgKey(orgId, 'members'), JSON.stringify(allMembers));
           localStorage.removeItem('crm_dorobek');
@@ -1088,7 +1087,7 @@ export default function App() {
 
           const tenuresJson = JSON.stringify(supabaseBoardTenures);
           localStorage.setItem(`skn_board_tenures_${orgId}`, tenuresJson);
-          localStorage.setItem('skn_board_tenures', tenuresJson);
+          localStorage.setItem(getOrgKey(orgId, 'skn_board_tenures'), tenuresJson);
 
           if (supabaseKorespondencja.length > 0) {
             setOrgStorage(orgId, 'correspondence_log', supabaseKorespondencja);
@@ -1385,16 +1384,24 @@ export default function App() {
       };
       hasCachedDataRef.current = false;
 
-      // 2. Natychmiastowa separacja kluczy w localStorage (brak miksowania ewidencji, kadencji i dorobku)
+      // 2. Twarde czyszczenie globalnych/przestarzałych kluczy w localStorage (brak wycieków między kołami)
       if (typeof window !== 'undefined' && window.localStorage) {
         try {
-          const cachedOrgEw = localStorage.getItem(getOrgKey(orgId, 'crm_ewidencja')) || '[]';
-          localStorage.setItem('crm_ewidencja', cachedOrgEw);
-          const cachedOrgTenures = localStorage.getItem(`skn_board_tenures_${orgId}`) || '[]';
-          localStorage.setItem('skn_board_tenures', cachedOrgTenures);
+          localStorage.removeItem('crm_ewidencja');
+          localStorage.removeItem('skn_board_tenures');
+          localStorage.removeItem('crm_board_tenures');
           localStorage.removeItem('crm_dorobek');
           localStorage.removeItem('crm_members');
           localStorage.removeItem('crm_czlonkowie');
+          localStorage.removeItem('CACHE_TEAMUP_EVENTS');
+          localStorage.removeItem('CRM_TEAMUP_MEETINGS_2026_2027');
+          // Czyszczenie nieizolowanych kluczy obecności z poprzednich wersji
+          for (let i = localStorage.length - 1; i >= 0; i--) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith('crm_attendance_')) {
+              localStorage.removeItem(k);
+            }
+          }
         } catch {}
       }
 
@@ -2734,7 +2741,7 @@ export default function App() {
     let rawEw = [];
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
-        const raw = localStorage.getItem(getOrgKey(currentOrg?.id, 'crm_ewidencja')) || localStorage.getItem('crm_ewidencja');
+        const raw = localStorage.getItem(getOrgKey(currentOrg?.id, 'crm_ewidencja'));
         if (raw) {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) rawEw = parsed;

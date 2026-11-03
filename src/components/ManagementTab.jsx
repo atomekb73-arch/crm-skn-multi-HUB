@@ -131,10 +131,10 @@ export default function ManagementTab({
     const map = new Map();
     try {
       const orgId = currentOrg?.id || 'skn_seksuologii';
+      const storageKey = getStorageKey ? getStorageKey('skn_board_tenures') : `skn_board_tenures_${orgId}`;
       const rawTenures =
-        localStorage.getItem(`skn_board_tenures_${orgId}`) ||
-        localStorage.getItem('skn_board_tenures') ||
-        localStorage.getItem('crm_board_tenures');
+        localStorage.getItem(storageKey) ||
+        localStorage.getItem(`skn_board_tenures_${orgId}`);
       const tenures = rawTenures ? JSON.parse(rawTenures) : [];
 
       const zarzadMonthly = getActivityWeight('ZARZAD_MIES', weights, 3);
@@ -162,6 +162,7 @@ export default function ManagementTab({
       if (Array.isArray(tenures)) {
         tenures.forEach(entry => {
           if (!entry) return;
+          if (entry.organization_id && entry.organization_id !== orgId) return;
           const rawIdx = String(entry.nrIndeksu || entry.studentIndex || entry.memberIndex || entry.index || '').trim();
           const cleanIdx = rawIdx.replace(/\D/g, '').replace(/^0+/, '').trim();
           const studentEmail = String(entry.email || entry.memberEmail || '').trim().toLowerCase();
@@ -192,24 +193,26 @@ export default function ManagementTab({
               map.set(`name_${studentName}`, (map.get(`name_${studentName}`) || 0) + pts);
             }
             // Aliasy i dopasowania specjalne dla kluczowych członków Zarządu Koła (SSOT)
-            if (studentName.includes('rodak') || studentEmail.includes('gabriel.creart') || cleanIdx === '11654') {
-              map.set('name_gabriel rodak', (map.get('name_gabriel rodak') || 0) + pts);
-              map.set('name_michał rodak', (map.get('name_michał rodak') || 0) + pts);
-              map.set('name_michal rodak', (map.get('name_michal rodak') || 0) + pts);
-              map.set('gabriel.creart@gmail.com', (map.get('gabriel.creart@gmail.com') || 0) + pts);
-              map.set('11654', (map.get('11654') || 0) + pts);
+            if (orgId === 'skn_seksuologii') {
+              if (studentName.includes('rodak') || studentEmail.includes('gabriel.creart') || cleanIdx === '11654') {
+                map.set('name_gabriel rodak', (map.get('name_gabriel rodak') || 0) + pts);
+                map.set('name_michał rodak', (map.get('name_michał rodak') || 0) + pts);
+                map.set('name_michal rodak', (map.get('name_michal rodak') || 0) + pts);
+                map.set('gabriel.creart@gmail.com', (map.get('gabriel.creart@gmail.com') || 0) + pts);
+                map.set('11654', (map.get('11654') || 0) + pts);
+              }
+              if (studentName.includes('bratkow') || cleanIdx === '15998') {
+                map.set('name_tomasz bratkowski', (map.get('name_tomasz bratkowski') || 0) + pts);
+                map.set('atomekb73@gmail.com', (map.get('atomekb73@gmail.com') || 0) + pts);
+                map.set('15998@student.wskz.pl', (map.get('15998@student.wskz.pl') || 0) + pts);
+                map.set('15998', (map.get('15998') || 0) + pts);
+              }
             }
             if (studentName.includes('czepir') || cleanIdx === '26535') {
               map.set('name_magda czepirska', (map.get('name_magda czepirska') || 0) + pts);
               map.set('name_magdalena czepirska', (map.get('name_magdalena czepirska') || 0) + pts);
               map.set('m.czepirek@gmail.com', (map.get('m.czepirek@gmail.com') || 0) + pts);
               map.set('26535', (map.get('26535') || 0) + pts);
-            }
-            if (studentName.includes('bratkow') || cleanIdx === '15998') {
-              map.set('name_tomasz bratkowski', (map.get('name_tomasz bratkowski') || 0) + pts);
-              map.set('atomekb73@gmail.com', (map.get('atomekb73@gmail.com') || 0) + pts);
-              map.set('15998@student.wskz.pl', (map.get('15998@student.wskz.pl') || 0) + pts);
-              map.set('15998', (map.get('15998') || 0) + pts);
             }
           }
         });
@@ -218,13 +221,14 @@ export default function ManagementTab({
       console.error('Błąd indeksowania punktów zarządu:', err);
     }
     return map;
-  }, [weights, currentScope, currentOrg?.id]);
+  }, [weights, currentScope, currentOrg?.id, getStorageKey]);
 
   // 1. Jednorazowy odczyt ewidencji ze Storage dla aktywnego widoku i organizacji
   const attendanceIndex = useMemo(() => {
     try {
-      const ewKey = getStorageKey ? getStorageKey('crm_ewidencja') : 'crm_ewidencja';
-      const raw = localStorage.getItem(ewKey) || localStorage.getItem('crm_ewidencja');
+      const orgId = currentOrg?.id || 'skn_seksuologii';
+      const ewKey = getStorageKey ? getStorageKey('crm_ewidencja') : `crm_ewidencja_${orgId}`;
+      const raw = localStorage.getItem(ewKey) || localStorage.getItem(`crm_ewidencja_${orgId}`);
       const parsed = raw ? JSON.parse(raw) : [];
       return buildAttendanceIndex(parsed);
     } catch (e) {
@@ -346,11 +350,6 @@ export default function ManagementTab({
           getStorageKey && m.date ? getStorageKey(`crm_attendance_${m.date}`) : null,
           getStorageKey && m.code ? getStorageKey(`crm_attendance_${m.code}`) : null,
           getStorageKey && cleanCode ? getStorageKey(`crm_attendance_${cleanCode}`) : null,
-          m.id ? `crm_attendance_${m.id}` : null,
-          m.date ? `crm_attendance_${m.date}` : null,
-          m.data ? `crm_attendance_${m.data}` : null,
-          m.code ? `crm_attendance_${m.code}` : null,
-          cleanCode ? `crm_attendance_${cleanCode}` : null,
         ].filter(Boolean);
 
         for (const k of candidateKeys) {
@@ -605,9 +604,9 @@ export default function ManagementTab({
                           boardPointsMap.get(studentEmail) ||
                           boardPointsMap.get(`name_${memberFullName}`) ||
                           (memberAliases ? boardPointsMap.get(`name_${memberAliases}`) : 0) ||
-                          (memberFullName.includes('rodak') || memberAliases.includes('rodak') || studentEmail.includes('gabriel.creart') || cleanIdx === '11654' ? (boardPointsMap.get('11654') || 0) : 0) ||
+                          (isSknSeks && (memberFullName.includes('rodak') || memberAliases.includes('rodak') || studentEmail.includes('gabriel.creart') || cleanIdx === '11654') ? (boardPointsMap.get('11654') || 0) : 0) ||
                           (memberFullName.includes('czepir') || cleanIdx === '26535' ? (boardPointsMap.get('26535') || 0) : 0) ||
-                          (memberFullName.includes('bratkow') || cleanIdx === '15998' ? (boardPointsMap.get('15998') || 0) : 0) ||
+                          (isSknSeks && (memberFullName.includes('bratkow') || cleanIdx === '15998') ? (boardPointsMap.get('15998') || 0) : 0) ||
                           0;
 
       // Suma łączna za aktywny rok akademicki: punkty ze spotkań + punkty z zarządu w tym roku

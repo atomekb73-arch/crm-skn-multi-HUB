@@ -1525,11 +1525,6 @@ export default function AttendanceModal({
         meeting.date ? getStorageKey(`crm_attendance_${meeting.date}`) : null,
         meeting.code ? getStorageKey(`crm_attendance_${meeting.code}`) : null,
         cleanMeetingCode ? getStorageKey(`crm_attendance_${cleanMeetingCode}`) : null,
-        `crm_attendance_${meeting.id || meeting.date}`,
-        meeting.id ? `crm_attendance_${meeting.id}` : null,
-        meeting.date ? `crm_attendance_${meeting.date}` : null,
-        meeting.code ? `crm_attendance_${meeting.code}` : null,
-        cleanMeetingCode ? `crm_attendance_${cleanMeetingCode}` : null,
       ].filter(Boolean);
 
       keys.forEach(k => {

@@ -1625,9 +1625,10 @@ export default function MeetingsTab({
         try { localStorage.removeItem(k); } catch (e) {}
       });
 
-      // Usunięcie wpisów z bufora crm_ewidencja
+      // Usunięcie wpisów z bufora crm_ewidencja aktywnego koła
       try {
-        const rawEwidencja = localStorage.getItem('crm_ewidencja');
+        const ewKey = getStorageKey ? getStorageKey('crm_ewidencja') : 'crm_ewidencja';
+        const rawEwidencja = localStorage.getItem(ewKey);
         if (rawEwidencja) {
           const parsed = JSON.parse(rawEwidencja);
           if (Array.isArray(parsed)) {
@@ -1635,7 +1636,7 @@ export default function MeetingsTab({
               const itemCode = cleanMeetCode(item.kodSpotkania || item.code || '');
               return itemCode !== meetCode && item.kodSpotkania !== rawCode && item.id !== m.id;
             });
-            localStorage.setItem('crm_ewidencja', JSON.stringify(filtered));
+            localStorage.setItem(ewKey, JSON.stringify(filtered));
           }
         }
       } catch (err) {

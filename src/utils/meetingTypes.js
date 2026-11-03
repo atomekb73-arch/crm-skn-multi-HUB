@@ -280,10 +280,12 @@ export function hasMeetingAttendanceLogs(meeting, ewidencja = null) {
       return true;
     }
 
-    // Sprawdź ewidencja w pamięci lub w localStorage z rygorystyczną izolacją lat akademickich
+    const mOrg = meeting.organization_id || meeting.orgId || (typeof window !== 'undefined' ? (localStorage.getItem('crm_active_org_id') || 'skn_seksuologii') : 'skn_seksuologii');
+
+    // Sprawdź ewidencja w pamięci lub w localStorage z rygorystyczną izolacją organizacji i lat akademickich
     let activeEwidencja = ewidencja;
     if (!activeEwidencja && typeof window !== 'undefined' && window.localStorage) {
-      activeEwidencja = getCachedStorageJson('crm_ewidencja');
+      activeEwidencja = getCachedStorageJson(`${mOrg}_crm_ewidencja`) || getCachedStorageJson(`crm_ewidencja_${mOrg}`);
     }
 
     if (Array.isArray(activeEwidencja) && activeEwidencja.length > 0) {
@@ -291,18 +293,21 @@ export function hasMeetingAttendanceLogs(meeting, ewidencja = null) {
       if (hasEwidencja) return true;
     }
 
-    // Sprawdź w localStorage czy istnieją zapisane obecności dla tego spotkania
+    // Sprawdź w localStorage czy istnieją zapisane obecności dla tego spotkania z prefiksem organizacji
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
+        const cleanCode = String(meeting.code || '').replace(/^\[.*?\]\s*/, '').trim();
         const keys = [
-          meeting.id ? `crm_attendance_${meeting.id}` : null,
-          meeting.date ? `crm_attendance_${meeting.date}` : null,
-          meeting.code ? `crm_attendance_${meeting.code}` : null,
+          meeting.id ? `${mOrg}_crm_attendance_${meeting.id}` : null,
+          meeting.date ? `${mOrg}_crm_attendance_${meeting.date}` : null,
+          meeting.code ? `${mOrg}_crm_attendance_${meeting.code}` : null,
+          cleanCode ? `${mOrg}_crm_attendance_${cleanCode}` : null,
         ].filter(Boolean);
 
         for (const k of keys) {
           const parsed = getCachedStorageJson(k);
           if (parsed) {
+            if (parsed.organization_id && parsed.organization_id !== mOrg) continue;
             if (parsed.date && meeting.date && parsed.date !== meeting.date) continue;
             if (parsed.code && meeting.code) {
               const pHas2526 = parsed.code.includes('25/26');
@@ -462,6 +467,14 @@ export function calculateMemberStats(memberOrIndex, ewidencja = null, meetings =
   const minPassingPercent = Math.max(1, Math.min(100, Number(activeSettings.minPassingPercent) || 50));
   const zeroAttendanceDisplay = activeSettings.zeroAttendanceDisplay || 'PERCENT_ZERO';
 
+  // Wyznaczenie aktywnego tenanta (Single Source of Truth) dla twardej separacji danych
+  const activeOrgId = String(
+    activeSettings.orgId ||
+    activeSettings.organization_id ||
+    (typeof window !== 'undefined' ? (localStorage.getItem('crm_skn_current_org_id') || localStorage.getItem('crm_active_org_id') || 'skn_seksuologii') : 'skn_seksuologii')
+  ).trim();
+  const cleanOrg = activeOrgId === 'skn-template' || !activeOrgId ? 'skn_seksuologii' : activeOrgId;
+
   if (!memberOrIndex) {
     return {
       freq: 0,
@@ -484,10 +497,10 @@ export function calculateMemberStats(memberOrIndex, ewidencja = null, meetings =
     };
   }
 
-  // 1. Bezpieczne pobranie bazy ewidencji z parametru lub zbuforowanego localStorage
+  // 1. Bezpieczne pobranie bazy ewidencji ściśle dla aktywnego koła (Multi-Tenant)
   let activeEwidencja = Array.isArray(ewidencja) ? ewidencja : null;
   if (!activeEwidencja) {
-    const parsed = getCachedStorageJson('crm_ewidencja');
+    const parsed = getCachedStorageJson(`${cleanOrg}_crm_ewidencja`) || getCachedStorageJson(`crm_ewidencja_${cleanOrg}`);
     if (Array.isArray(parsed)) activeEwidencja = parsed;
   }
   if (!activeEwidencja) activeEwidencja = [];
@@ -714,12 +727,14 @@ export function calculateMemberStats(memberOrIndex, ewidencja = null, meetings =
       });
     }
 
-    // d) Sprawdź w zbuforowanym localStorage
+    // d) Sprawdź w zbuforowanym localStorage ściśle dla aktywnego koła (Multi-Tenant)
     if (!isPresent && typeof window !== 'undefined' && window.localStorage) {
+      const cleanCode = String(m.code || '').replace(/^\[.*?\]\s*/, '').trim();
       const storageKeys = [
-        m.id ? `crm_attendance_${m.id}` : null,
-        m.date ? `crm_attendance_${m.date}` : null,
-        m.code ? `crm_attendance_${m.code}` : null,
+        m.id ? `${cleanOrg}_crm_attendance_${m.id}` : null,
+        m.date ? `${cleanOrg}_crm_attendance_${m.date}` : null,
+        m.code ? `${cleanOrg}_crm_attendance_${m.code}` : null,
+        cleanCode ? `${cleanOrg}_crm_attendance_${cleanCode}` : null,
       ].filter(Boolean);
 
       for (const key of storageKeys) {
@@ -826,14 +841,16 @@ export function calculateMemberStats(memberOrIndex, ewidencja = null, meetings =
     meetingPoints += p;
   });
 
-  // Punkty z przypisanych aktywności spotkań (zbuforowany localStorage crm_attendance_*) w aktywnym roku akademickim
+  // Punkty z przypisanych aktywności spotkań (zbuforowany localStorage per organizacja) w aktywnym roku akademickim
   if (typeof window !== 'undefined' && window.localStorage) {
     scopedMeetings.forEach(m => {
       if (!m || m.isUpcoming) return;
+      const cleanCode = String(m.code || '').replace(/^\[.*?\]\s*/, '').trim();
       const storageKeys = [
-        m.id ? `crm_attendance_${m.id}` : null,
-        m.date ? `crm_attendance_${m.date}` : null,
-        m.code ? `crm_attendance_${m.code}` : null,
+        m.id ? `${cleanOrg}_crm_attendance_${m.id}` : null,
+        m.date ? `${cleanOrg}_crm_attendance_${m.date}` : null,
+        m.code ? `${cleanOrg}_crm_attendance_${m.code}` : null,
+        cleanCode ? `${cleanOrg}_crm_attendance_${cleanCode}` : null,
       ].filter(Boolean);
 
       for (const k of storageKeys) {
@@ -863,16 +880,20 @@ export function calculateMemberStats(memberOrIndex, ewidencja = null, meetings =
     });
   }
 
-  // 2. Punkty stałe z dorobku naukowego (izolowane ściśle do aktywnego roku akademickiego)
+  // 2. Punkty stałe z dorobku naukowego (izolowane ściśle do aktywnego koła i roku akademickiego)
   let activeDorobek = explicitDorobek || settings?.dorobek || null;
   if (!activeDorobek) {
-    activeDorobek = getCachedStorageJson('crm_dorobek') || getCachedStorageJson('skn_dorobek');
+    activeDorobek = getCachedStorageJson(`crm_dorobek_${cleanOrg}`) || getCachedStorageJson(`${cleanOrg}_research`);
+    if (!activeDorobek && cleanOrg === 'skn_seksuologii') {
+      activeDorobek = getCachedStorageJson('crm_dorobek');
+    }
   }
 
   if (activeDorobek) {
     if (Array.isArray(activeDorobek)) {
       activeDorobek.forEach(item => {
         if (!item) return;
+        if (item.organization_id && item.organization_id !== cleanOrg) return;
         // Weryfikacja czy data lub rok akademicki publikacji/badania przypada na activeScope
         if (!isDorobekInAcademicScope(item, activeScope)) {
           return;
@@ -902,6 +923,7 @@ export function calculateMemberStats(memberOrIndex, ewidencja = null, meetings =
       } else if (entry && typeof entry === 'object') {
         if (Array.isArray(entry)) {
           entry.forEach(it => {
+            if (it.organization_id && it.organization_id !== cleanOrg) return;
             if (isDorobekInAcademicScope(it, activeScope)) {
               meritPoints += Number(it.punkty || it.points || it.pkt || 0);
             }
@@ -913,7 +935,7 @@ export function calculateMemberStats(memberOrIndex, ewidencja = null, meetings =
     }
   }
 
-  // 3. Punkty z kadencji zarządu (skn_board_tenures) – tylko miesiące przypadające na activeScope
+  // 3. Punkty z kadencji zarządu (skn_board_tenures) – ściśle dla aktualnego koła naukowego
   const BOARD_ROLE_MONTHLY_WEIGHTS = {
     'Przewodniczący / Przewodnicząca': 3,
     'Wiceprzewodniczący / Wiceprzewodnicząca': 3,
@@ -933,13 +955,18 @@ export function calculateMemberStats(memberOrIndex, ewidencja = null, meetings =
 
   let activeTenures = explicitBoardTenures || settings?.boardTenures || null;
   if (!activeTenures) {
-    const parsedTenures = getCachedStorageJson('skn_board_tenures');
+    const parsedTenures = getCachedStorageJson(`skn_board_tenures_${cleanOrg}`);
     if (Array.isArray(parsedTenures)) activeTenures = parsedTenures;
   }
 
   if (Array.isArray(activeTenures)) {
     activeTenures.forEach(t => {
       if (!t) return;
+      // Twarda izolacja multi-tenant: weryfikacja czy kadencja należy do bieżącego koła
+      if (t.organization_id && String(t.organization_id).trim() !== cleanOrg) {
+        return;
+      }
+
       const tIdx = String(t.memberIndex || t.index || '').replace(/\D/g, '').replace(/^0+/, '').trim();
       const tEmail = String(t.memberEmail || t.email || '').trim().toLowerCase();
       const tName = String(t.memberName || t.name || '').trim().toLowerCase();
@@ -949,10 +976,16 @@ export function calculateMemberStats(memberOrIndex, ewidencja = null, meetings =
       else if (rawEmail && tEmail && rawEmail === tEmail) isMatch = true;
       else if (rawFullName && tName && (rawFullName === tName || tName.includes(rawFullName) || rawFullName.includes(tName))) isMatch = true;
       else if (rawAliases && (rawAliases.includes(tName) || (tName && rawAliases.includes(tName.split(' ')[0])))) isMatch = true;
-      else if (tName && cleanIdxDigits === '11654' && (tName.includes('rodak') || tEmail.includes('gabriel.creart'))) isMatch = true;
-      else if (tName && (tName.includes('rodak') && (rawFullName.includes('rodak') || rawAliases.includes('rodak') || rawEmail.includes('gabriel.creart')))) isMatch = true;
-      else if (tName && (tName.includes('czepir') && (rawFullName.includes('czepir') || cleanIdxDigits === '26535' || rawEmail.includes('czepir')))) isMatch = true;
-      else if (tName && (tName.includes('bratkow') && (rawFullName.includes('bratkow') || cleanIdxDigits === '15998' || rawEmail.includes('bratkow') || rawEmail.includes('15998')))) isMatch = true;
+      
+      // Aliasy i dopasowania ról zarządowych TYLKO dla właściwego koła:
+      if (cleanOrg === 'skn_seksuologii') {
+        if (tName && cleanIdxDigits === '11654' && (tName.includes('rodak') || tEmail.includes('gabriel.creart'))) isMatch = true;
+        if (tName && (tName.includes('rodak') && (rawFullName.includes('rodak') || rawAliases.includes('rodak') || rawEmail.includes('gabriel.creart')))) isMatch = true;
+        if (tName && (tName.includes('czepir') && (rawFullName.includes('czepir') || cleanIdxDigits === '26535' || rawEmail.includes('czepir')))) isMatch = true;
+        if (tName && (tName.includes('bratkow') && (rawFullName.includes('bratkow') || cleanIdxDigits === '15998' || rawEmail.includes('bratkow') || rawEmail.includes('15998')))) isMatch = true;
+      } else if (cleanOrg === 'uzaleznienia') {
+        if (tName && (tName.includes('czepir') && (rawFullName.includes('czepir') || cleanIdxDigits === '26535' || rawEmail.includes('czepir')))) isMatch = true;
+      }
 
       if (isMatch) {
         const ptsPerMonth = BOARD_ROLE_MONTHLY_WEIGHTS[t.roleName] || 3;

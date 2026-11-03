@@ -165,7 +165,9 @@ export function calculateMemberAttendance(member, allMeetings = [], activeScope 
     let activeEwidencja = Array.isArray(ewidencjaList) ? ewidencjaList : null;
     if (!activeEwidencja && typeof window !== 'undefined' && window.localStorage) {
       try {
-        const raw = localStorage.getItem('crm_ewidencja');
+        const orgId = options?.organization_id || options?.orgId || member?.organization_id;
+        const orgKey = orgId ? `${orgId}_crm_ewidencja` : null;
+        const raw = (orgKey ? localStorage.getItem(orgKey) : null) || (orgId ? localStorage.getItem(`crm_ewidencja_${orgId}`) : null);
         if (raw) {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) activeEwidencja = parsed;

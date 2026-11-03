@@ -407,7 +407,8 @@ export function AuthProvider({ children }) {
 
     let boardTenures = [];
     try {
-      const savedTenures = localStorage.getItem('skn_board_tenures');
+      const activeOrg = localStorage.getItem('crm_active_org_id') || 'skn_seksuologii';
+      const savedTenures = localStorage.getItem(`skn_board_tenures_${activeOrg}`) || localStorage.getItem('skn_board_tenures');
       if (savedTenures) {
         boardTenures = JSON.parse(savedTenures);
       }

@@ -253,7 +253,7 @@ export default function ReportsTab({
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
         const ewKey = getStorageKey ? getStorageKey('crm_ewidencja') : 'crm_ewidencja';
-        const s = localStorage.getItem(ewKey) || localStorage.getItem('crm_ewidencja');
+        const s = localStorage.getItem(ewKey);
         if (s) raw = JSON.parse(s);
       } catch {}
     }
@@ -456,7 +456,7 @@ export default function ReportsTab({
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
         const ewKey = getStorageKey ? getStorageKey('crm_ewidencja') : 'crm_ewidencja';
-        const raw = localStorage.getItem(ewKey) || localStorage.getItem('crm_ewidencja');
+        const raw = localStorage.getItem(ewKey);
         if (raw) {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) {

@@ -16,13 +16,10 @@ export function getCachedTeamupSubcalendars() {
 
 export function getCachedTeamupEvents(subcalendarId = DEFAULT_SUBCALENDAR_ID, yearPrefix = '26/27') {
   const targetSubId = String(subcalendarId || DEFAULT_SUBCALENDAR_ID || '').trim();
+  if (!targetSubId) return null;
   const scoped = readSWRData(`${CACHE_KEYS.TEAMUP_EVENTS}_${targetSubId}_${yearPrefix}`);
   if (scoped?.data && Array.isArray(scoped.data) && scoped.data.length > 0) {
     return scoped.data;
-  }
-  const globalCached = readSWRData(CACHE_KEYS.TEAMUP_EVENTS);
-  if (globalCached?.data && Array.isArray(globalCached.data)) {
-    return globalCached.data;
   }
   return null;
 }
@@ -225,19 +222,16 @@ export async function fetchTeamupEvents({
     });
 
     writeSWRData(`${CACHE_KEYS.TEAMUP_EVENTS}_${targetSubId}_${yearPrefix}`, mappedEvents);
-    if (!isBypass || yearPrefix === '26/27') {
-      writeSWRData(CACHE_KEYS.TEAMUP_EVENTS, mappedEvents);
-    }
 
     try {
-      if (yearPrefix === '26/27' || (!yearPrefix && startDate?.startsWith('2026'))) {
-        localStorage.setItem('CRM_TEAMUP_MEETINGS_2026_2027', JSON.stringify({
+      if (targetSubId) {
+        localStorage.setItem(`CRM_TEAMUP_MEETINGS_${targetSubId}_${yearPrefix}`, JSON.stringify({
           data: mappedEvents,
           timestamp: Date.now()
         }));
       }
     } catch (e) {
-      console.warn('Błąd zapisu CRM_TEAMUP_MEETINGS_2026_2027 w localStorage:', e);
+      console.warn(`Błąd zapisu CRM_TEAMUP_MEETINGS_${targetSubId}_${yearPrefix} w localStorage:`, e);
     }
 
     return mappedEvents;
