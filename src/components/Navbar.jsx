@@ -22,8 +22,8 @@ const MAIN_TABS = [
   { id: 'members',       label: 'Członkowie',            icon: Users,        aliases: ['management', 'quarantine'] },
   { id: 'meetings',      label: 'Spotkania',             icon: Calendar,     aliases: [] },
   { id: 'documentation', label: 'Dokumentacja',          icon: FileText,     aliases: ['reports', 'documents', 'repository'] },
-  { id: 'research',      label: 'Dorobek & Badania',    icon: ResearchIcon, aliases: [] },
-  { id: 'settings_tools',label: 'Ustawienia & Narzędzia',icon: Settings,     aliases: ['settings', 'tools'] },
+  { id: 'research',      label: 'Dorobek & Badania',    shortLabel: 'Badania',   icon: ResearchIcon, aliases: [] },
+  { id: 'settings_tools',label: 'Ustawienia & Narzędzia',shortLabel: 'Ustawienia',icon: Settings,     aliases: ['settings', 'tools'] },
 ];
 
 export default function Navbar({
@@ -92,7 +92,16 @@ export default function Navbar({
                     isActive ? (theme?.navActiveTabIcon || 'text-indigo-600') : 'text-slate-600 group-hover:text-slate-900'
                   }`}
                 />
-                <span>{tab.label}</span>
+                <span>
+                  {tab.shortLabel ? (
+                    <>
+                      <span className="md:hidden">{tab.shortLabel}</span>
+                      <span className="hidden md:inline">{tab.label}</span>
+                    </>
+                  ) : (
+                    tab.label
+                  )}
+                </span>
               </button>
             );
           })}

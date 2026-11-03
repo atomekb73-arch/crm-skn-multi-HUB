@@ -41,6 +41,7 @@ import { getEngagementScaleLevel, useSettings } from '../context/SettingsContext
 import { useOrg } from '../context/OrgContext';
 import { useAcademicYear } from '../context/AcademicYearContext';
 import { calculateMemberSemesterProgress, STUDY_CYCLES } from '../utils/academicYear';
+import { getTenureMonthsInScope } from '../utils/academicScope';
 import { supabase, isValidUUID } from '../supabaseClient';
 
 export default function EditMemberModal({
@@ -262,7 +263,8 @@ export default function EditMemberModal({
 
     const cleanMemberIdx = String(member.index || member.nrIndeksu || member.cleanIndex || '').replace(/\D/g, '').replace(/^0+/, '').trim();
     const cleanMemberEmail = String(member.email || '').trim().toLowerCase();
-    const cleanMemberName = String(member.fullName || `${member.firstName || ''} ${member.lastName || ''}`).trim().toLowerCase();
+    const cleanMemberName = String(member.fullName || member.name || `${member.firstName || ''} ${member.lastName || ''}`).trim().toLowerCase();
+    const cleanMemberAliases = String(member.aliasy || member.aliases || '').trim().toLowerCase();
 
     return rawTenures.filter(t => {
       if (!t) return false;
@@ -273,20 +275,39 @@ export default function EditMemberModal({
       if (cleanMemberIdx && tIdx && cleanMemberIdx === tIdx) return true;
       if (cleanMemberEmail && tEmail && cleanMemberEmail === tEmail) return true;
       if (cleanMemberName && tName && (cleanMemberName === tName || tName.includes(cleanMemberName) || cleanMemberName.includes(tName))) return true;
+      if (cleanMemberAliases && tName && (cleanMemberAliases.includes(tName) || tName.includes(cleanMemberAliases))) return true;
+      if (tName && cleanMemberIdx === '11654' && (tName.includes('rodak') || tEmail.includes('gabriel.creart'))) return true;
+      if (tName && (tName.includes('rodak') && (cleanMemberName.includes('rodak') || cleanMemberAliases.includes('rodak') || cleanMemberEmail.includes('gabriel.creart')))) return true;
+      if (tName && (tName.includes('czepir') && (cleanMemberName.includes('czepir') || cleanMemberIdx === '26535' || cleanMemberEmail.includes('czepir')))) return true;
+      if (tName && (tName.includes('bratkow') && (cleanMemberName.includes('bratkow') || cleanMemberIdx === '15998' || cleanMemberEmail.includes('bratkow') || cleanMemberEmail.includes('15998')))) return true;
       return false;
     }).map(t => {
-      let months = 1;
+      // Oblicz punkty w wybranym roku akademickim (SSOT)
+      const monthsInScope = getTenureMonthsInScope(t, currentScope);
+
+      // Oblicz pełny czas kadencji dożywotnio (dla pełnego kontekstu historycznego)
+      let lifetimeMonths = 1;
       if (t.startDate) {
         const start = new Date(t.startDate);
         const end = (t.isActive || !t.endDate) ? new Date() : new Date(t.endDate);
         const diffTime = Math.max(0, end.getTime() - start.getTime());
-        months = Math.max(1, Math.round(diffTime / (1000 * 60 * 60 * 24 * 30.4375)));
+        lifetimeMonths = Math.max(1, Math.round(diffTime / (1000 * 60 * 60 * 24 * 30.4375)));
       }
+
       const ptsPerMonth = t.roleName?.includes('Badań') ? 4 : t.roleName?.includes('IT') || t.roleName?.includes('Social') ? 5 : 3;
-      const calculatedPoints = months * ptsPerMonth;
-      return { ...t, calculatedPoints };
+      const calculatedPoints = monthsInScope * ptsPerMonth;
+      const lifetimePoints = lifetimeMonths * ptsPerMonth;
+
+      return {
+        ...t,
+        monthsInScope,
+        lifetimeMonths,
+        ptsPerMonth,
+        calculatedPoints,
+        lifetimePoints,
+      };
     }).sort((a, b) => new Date(b.startDate || 0) - new Date(a.startDate || 0));
-  }, [member]);
+  }, [member, currentOrg?.id, currentScope]);
 
   const totalTenurePoints = useMemo(() => {
     return memberTenures.reduce((sum, t) => sum + (t.calculatedPoints || 0), 0);
@@ -294,7 +315,17 @@ export default function EditMemberModal({
 
   // Compute live categorized frequency data (Single Source of Truth)
   const freqData = useMemo(() => {
-    if (!member) return { freq: 0, present: 0, absent: 0, presentMandatory: 0, mandatoryTotal: 0, optionalBonus: 0, totalAttended: 0 };
+    if (!member) return { freq: 0, present: 0, absent: 0, presentMandatory: 0, mandatoryTotal: 0, optionalBonus: 0, totalAttended: 0, totalPoints: 0, meetingPoints: 0, tenurePoints: 0 };
+    let rawTenures = [];
+    try {
+      const orgId = currentOrg?.id || 'skn_seksuologii';
+      const saved = localStorage.getItem(`skn_board_tenures_${orgId}`) || localStorage.getItem('skn_board_tenures');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) rawTenures = parsed;
+      }
+    } catch {}
+
     return calculateMemberStats(
       member,
       ewidencjaList,
@@ -306,9 +337,10 @@ export default function EditMemberModal({
         startDate: currentScope?.startDate,
         endDate: currentScope?.endDate,
         scope: currentScope,
+        boardTenures: rawTenures,
       }
     );
-  }, [member, meetings, customMeetingTypes, ewidencjaList, attendanceConfig, academicYear, currentScope]);
+  }, [member, meetings, customMeetingTypes, ewidencjaList, attendanceConfig, academicYear, currentScope, currentOrg?.id]);
 
   // Process and sort all meetings with individual student attendance status
   const auditedMeetings = useMemo(() => {
@@ -568,6 +600,13 @@ export default function EditMemberModal({
                     status === 'guest' ? 'Wolny Słuchacz' :
                     status === 'resigned' ? 'Rezygnacja' : 'Oczekuje'
                   }</span>
+                </span>
+                <span
+                  className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-0.5 rounded-lg bg-amber-50 text-amber-900 border border-amber-200/90 shadow-2xs font-mono shrink-0"
+                  title={`Bilans punktów za aktywny rok akademicki: Spotkania: ${freqData?.meetingPoints ?? 0} pkt | Funkcyjne (zarząd): +${freqData?.tenurePoints ?? totalTenurePoints ?? 0} pkt${(freqData?.meritPoints ?? 0) > 0 ? ` | Dorobek: +${freqData.meritPoints} pkt` : ''}`}
+                >
+                  <Zap size={13} strokeWidth={2.2} className="text-amber-500 shrink-0" />
+                  <span>Bilans: {freqData?.totalPoints ?? ((freqData?.meetingPoints ?? 0) + (totalTenurePoints ?? 0))} pkt</span>
                 </span>
               </div>
               <p className="text-xs text-slate-500 truncate mt-0.5">
@@ -1055,8 +1094,8 @@ export default function EditMemberModal({
                 </div>
               </div>
 
-              {/* 3 Metric Pills */}
-              <div className="grid grid-cols-3 gap-1.5 pt-0.5">
+              {/* 4 Metric Pills */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-0.5">
                 <div className="bg-emerald-50/70 border border-emerald-200/70 rounded-xl p-1.5 text-center">
                   <span className="block text-[9px] font-bold text-emerald-700 uppercase">Zaliczone</span>
                   <span className="text-sm font-black text-emerald-900 font-mono">
@@ -1073,6 +1112,13 @@ export default function EditMemberModal({
                   <span className="block text-[9px] font-bold text-rose-700 uppercase">Nieobecności</span>
                   <span className="text-sm font-black text-rose-900 font-mono">
                     {freqData.absent}
+                  </span>
+                </div>
+                <div className="bg-amber-50/80 border border-amber-200/80 rounded-xl p-1.5 text-center">
+                  <span className="block text-[9px] font-bold text-amber-800 uppercase">Punkty ogółem</span>
+                  <span className="text-sm font-black text-amber-950 font-mono flex items-center justify-center gap-1">
+                    <Zap size={12} strokeWidth={2.2} className="text-amber-500 shrink-0" />
+                    <span>{freqData?.totalPoints ?? ((freqData?.meetingPoints ?? 0) + (totalTenurePoints ?? 0))}</span>
                   </span>
                 </div>
               </div>
@@ -1102,13 +1148,13 @@ export default function EditMemberModal({
                   {memberTenures.map(t => (
                     <div
                       key={t.id || `${t.roleName}_${t.startDate}`}
-                      className="p-2 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2"
+                      className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2"
                     >
-                      <div className="min-w-0">
+                      <div className="min-w-0 pr-1">
                         <span className="text-xs font-bold text-slate-900 block truncate">
                           {t.roleName}
                         </span>
-                        <div className="flex items-center gap-1.5 text-[10px] mt-0.5">
+                        <div className="flex items-center gap-1.5 text-[10px] mt-0.5 flex-wrap">
                           {t.isActive ? (
                             <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
                               <VectorRingIndicator color="emerald" size={10} />
@@ -1120,11 +1166,21 @@ export default function EditMemberModal({
                               <span>{t.startDate || '—'} do {t.endDate || '—'}</span>
                             </span>
                           )}
+                          <span className="text-slate-400">
+                            • {t.monthsInScope || 0} mies. w tym roku ({t.lifetimeMonths || 0} mies. łącznie)
+                          </span>
                         </div>
                       </div>
-                      <span className="text-xs font-bold text-indigo-700 font-mono shrink-0 bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-200">
-                        +{t.calculatedPoints} pkt
-                      </span>
+                      <div className="text-right shrink-0">
+                        <span className="text-xs font-bold text-indigo-700 font-mono bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-200 inline-block">
+                          +{t.calculatedPoints} pkt
+                        </span>
+                        {(t.lifetimePoints || 0) > (t.calculatedPoints || 0) && (
+                          <span className="block text-[9px] text-slate-400 font-medium mt-0.5" title="Suma punktów od początku pełnienia roli">
+                            +{t.lifetimePoints} pkt łącznie
+                          </span>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

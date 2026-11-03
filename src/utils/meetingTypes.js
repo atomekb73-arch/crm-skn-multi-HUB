@@ -948,6 +948,11 @@ export function calculateMemberStats(memberOrIndex, ewidencja = null, meetings =
       if (cleanIdxDigits && tIdx && cleanIdxDigits === tIdx) isMatch = true;
       else if (rawEmail && tEmail && rawEmail === tEmail) isMatch = true;
       else if (rawFullName && tName && (rawFullName === tName || tName.includes(rawFullName) || rawFullName.includes(tName))) isMatch = true;
+      else if (rawAliases && (rawAliases.includes(tName) || (tName && rawAliases.includes(tName.split(' ')[0])))) isMatch = true;
+      else if (tName && cleanIdxDigits === '11654' && (tName.includes('rodak') || tEmail.includes('gabriel.creart'))) isMatch = true;
+      else if (tName && (tName.includes('rodak') && (rawFullName.includes('rodak') || rawAliases.includes('rodak') || rawEmail.includes('gabriel.creart')))) isMatch = true;
+      else if (tName && (tName.includes('czepir') && (rawFullName.includes('czepir') || cleanIdxDigits === '26535' || rawEmail.includes('czepir')))) isMatch = true;
+      else if (tName && (tName.includes('bratkow') && (rawFullName.includes('bratkow') || cleanIdxDigits === '15998' || rawEmail.includes('bratkow') || rawEmail.includes('15998')))) isMatch = true;
 
       if (isMatch) {
         const ptsPerMonth = BOARD_ROLE_MONTHLY_WEIGHTS[t.roleName] || 3;

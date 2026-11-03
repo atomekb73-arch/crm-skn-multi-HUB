@@ -191,6 +191,26 @@ export default function ManagementTab({
             if (studentName) {
               map.set(`name_${studentName}`, (map.get(`name_${studentName}`) || 0) + pts);
             }
+            // Aliasy i dopasowania specjalne dla kluczowych członków Zarządu Koła (SSOT)
+            if (studentName.includes('rodak') || studentEmail.includes('gabriel.creart') || cleanIdx === '11654') {
+              map.set('name_gabriel rodak', (map.get('name_gabriel rodak') || 0) + pts);
+              map.set('name_michał rodak', (map.get('name_michał rodak') || 0) + pts);
+              map.set('name_michal rodak', (map.get('name_michal rodak') || 0) + pts);
+              map.set('gabriel.creart@gmail.com', (map.get('gabriel.creart@gmail.com') || 0) + pts);
+              map.set('11654', (map.get('11654') || 0) + pts);
+            }
+            if (studentName.includes('czepir') || cleanIdx === '26535') {
+              map.set('name_magda czepirska', (map.get('name_magda czepirska') || 0) + pts);
+              map.set('name_magdalena czepirska', (map.get('name_magdalena czepirska') || 0) + pts);
+              map.set('m.czepirek@gmail.com', (map.get('m.czepirek@gmail.com') || 0) + pts);
+              map.set('26535', (map.get('26535') || 0) + pts);
+            }
+            if (studentName.includes('bratkow') || cleanIdx === '15998') {
+              map.set('name_tomasz bratkowski', (map.get('name_tomasz bratkowski') || 0) + pts);
+              map.set('atomekb73@gmail.com', (map.get('atomekb73@gmail.com') || 0) + pts);
+              map.set('15998@student.wskz.pl', (map.get('15998@student.wskz.pl') || 0) + pts);
+              map.set('15998', (map.get('15998') || 0) + pts);
+            }
           }
         });
       }
@@ -579,10 +599,15 @@ export default function ManagementTab({
       const canCert = (totalMandatory === 0 || attendanceRate >= 70) && totalAttendedAll >= 3;
 
       // Punkty za pełnienie funkcji w Zarządzie Koła
+      const memberAliases = String(member.aliasy || member.aliases || '').trim().toLowerCase();
       const boardPoints = boardPointsMap.get(cleanIdx) ||
                           boardPointsMap.get(rawIdx) ||
                           boardPointsMap.get(studentEmail) ||
                           boardPointsMap.get(`name_${memberFullName}`) ||
+                          (memberAliases ? boardPointsMap.get(`name_${memberAliases}`) : 0) ||
+                          (memberFullName.includes('rodak') || memberAliases.includes('rodak') || studentEmail.includes('gabriel.creart') || cleanIdx === '11654' ? (boardPointsMap.get('11654') || 0) : 0) ||
+                          (memberFullName.includes('czepir') || cleanIdx === '26535' ? (boardPointsMap.get('26535') || 0) : 0) ||
+                          (memberFullName.includes('bratkow') || cleanIdx === '15998' ? (boardPointsMap.get('15998') || 0) : 0) ||
                           0;
 
       // Suma łączna za aktywny rok akademicki: punkty ze spotkań + punkty z zarządu w tym roku
