@@ -66,7 +66,7 @@ export default function ManagementTab({
   customEndDate: propCustomEndDate,
   onCustomDateChange,
 }) {
-  const { currentOrg, getStorageKey } = useOrg();
+  const { currentOrg, getStorageKey, theme } = useOrg();
   const { isViewer } = useAuth();
   const isSknSeks = currentOrg?.id === 'skn_seksuologii';
 
