@@ -139,7 +139,7 @@ export const TENANT_THEMES = {
     navBadge: 'bg-purple-600 text-white',
 
     // Kontenery widżetów, statystyk i filtrów (bardzo jasny, pastelowy odcień fioletu)
-    widgetCardBg: 'bg-purple-50/50 border-purple-100',
+    widgetCardBg: 'bg-white/95 border-purple-200',
     statDotColor: 'bg-purple-500',
     statIconColor: 'text-purple-600',
     filterBarBg: 'bg-purple-50/40 border-purple-200/70',

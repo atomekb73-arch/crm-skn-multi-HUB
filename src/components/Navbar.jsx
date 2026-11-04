@@ -194,7 +194,7 @@ export default function Navbar({
             <div className="relative max-w-full sm:ml-auto">
               <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto whitespace-nowrap max-w-full py-0.5 scrollbar-none scroll-smooth touch-auto sm:ml-auto h-9 min-h-[36px]">
                 {/* 1) Aktywni */}
-                <div className={`${theme?.widgetCardBg || 'bg-purple-50/50 border-purple-100'} border rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0`}>
+                <div className={`${theme?.widgetCardBg || 'bg-white/95 border-purple-200'} border border-purple-200 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-sm shrink-0 transition-all hover:border-purple-300`}>
                   <span className={`w-2 h-2 rounded-full ${theme?.statDotColor || 'bg-purple-500'} shrink-0`} />
                   <span className="font-bold text-xs text-purple-950 font-mono">{membersMetrics.activeCount}</span>
                   <span className="text-purple-900 font-semibold text-[11px] whitespace-nowrap">
@@ -204,7 +204,7 @@ export default function Navbar({
                 </div>
 
                 {/* 2) Archiwum */}
-                <div className={`${theme?.widgetCardBg || 'bg-purple-50/50 border-purple-100'} border rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0`} title="Liczba zarchiwizowanych zgłoszeń i wpisów">
+                <div className={`${theme?.widgetCardBg || 'bg-white/95 border-purple-200'} border border-purple-200 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-sm shrink-0 transition-all hover:border-purple-300`} title="Liczba zarchiwizowanych zgłoszeń i wpisów">
                   <span className={`w-2 h-2 rounded-full ${theme?.statDotColor || 'bg-purple-500'} shrink-0`} />
                   <span className="font-bold text-xs text-purple-950 font-mono">{membersMetrics.archivedCount ?? 0}</span>
                   <span className="text-purple-900 font-semibold text-[11px] whitespace-nowrap">
@@ -213,7 +213,7 @@ export default function Navbar({
                 </div>
 
                 {/* 3) Spotkania */}
-                <div className={`${theme?.widgetCardBg || 'bg-purple-50/50 border-purple-100'} border rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0`} title="Łączna liczba zarejestrowanych spotkań koła">
+                <div className={`${theme?.widgetCardBg || 'bg-white/95 border-purple-200'} border border-purple-200 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-sm shrink-0 transition-all hover:border-purple-300`} title="Łączna liczba zarejestrowanych spotkań koła">
                   <span className={`w-2 h-2 rounded-full ${theme?.statDotColor || 'bg-purple-500'} shrink-0`} />
                   <span className="font-bold text-xs text-purple-950 font-mono">{membersMetrics.meetingsCount ?? 0}</span>
                   <span className="text-purple-900 font-semibold text-[11px] whitespace-nowrap">
@@ -222,7 +222,7 @@ export default function Navbar({
                 </div>
 
                 {/* 4) Frekwencja */}
-                <div className={`${theme?.widgetCardBg || 'bg-purple-50/50 border-purple-100'} border rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0`}>
+                <div className={`${theme?.widgetCardBg || 'bg-white/95 border-purple-200'} border border-purple-200 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-sm shrink-0 transition-all hover:border-purple-300`}>
                   <span className={`w-2 h-2 rounded-full ${theme?.statDotColor || 'bg-purple-500'} shrink-0`} />
                   <span className="font-bold text-xs text-purple-950 font-mono">{isNaN(membersMetrics.avgFreq) ? 0 : membersMetrics.avgFreq}%</span>
                   <span className="text-purple-900 font-semibold text-[11px] whitespace-nowrap">
@@ -232,7 +232,7 @@ export default function Navbar({
                 </div>
 
                 {/* 5) Zaświadczenia */}
-                <div className={`${theme?.widgetCardBg || 'bg-purple-50/50 border-purple-100'} border rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0`}>
+                <div className={`${theme?.widgetCardBg || 'bg-white/95 border-purple-200'} border border-purple-200 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-sm shrink-0 transition-all hover:border-purple-300`}>
                   <span className={`w-2 h-2 rounded-full ${theme?.statDotColor || 'bg-purple-500'} shrink-0`} />
                   <span className="font-bold text-xs text-purple-950 font-mono">{membersMetrics.certReady}</span>
                   <span className="text-purple-900 font-semibold text-[11px] whitespace-nowrap">
@@ -242,7 +242,7 @@ export default function Navbar({
                 </div>
 
                 {/* 6) Mailing */}
-                <div className={`${theme?.widgetCardBg || 'bg-purple-50/50 border-purple-100'} border rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0`}>
+                <div className={`${theme?.widgetCardBg || 'bg-white/95 border-purple-200'} border border-purple-200 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-sm shrink-0 transition-all hover:border-purple-300`}>
                   <span className={`w-2 h-2 rounded-full ${theme?.statDotColor || 'bg-purple-500'} shrink-0`} />
                   <span className="font-bold text-xs text-purple-950 font-mono">{membersMetrics.mailingConsentsCount}</span>
                   <span className="text-purple-900 font-semibold text-[11px] whitespace-nowrap">
@@ -251,7 +251,7 @@ export default function Navbar({
                   </span>
                 </div>
               </div>
-              <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-purple-100/40 to-transparent rounded-r-xl sm:hidden" />
+              <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-white/90 to-transparent rounded-r-xl sm:hidden" />
             </div>
           )}
         </div>
