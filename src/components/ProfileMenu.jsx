@@ -167,13 +167,13 @@ export default function ProfileMenu({ onOpenSettings }) {
           {/* Name */}
           <div className="text-left hidden md:block min-w-0">
             <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-slate-800 group-hover:text-indigo-600 transition truncate max-w-[130px]">
+              <span className="text-xs font-bold text-slate-800 group-hover:text-purple-700 transition truncate max-w-[130px]">
                 {user.name}
               </span>
             </div>
           </div>
 
-          <ChevronDown size={14} className="text-slate-400 group-hover:text-indigo-600 transition shrink-0 ml-0.5" />
+          <ChevronDown size={14} className="text-slate-400 group-hover:text-purple-700 transition shrink-0 ml-0.5" />
         </button>
 
         {/* Dropdown Menu */}
@@ -181,7 +181,7 @@ export default function ProfileMenu({ onOpenSettings }) {
           <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-24px)] bg-white rounded-3xl shadow-2xl border border-slate-100 p-2.5 z-[60] animate-in fade-in zoom-in-95 duration-100">
             
             {/* User Info Header Card */}
-            <div className="p-3 bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-2xl mb-2">
+            <div className="p-3 bg-gradient-to-br from-slate-900 to-purple-950 text-white rounded-2xl mb-2">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/20 text-white font-bold text-sm flex items-center justify-center shrink-0">
                   {initials}
@@ -197,7 +197,7 @@ export default function ProfileMenu({ onOpenSettings }) {
             <div className="space-y-1 mb-2">
               <div className="px-2.5 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
                 <span className="flex items-center gap-1">
-                  <Building2 size={11} className="text-indigo-600" />
+                  <Building2 size={11} className="text-purple-600" />
                   <span>Aktywne Koło Naukowe</span>
                 </span>
                 <span className="text-[9px] font-medium text-slate-400">
@@ -217,7 +217,7 @@ export default function ProfileMenu({ onOpenSettings }) {
                       }}
                       className={`w-full flex items-center justify-between p-2 rounded-xl text-xs text-left transition cursor-pointer ${
                         isSelected
-                          ? 'bg-indigo-50 text-indigo-900 font-bold border border-indigo-200/80 shadow-2xs'
+                          ? 'bg-purple-50 text-purple-900 font-bold border border-purple-200/80 shadow-2xs'
                           : 'text-slate-700 hover:bg-slate-50 hover:border-slate-200 border border-transparent'
                       }`}
                     >
@@ -225,7 +225,7 @@ export default function ProfileMenu({ onOpenSettings }) {
                         <p className="truncate font-semibold">{org.name}</p>
                         <p className="text-[10px] text-slate-400 font-mono">{org.tag || 'WSKZ'}</p>
                       </div>
-                      {isSelected && <CheckCircle2 size={15} className="text-indigo-600 shrink-0" />}
+                      {isSelected && <CheckCircle2 size={15} className="text-purple-600 shrink-0" />}
                     </button>
                   );
                 })}
@@ -241,9 +241,9 @@ export default function ProfileMenu({ onOpenSettings }) {
                   setIsOpen(false);
                   if (onOpenSettings) onOpenSettings();
                 }}
-                className="w-full flex items-center gap-2 p-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition cursor-pointer"
+                className="w-full flex items-center gap-2 p-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-purple-50 hover:text-purple-800 transition cursor-pointer"
               >
-                <Settings size={14} className="text-indigo-600" />
+                <Settings size={14} className="text-purple-600" />
                 <span>Konfiguracja Koła & Arkusze Google</span>
               </button>
             )}
@@ -251,7 +251,7 @@ export default function ProfileMenu({ onOpenSettings }) {
             {/* Section 3: Change Password */}
             <button
               onClick={handleOpenChangePassword}
-              className="w-full flex items-center gap-2 p-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition cursor-pointer"
+              className="w-full flex items-center gap-2 p-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-purple-50 hover:text-purple-800 transition cursor-pointer"
             >
               <KeyRound size={14} className="text-amber-500" />
               <span>Zmień hasło</span>

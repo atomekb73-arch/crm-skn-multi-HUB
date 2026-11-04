@@ -101,7 +101,8 @@ export const DEFAULT_ORGS = [
     id: 'psychoonkologia',
     name: 'Studenckie Koło Naukowe Psychoonkologii WSKZ',
     shortName: 'SKN Psychoonkologii',
-    tag: 'SKN-PSYCHO',
+    tag: 'SKN-ONKO',
+    badgeText: 'ONKO',
     faculty: 'Instytut Psychologii WSKZ',
     unit: 'Instytut Psychologii WSKZ',
     academicYear: '2026/2027',
@@ -113,7 +114,7 @@ export const DEFAULT_ORGS = [
     subcalendarId: '15520558',
     subcalendarName: '07 🎗️ SKN Psychoonkologii',
     description: 'Studenckie Koło Naukowe Psychoonkologii WSKZ - Oficjalna ewidencja i harmonogram',
-    color: 'rose',
+    color: 'purple',
     isDefault: false,
     supervisors: [
       {
@@ -195,6 +196,9 @@ export function OrgProvider({ children }) {
               ...DEFAULT_ORGS[2],
               ...o,
               id: 'psychoonkologia',
+              tag: 'SKN-ONKO',
+              badgeText: 'ONKO',
+              color: 'purple',
               calendarKey: 'ks9aiux4jiza1ronpd',
               calendarId: 'ks9aiux4jiza1ronpd',
               subcalendarId: '15520558',

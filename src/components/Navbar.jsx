@@ -82,14 +82,14 @@ export default function Navbar({
                 onClick={() => handleMainTabClick(tab.id)}
                 className={`group flex items-center gap-2 text-xs md:text-sm px-3 sm:px-3.5 py-1.5 rounded-xl transition-colors duration-150 whitespace-nowrap cursor-pointer font-semibold shrink-0 ${
                   isActive
-                    ? 'bg-white text-slate-950 shadow-sm border border-slate-300'
+                    ? `bg-white text-purple-950 shadow-sm border ${theme?.navActiveTabBorder || 'border-purple-300 ring-1 ring-purple-200/50'}`
                     : 'text-slate-700 hover:text-slate-950 hover:bg-slate-300/70'
                 }`}
               >
                 <Icon
                   size={16}
                   className={`transition-colors shrink-0 w-4 h-4 ${
-                    isActive ? (theme?.navActiveTabIcon || 'text-indigo-600') : 'text-slate-600 group-hover:text-slate-900'
+                    isActive ? (theme?.navActiveTabIcon || 'text-purple-600') : 'text-slate-600 group-hover:text-slate-900'
                   }`}
                 />
                 <span>
@@ -126,11 +126,11 @@ export default function Navbar({
                 }}
                 className={`group px-3 py-1 rounded-lg text-xs transition-colors duration-150 cursor-pointer flex items-center gap-1.5 font-semibold shrink-0 ${
                   membersSubTab === 'management' || activeTab === 'management'
-                    ? `bg-white ${theme?.navActiveSubtabText || 'text-indigo-950'} shadow-xs border border-slate-300/80`
+                    ? `bg-white ${theme?.navActiveSubtabText || 'text-purple-950'} shadow-xs border ${theme?.navActiveTabBorder || 'border-purple-300'}`
                     : 'text-slate-700 hover:text-slate-950 hover:bg-white/60'
                 }`}
               >
-                <Users size={13} className={`w-3.5 h-3.5 shrink-0 ${membersSubTab === 'management' || activeTab === 'management' ? (theme?.navActiveTabIcon || 'text-indigo-600') : 'text-slate-600 group-hover:text-slate-900'}`} />
+                <Users size={13} className={`w-3.5 h-3.5 shrink-0 ${membersSubTab === 'management' || activeTab === 'management' ? (theme?.navActiveTabIcon || 'text-purple-600') : 'text-slate-600 group-hover:text-slate-900'}`} />
                 <span className="md:hidden">Główna lista</span>
                 <span className="hidden md:inline">Główna lista członków</span>
               </button>
@@ -144,11 +144,11 @@ export default function Navbar({
                 }}
                 className={`group px-3 py-1 rounded-lg text-xs transition-colors duration-150 cursor-pointer flex items-center gap-1.5 font-semibold shrink-0 ${
                   membersSubTab === 'quarantine' || activeTab === 'quarantine'
-                    ? 'bg-white text-amber-950 shadow-xs border border-slate-300/80'
+                    ? `bg-white ${theme?.navActiveSubtabText || 'text-purple-950'} shadow-xs border ${theme?.navActiveTabBorder || 'border-purple-300'}`
                     : 'text-slate-700 hover:text-slate-950 hover:bg-white/60'
                 }`}
               >
-                <ShieldAlert size={13} className={`w-3.5 h-3.5 shrink-0 ${membersSubTab === 'quarantine' || activeTab === 'quarantine' ? 'text-amber-600' : 'text-slate-600 group-hover:text-slate-900'}`} />
+                <ShieldAlert size={13} className={`w-3.5 h-3.5 shrink-0 ${membersSubTab === 'quarantine' || activeTab === 'quarantine' ? (theme?.navActiveTabIcon || 'text-purple-600') : 'text-slate-600 group-hover:text-slate-900'}`} />
                 <span className="md:hidden">Kwarantanna</span>
                 <span className="hidden md:inline">Kwarantanna & Zgłoszenia</span>
                 {pendingCount > 0 && (
@@ -194,61 +194,64 @@ export default function Navbar({
             <div className="relative max-w-full sm:ml-auto">
               <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto whitespace-nowrap max-w-full py-0.5 scrollbar-none scroll-smooth touch-auto sm:ml-auto h-9 min-h-[36px]">
                 {/* 1) Aktywni */}
-                <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                  <span className="font-bold text-xs text-slate-900 font-mono">{membersMetrics.activeCount}</span>
-                  <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">
+                <div className={`${theme?.widgetCardBg || 'bg-purple-50/50 border-purple-100'} border rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0`}>
+                  <span className={`w-2 h-2 rounded-full ${theme?.statDotColor || 'bg-purple-500'} shrink-0`} />
+                  <span className="font-bold text-xs text-purple-950 font-mono">{membersMetrics.activeCount}</span>
+                  <span className="text-purple-900 font-semibold text-[11px] whitespace-nowrap">
                     <span className="md:hidden">Aktywni</span>
                     <span className="hidden md:inline">Aktywni członkowie</span>
                   </span>
                 </div>
 
                 {/* 2) Archiwum */}
-                <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0" title="Liczba zarchiwizowanych zgłoszeń i wpisów">
-                  <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
-                  <span className="font-bold text-xs text-slate-900 font-mono">{membersMetrics.archivedCount ?? 0}</span>
-                  <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">
+                <div className={`${theme?.widgetCardBg || 'bg-purple-50/50 border-purple-100'} border rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0`} title="Liczba zarchiwizowanych zgłoszeń i wpisów">
+                  <span className={`w-2 h-2 rounded-full ${theme?.statDotColor || 'bg-purple-500'} shrink-0`} />
+                  <span className="font-bold text-xs text-purple-950 font-mono">{membersMetrics.archivedCount ?? 0}</span>
+                  <span className="text-purple-900 font-semibold text-[11px] whitespace-nowrap">
                     Archiwum
                   </span>
                 </div>
 
                 {/* 3) Spotkania */}
-                <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0" title="Łączna liczba zarejestrowanych spotkań koła">
-                  <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
-                  <span className="font-bold text-xs text-slate-900 font-mono">{membersMetrics.meetingsCount ?? 0}</span>
-                  <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">
+                <div className={`${theme?.widgetCardBg || 'bg-purple-50/50 border-purple-100'} border rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0`} title="Łączna liczba zarejestrowanych spotkań koła">
+                  <span className={`w-2 h-2 rounded-full ${theme?.statDotColor || 'bg-purple-500'} shrink-0`} />
+                  <span className="font-bold text-xs text-purple-950 font-mono">{membersMetrics.meetingsCount ?? 0}</span>
+                  <span className="text-purple-900 font-semibold text-[11px] whitespace-nowrap">
                     Spotkania
                   </span>
                 </div>
 
                 {/* 4) Frekwencja */}
-                <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0">
-                  <span className="font-bold text-xs text-slate-900 font-mono">{isNaN(membersMetrics.avgFreq) ? 0 : membersMetrics.avgFreq}%</span>
-                  <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">
+                <div className={`${theme?.widgetCardBg || 'bg-purple-50/50 border-purple-100'} border rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0`}>
+                  <span className={`w-2 h-2 rounded-full ${theme?.statDotColor || 'bg-purple-500'} shrink-0`} />
+                  <span className="font-bold text-xs text-purple-950 font-mono">{isNaN(membersMetrics.avgFreq) ? 0 : membersMetrics.avgFreq}%</span>
+                  <span className="text-purple-900 font-semibold text-[11px] whitespace-nowrap">
                     <span className="md:hidden">Średnia</span>
                     <span className="hidden md:inline">Średnia frekwencja</span>
                   </span>
                 </div>
 
                 {/* 5) Zaświadczenia */}
-                <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0">
-                  <span className="font-bold text-xs text-slate-900 font-mono">{membersMetrics.certReady}</span>
-                  <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">
+                <div className={`${theme?.widgetCardBg || 'bg-purple-50/50 border-purple-100'} border rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0`}>
+                  <span className={`w-2 h-2 rounded-full ${theme?.statDotColor || 'bg-purple-500'} shrink-0`} />
+                  <span className="font-bold text-xs text-purple-950 font-mono">{membersMetrics.certReady}</span>
+                  <span className="text-purple-900 font-semibold text-[11px] whitespace-nowrap">
                     <span className="md:hidden">Zaświadczenia</span>
                     <span className="hidden md:inline">Gotowe zaświadczenia</span>
                   </span>
                 </div>
 
                 {/* 6) Mailing */}
-                <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0">
-                  <span className="font-bold text-xs text-slate-900 font-mono">{membersMetrics.mailingConsentsCount}</span>
-                  <span className="text-slate-800 font-semibold text-[11px] whitespace-nowrap">
+                <div className={`${theme?.widgetCardBg || 'bg-purple-50/50 border-purple-100'} border rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-2xs shrink-0`}>
+                  <span className={`w-2 h-2 rounded-full ${theme?.statDotColor || 'bg-purple-500'} shrink-0`} />
+                  <span className="font-bold text-xs text-purple-950 font-mono">{membersMetrics.mailingConsentsCount}</span>
+                  <span className="text-purple-900 font-semibold text-[11px] whitespace-nowrap">
                     <span className="md:hidden">Mailing</span>
                     <span className="hidden md:inline">Zgody na mailing</span>
                   </span>
                 </div>
               </div>
-              <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-slate-100 to-transparent rounded-r-xl sm:hidden" />
+              <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-purple-100/40 to-transparent rounded-r-xl sm:hidden" />
             </div>
           )}
         </div>
@@ -267,11 +270,11 @@ export default function Navbar({
               }}
               className={`group px-3 py-1 rounded-lg text-xs transition-colors duration-150 cursor-pointer flex items-center gap-1.5 font-semibold shrink-0 ${
                 documentationSubTab === 'reports' || activeTab === 'reports'
-                  ? `bg-white ${theme?.navActiveSubtabText || 'text-indigo-950'} shadow-xs border border-slate-300/80`
+                  ? `bg-white ${theme?.navActiveSubtabText || 'text-purple-950'} shadow-xs border ${theme?.navActiveTabBorder || 'border-purple-300'}`
                   : 'text-slate-700 hover:text-slate-950 hover:bg-white/60'
               }`}
             >
-              <FileText size={13} className={`w-3.5 h-3.5 shrink-0 ${documentationSubTab === 'reports' || activeTab === 'reports' ? (theme?.navActiveTabIcon || 'text-indigo-600') : 'text-slate-600 group-hover:text-slate-900'}`} />
+              <FileText size={13} className={`w-3.5 h-3.5 shrink-0 ${documentationSubTab === 'reports' || activeTab === 'reports' ? (theme?.navActiveTabIcon || 'text-purple-600') : 'text-slate-600 group-hover:text-slate-900'}`} />
               <span>Certyfikaty & Sprawozdania</span>
             </button>
 
@@ -284,11 +287,11 @@ export default function Navbar({
               }}
               className={`group px-3 py-1 rounded-lg text-xs transition-colors duration-150 cursor-pointer flex items-center gap-1.5 font-semibold shrink-0 ${
                 documentationSubTab === 'documents' || activeTab === 'documents' || activeTab === 'repository'
-                  ? `bg-white ${theme?.navActiveSubtabText || 'text-indigo-950'} shadow-xs border border-slate-300/80`
+                  ? `bg-white ${theme?.navActiveSubtabText || 'text-purple-950'} shadow-xs border ${theme?.navActiveTabBorder || 'border-purple-300'}`
                   : 'text-slate-700 hover:text-slate-950 hover:bg-white/60'
               }`}
             >
-              <FolderKanban size={13} className={`w-3.5 h-3.5 shrink-0 ${documentationSubTab === 'documents' || activeTab === 'documents' || activeTab === 'repository' ? (theme?.navActiveTabIcon || 'text-indigo-600') : 'text-slate-600 group-hover:text-slate-900'}`} />
+              <FolderKanban size={13} className={`w-3.5 h-3.5 shrink-0 ${documentationSubTab === 'documents' || activeTab === 'documents' || activeTab === 'repository' ? (theme?.navActiveTabIcon || 'text-purple-600') : 'text-slate-600 group-hover:text-slate-900'}`} />
               <span>Rejestr Uchwał & Statut</span>
             </button>
           </div>
@@ -309,11 +312,11 @@ export default function Navbar({
               }}
               className={`group px-3 py-1 rounded-lg text-xs transition-colors duration-150 cursor-pointer flex items-center gap-1.5 font-semibold shrink-0 ${
                 settingsToolsSubTab === 'settings' || activeTab === 'settings'
-                  ? `bg-white ${theme?.navActiveSubtabText || 'text-indigo-950'} shadow-xs border border-slate-300/80`
+                  ? `bg-white ${theme?.navActiveSubtabText || 'text-purple-950'} shadow-xs border ${theme?.navActiveTabBorder || 'border-purple-300'}`
                   : 'text-slate-700 hover:text-slate-950 hover:bg-white/60'
               }`}
             >
-              <Settings size={13} className={`w-3.5 h-3.5 shrink-0 ${settingsToolsSubTab === 'settings' || activeTab === 'settings' ? (theme?.navActiveTabIcon || 'text-indigo-600') : 'text-slate-600 group-hover:text-slate-900'}`} />
+              <Settings size={13} className={`w-3.5 h-3.5 shrink-0 ${settingsToolsSubTab === 'settings' || activeTab === 'settings' ? (theme?.navActiveTabIcon || 'text-purple-600') : 'text-slate-600 group-hover:text-slate-900'}`} />
               <span>Konfiguracja Koła</span>
             </button>
 
@@ -326,11 +329,11 @@ export default function Navbar({
               }}
               className={`group px-3 py-1 rounded-lg text-xs transition-colors duration-150 cursor-pointer flex items-center gap-1.5 font-semibold shrink-0 ${
                 settingsToolsSubTab === 'tools' || activeTab === 'tools'
-                  ? `bg-white ${theme?.navActiveSubtabText || 'text-indigo-950'} shadow-xs border border-slate-300/80`
+                  ? `bg-white ${theme?.navActiveSubtabText || 'text-purple-950'} shadow-xs border ${theme?.navActiveTabBorder || 'border-purple-300'}`
                   : 'text-slate-700 hover:text-slate-950 hover:bg-white/60'
               }`}
             >
-              <Wrench size={13} className={`w-3.5 h-3.5 shrink-0 ${settingsToolsSubTab === 'tools' || activeTab === 'tools' ? (theme?.navActiveTabIcon || 'text-indigo-600') : 'text-slate-600 group-hover:text-slate-900'}`} />
+              <Wrench size={13} className={`w-3.5 h-3.5 shrink-0 ${settingsToolsSubTab === 'tools' || activeTab === 'tools' ? (theme?.navActiveTabIcon || 'text-purple-600') : 'text-slate-600 group-hover:text-slate-900'}`} />
               <span>Narzędzia & Mailing</span>
             </button>
           </div>

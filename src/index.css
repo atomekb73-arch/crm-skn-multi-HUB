@@ -28,6 +28,19 @@
   --tenant-backdrop-to: #f0fdfa;
 }
 
+[data-tenant="psychoonkologia"],
+[data-tenant="skn_psychoonkologii"],
+[data-tenant="skn-psychoonkologia"] {
+  --tenant-primary: #7c3aed;
+  --tenant-primary-hover: #6d28d9;
+  --tenant-primary-light: #f5f3ff;
+  --tenant-primary-border: #ddd6fe;
+  --tenant-accent: #8b5cf6;
+  --tenant-backdrop-from: #fbfaff;
+  --tenant-backdrop-via: #f6f3ff;
+  --tenant-backdrop-to: #ede9fe;
+}
+
 /* Płynne przejście motywów tenantów na elementach zewnętrznych */
 .tenant-backdrop {
   transition: background-color 0.4s ease, border-color 0.3s ease, color 0.3s ease;

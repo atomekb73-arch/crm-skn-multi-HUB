@@ -958,7 +958,7 @@ export default function ManagementTab({
       );
     }
     return (
-      <span className="inline-flex items-center justify-center ml-1 p-0.5 rounded bg-indigo-100 text-indigo-600 font-black border border-indigo-200 shadow-2xs print:hidden shrink-0">
+      <span className="inline-flex items-center justify-center ml-1 p-0.5 rounded bg-purple-100 text-purple-700 font-black border border-purple-200 shadow-2xs print:hidden shrink-0">
         {sortConfig.direction === 'asc' ? <ChevronUp size={13} strokeWidth={2.5} /> : <ChevronDown size={13} strokeWidth={2.5} />}
       </span>
     );
@@ -1166,10 +1166,10 @@ export default function ManagementTab({
 
       {/* ── Search & Filter Controls Toolbar (Hidden during Print) ───────────── */}
       <div className="w-full max-w-full flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 print:hidden no-print">
-        {/* Search Input inside distinct gray base container with inner shadow */}
-        <div className="bg-slate-100 border border-slate-300/80 rounded-xl p-1 shadow-inner relative flex-1 max-w-md">
+        {/* Search Input inside distinct soft purple base container with inner shadow */}
+        <div className={`${theme?.filterBarBg || 'bg-purple-50/40 border-purple-200/70'} border rounded-xl p-1 shadow-inner relative flex-1 max-w-md`}>
           <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-400 pointer-events-none" />
             <input
               id="member-search-input"
               name="memberSearch"
@@ -1178,10 +1178,10 @@ export default function ManagementTab({
               placeholder="Szukaj po nazwisku, nr indeksu lub emailu…"
               value={query}
               onChange={e => setQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-500 font-medium text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400 shadow-2xs transition"
+              className="w-full pl-9 pr-4 py-1.5 rounded-lg border border-purple-200/60 bg-white text-slate-900 placeholder:text-slate-500 font-medium text-xs focus:outline-none focus:ring-2 focus:ring-purple-400 shadow-2xs transition"
             />
             {query && (
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-slate-500">
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-purple-700">
                 {sortedMembers.length} wyników
               </span>
             )}
@@ -1191,11 +1191,11 @@ export default function ManagementTab({
         {/* Action Controls: Academic Year + Filters + XLSX Export + Print Button */}
         <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap shrink-0 w-full sm:w-auto">
           {/* Academic Year Selector in Management Tab (Clean select without redundant label) */}
-          <div className="inline-flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200 text-xs font-semibold shrink-0 gap-1.5 shadow-2xs">
+          <div className={`inline-flex items-center ${theme?.filterBarBg || 'bg-purple-50/40 border-purple-200/70'} p-1 rounded-xl border text-xs font-semibold shrink-0 gap-1.5 shadow-2xs`}>
             <select
               value={academicYear}
               onChange={e => handleYearChange(e.target.value)}
-              className="text-xs border border-slate-200 rounded-lg px-2 sm:px-2.5 py-1 bg-white font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer shadow-xs"
+              className="text-xs border border-purple-200/60 rounded-lg px-2 sm:px-2.5 py-1 bg-white font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-300 cursor-pointer shadow-xs"
             >
               {academicYearOptions.map(opt => (
                 <option key={opt.value} value={opt.value}>
@@ -1205,7 +1205,7 @@ export default function ManagementTab({
               <option value="custom">Własny zakres...</option>
             </select>
             {academicYear === 'custom' && (
-              <div className="flex items-center gap-1.5 text-xs bg-white px-2 py-0.5 rounded-lg border border-slate-200">
+              <div className="flex items-center gap-1.5 text-xs bg-white px-2 py-0.5 rounded-lg border border-purple-200">
                 <input
                   type="date"
                   value={customStartDate}
@@ -1224,13 +1224,13 @@ export default function ManagementTab({
           </div>
 
           {/* Segmented Filter Pills (Concise Labels) */}
-          <div className="inline-flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200 text-xs font-semibold shrink-0 gap-1 shadow-2xs overflow-x-auto max-w-full scrollbar-none">
+          <div className={`inline-flex items-center ${theme?.filterBarBg || 'bg-purple-50/40 border-purple-200/70'} p-1 rounded-xl border text-xs font-semibold shrink-0 gap-1 shadow-2xs overflow-x-auto max-w-full scrollbar-none`}>
             <button
               type="button"
               onClick={() => startTransition(() => setStatusFilter('active'))}
               className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
                 statusFilter === 'active'
-                  ? 'bg-white text-emerald-700 shadow-xs font-bold'
+                  ? 'bg-white text-emerald-700 shadow-xs font-bold border border-emerald-200/70'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -1244,11 +1244,11 @@ export default function ManagementTab({
                 onClick={() => startTransition(() => setStatusFilter('final_semester'))}
                 className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
                   statusFilter === 'final_semester'
-                    ? 'bg-white text-sky-700 shadow-xs font-bold'
+                    ? 'bg-white text-purple-900 border border-purple-200 shadow-xs font-bold'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <span className="w-2 h-2 rounded-full bg-sky-500 shrink-0" />
+                <span className="w-2 h-2 rounded-full bg-purple-500 shrink-0" />
                 <span className="sm:hidden">Sem. ost. ({finalSemesterCount})</span>
                 <span className="hidden sm:inline">Ostatni semestr ({finalSemesterCount})</span>
               </button>
@@ -1259,11 +1259,11 @@ export default function ManagementTab({
               onClick={() => startTransition(() => setStatusFilter('guest'))}
               className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
                 statusFilter === 'guest'
-                  ? 'bg-white text-indigo-700 shadow-xs font-bold'
+                  ? 'bg-white text-purple-900 border border-purple-200 shadow-xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+              <span className="w-2 h-2 rounded-full bg-purple-500 shrink-0" />
               <span>Goście ({guestCount})</span>
             </button>
 
@@ -1272,7 +1272,7 @@ export default function ManagementTab({
               onClick={() => startTransition(() => setStatusFilter('resigned'))}
               className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
                 statusFilter === 'resigned'
-                  ? 'bg-white text-slate-800 shadow-xs font-bold'
+                  ? 'bg-white text-slate-800 shadow-xs font-bold border border-slate-200'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -1287,11 +1287,11 @@ export default function ManagementTab({
                 onClick={() => startTransition(() => setStatusFilter('graduates'))}
                 className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
                   statusFilter === 'graduates'
-                    ? 'bg-white text-indigo-700 shadow-xs font-bold'
+                    ? 'bg-white text-purple-900 border border-purple-200 shadow-xs font-bold'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <GraduationCap size={13} className="text-indigo-600 shrink-0" />
+                <GraduationCap size={13} className="text-purple-600 shrink-0" />
                 <span>Absolwenci ({graduatesCount})</span>
               </button>
             )}
@@ -1529,7 +1529,7 @@ export default function ManagementTab({
                   className={`group/row transition-all duration-150 ease-in-out cursor-pointer print:break-inside-avoid print:page-break-inside-avoid ${
                     isNonActive
                       ? 'opacity-65 bg-slate-50/60 hover:opacity-90 hover:bg-slate-100/80 text-slate-500 print:opacity-100 print:bg-white'
-                      : 'hover:bg-indigo-50/60 hover:border-indigo-300 text-slate-800'
+                      : 'hover:bg-purple-50/50 hover:border-purple-200 text-slate-800'
                   }`}
                 >
                   {/* 1. # (Lp.) - Print: 5% */}
@@ -1540,15 +1540,15 @@ export default function ManagementTab({
                     <div className="flex items-center gap-1.5 font-semibold text-slate-900 text-xs truncate print:whitespace-normal print:overflow-visible print:text-slate-900 print:leading-tight" title={name}>
                       <span
                         onClick={() => setDecisionModalMember(m)}
-                        className={`cursor-pointer transition-colors hover:text-indigo-600 ${
-                          isResigned ? 'line-through text-slate-400 print:no-underline print:text-slate-900' : isGuestMember ? 'text-indigo-900 font-bold' : 'text-slate-900 group-hover/row:text-indigo-600 print:text-slate-900 font-bold'
+                        className={`cursor-pointer transition-colors hover:text-purple-700 ${
+                          isResigned ? 'line-through text-slate-400 print:no-underline print:text-slate-900' : isGuestMember ? 'text-purple-900 font-bold' : 'text-slate-900 group-hover/row:text-purple-700 print:text-slate-900 font-bold'
                         }`}
                         title="Kliknij, aby otworzyć zarządzanie wpisem studenta"
                       >
                         {name}
                       </span>
                       {isGuestMember && (
-                        <span className="text-[10px] text-indigo-700 font-semibold shrink-0 print:hidden no-print">· Gość</span>
+                        <span className="text-[10px] text-purple-700 font-semibold shrink-0 print:hidden no-print">· Gość</span>
                       )}
                       {isResigned && (
                         <span className="text-[10px] text-slate-500 font-semibold shrink-0 print:hidden no-print">· Nieaktywny</span>
@@ -1638,7 +1638,7 @@ export default function ManagementTab({
                       onClick={() => setDecisionModalMember(m)}
                       className={`inline-flex items-center justify-center gap-1.5 text-xs font-bold transition-colors cursor-pointer hover:underline ${
                         isGuestMember
-                          ? 'text-indigo-600'
+                          ? 'text-purple-700'
                           : isResigned
                           ? 'text-slate-500'
                           : isGrad
@@ -1650,7 +1650,7 @@ export default function ManagementTab({
                       title="Kliknij, aby zmienić status lub opcje wpisu"
                     >
                       <VectorRingIndicator
-                        color={isGuestMember ? 'indigo' : isResigned ? 'slate' : isGrad ? 'purple' : isFinalSem ? 'sky' : 'emerald'}
+                        color={isGuestMember ? 'purple' : isResigned ? 'slate' : isGrad ? 'purple' : isFinalSem ? 'sky' : 'emerald'}
                         size={10}
                       />
                       <span>{isGuestMember ? 'Gość' : isResigned ? 'Nieaktywny' : isGrad ? 'Absolwent' : isFinalSem ? 'Ostatni sem.' : 'Aktywny'}</span>

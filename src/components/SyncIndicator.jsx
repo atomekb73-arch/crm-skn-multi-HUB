@@ -26,10 +26,10 @@ export default function SyncIndicator({ status = 'synced', lastSyncTime = null, 
   if (status === 'saving' || status === 'syncing' || status === 'refreshing') {
     return (
       <div
-        className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-semibold bg-indigo-50 border border-indigo-200/80 text-indigo-700 shadow-2xs animate-in fade-in duration-150 shrink-0 whitespace-nowrap"
+        className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-semibold bg-purple-50 border border-purple-200/80 text-purple-800 shadow-2xs animate-in fade-in duration-150 shrink-0 whitespace-nowrap"
         title="Trwa pobieranie i synchronizacja najświeższych danych z chmury"
       >
-        <Loader2 size={13} className="animate-spin text-indigo-600 shrink-0" />
+        <Loader2 size={13} className="animate-spin text-purple-600 shrink-0" />
         <span>Synchronizacja...</span>
       </div>
     );

@@ -823,7 +823,7 @@ export default function QuarantineTab({
           <div className="bg-white rounded-2xl p-4 sm:p-6 max-w-lg w-full shadow-2xl border border-slate-100 space-y-4 animate-in fade-in zoom-in-95 duration-150 my-8">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-800 flex items-center justify-center">
                   <UserPlus size={18} />
                 </div>
                 <div>
@@ -1083,7 +1083,7 @@ export default function QuarantineTab({
                 <button
                   type="submit"
                   disabled={isAddingMember || Boolean(duplicateIndexFound) || Boolean(duplicateEmailFound)}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-xs font-bold shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-xs font-bold shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer"
                   title={
                     duplicateIndexFound || duplicateEmailFound
                       ? 'Popraw zduplikowane dane przed zapisem'
@@ -1119,7 +1119,7 @@ export default function QuarantineTab({
             onClick={() => startTransition(() => setViewMode('pending'))}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               viewMode === 'pending'
-                ? 'bg-white text-indigo-700 shadow-xs'
+                ? 'bg-white text-purple-950 shadow-xs border border-purple-200/60'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -1149,7 +1149,7 @@ export default function QuarantineTab({
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               copiedLink
                 ? 'bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs'
-                : 'bg-white hover:bg-slate-50 text-indigo-700 border border-indigo-200 shadow-2xs'
+                : 'bg-white hover:bg-purple-50/50 text-purple-800 border border-purple-200 shadow-2xs'
             }`}
             title="Skopiuj link do publicznego formularza zgłoszeniowego dla kandydatów"
           >
@@ -1160,7 +1160,7 @@ export default function QuarantineTab({
               </>
             ) : (
               <>
-                <FileSpreadsheet size={15} strokeWidth={2.2} className="shrink-0 text-indigo-600" />
+                <FileSpreadsheet size={15} strokeWidth={2.2} className="shrink-0 text-purple-600" />
                 <span>Kopiuj link do deklaracji</span>
               </>
             )}
@@ -1169,7 +1169,7 @@ export default function QuarantineTab({
           <button
             type="button"
             onClick={() => setShowAddMemberModal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white shadow-xs transition-colors cursor-pointer"
             title="Dodaj ręcznie nowego członka bezpośrednio do bazy CRM i Rejestru Zgłoszeń"
           >
             <UserPlus size={16} strokeWidth={2.2} className="w-4 h-4 shrink-0" />
@@ -1227,14 +1227,14 @@ export default function QuarantineTab({
             </div>
 
             {/* Academic Year Filter Segment */}
-            <div className="inline-flex items-center bg-indigo-50/70 p-1 rounded-xl border border-indigo-200/60 text-xs font-medium">
+            <div className="inline-flex items-center bg-purple-50/70 p-1 rounded-xl border border-purple-200/60 text-xs font-medium">
               <button
                 type="button"
                 onClick={() => startTransition(() => setAcademicYearFilter('all'))}
                 className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
                   academicYearFilter === 'all'
-                    ? 'bg-white text-indigo-950 font-bold shadow-2xs'
-                    : 'text-indigo-600 hover:text-indigo-950'
+                    ? 'bg-white text-purple-950 font-bold shadow-2xs'
+                    : 'text-purple-700 hover:text-purple-950'
                 }`}
               >
                 Wszystkie lata akademickie
@@ -1333,9 +1333,9 @@ export default function QuarantineTab({
         <>
           {/* Bulk Actions Bar */}
           {selectedIds.length >= 1 && (
-            <div className="bg-gradient-to-r from-indigo-900 to-slate-900 text-white rounded-xl p-3.5 shadow-lg flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-200 border border-indigo-700/50 print:hidden no-print">
+            <div className="bg-gradient-to-r from-purple-950 via-slate-900 to-indigo-950 text-white rounded-xl p-3.5 shadow-lg flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-200 border border-purple-700/50 print:hidden no-print">
               <div className="flex items-center gap-2 text-xs font-medium">
-                <span className="bg-indigo-500/30 border border-indigo-400/40 text-indigo-200 px-2.5 py-1 rounded-full font-bold">
+                <span className="bg-purple-500/30 border border-purple-400/40 text-purple-200 px-2.5 py-1 rounded-full font-bold">
                   Zaznaczono: {selectedIds.length}
                 </span>
                 <span className="text-slate-300">gotowe do przetworzenia</span>
@@ -1345,7 +1345,7 @@ export default function QuarantineTab({
                 <button
                   onClick={handleBulkApproveClick}
                   disabled={isBulkApproving}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs font-semibold shadow-sm transition-all border border-indigo-400/40"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs font-semibold shadow-sm transition-all border border-purple-400/40"
                 >
                   {isBulkApproving ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
                   <span>{isBulkApproving ? 'Zapisywanie...' : `Zatwierdź zaznaczone (${selectedIds.length}) do Zarządzania`}</span>
@@ -1376,7 +1376,7 @@ export default function QuarantineTab({
               tabIndex={0}
               role="region"
               aria-label="Tabela zgłoszeń i kwarantanny kandydatów"
-              className="table-wrapper w-full overflow-x-auto block touch-auto focus:outline-none focus:ring-1 focus:ring-indigo-400/50 print:overflow-visible"
+              className="table-wrapper w-full overflow-x-auto block touch-auto focus:outline-none focus:ring-1 focus:ring-purple-400/50 print:overflow-visible"
             >
               <table className="print-table w-full text-sm border-collapse">
                 <thead>
@@ -1387,7 +1387,7 @@ export default function QuarantineTab({
                         type="checkbox"
                         checked={allValidSelected}
                         onChange={toggleSelectAllValid}
-                        className="accent-indigo-600 focus:ring-indigo-500 w-4 h-4 rounded border-slate-300 cursor-pointer align-middle print:hidden no-print"
+                        className="accent-purple-600 focus:ring-purple-500 w-4 h-4 rounded border-slate-300 cursor-pointer align-middle print:hidden no-print"
                         title="Zaznacz wszystkie poprawne (bez duplikatów)"
                       />
                       <span className="hidden print:inline font-mono">Lp.</span>
@@ -1482,7 +1482,7 @@ export default function QuarantineTab({
                         key={q.id}
                         style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}
                         className={`hover:bg-slate-50/70 transition-colors print:bg-white print:break-inside-avoid ${
-                          isSelected ? 'bg-indigo-50/50' : q.isDuplicate ? 'bg-amber-50/30' : ''
+                          isSelected ? 'bg-purple-50/60' : q.isDuplicate ? 'bg-amber-50/30' : ''
                         }`}
                       >
                         {/* 1. Checkbox (Screen) / Lp. (Print: 6%) */}
@@ -1491,7 +1491,7 @@ export default function QuarantineTab({
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => toggleSelectRow(q.id)}
-                            className="accent-indigo-600 focus:ring-indigo-500 w-4 h-4 rounded border-slate-300 cursor-pointer align-middle print:hidden no-print"
+                            className="accent-purple-600 focus:ring-purple-500 w-4 h-4 rounded border-slate-300 cursor-pointer align-middle print:hidden no-print"
                           />
                           <span className="hidden print:inline font-mono">{idx + 1}</span>
                         </td>
@@ -1502,7 +1502,7 @@ export default function QuarantineTab({
                             <span className="font-medium text-slate-700 text-xs leading-tight font-mono print:text-[8pt] print:text-slate-900">
                               {formatSubmissionDate(q.timestamp || q.dataWplywu)}
                             </span>
-                            <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                            <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-50 text-purple-800 border border-purple-200">
                               {q.academicYear || '2026/2027'}
                             </span>
                           </div>
@@ -1514,7 +1514,7 @@ export default function QuarantineTab({
                             <span>{name}</span>
                             <button
                               onClick={() => setEditingMember(q)}
-                              className="text-slate-400 hover:text-indigo-600 p-0.5 rounded transition print:hidden no-print"
+                              className="text-slate-400 hover:text-purple-600 p-0.5 rounded transition print:hidden no-print"
                               title="Edytuj dane studenta"
                             >
                               <Pencil size={13} strokeWidth={2.2} />
@@ -1575,10 +1575,10 @@ export default function QuarantineTab({
                             <button
                               type="button"
                               onClick={() => setWelcomeMailMember(q)}
-                              className="inline-flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 text-xs font-semibold p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg shadow-2xs transition cursor-pointer"
+                              className="inline-flex items-center gap-1.5 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200/80 text-xs font-semibold p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg shadow-2xs transition cursor-pointer"
                               title="Wyślij powitanie / potwierdzenie i zarejestruj w Ewidencja_Poczty"
                             >
-                              <Mail size={15} strokeWidth={2.2} className="text-indigo-600" />
+                              <Mail size={15} strokeWidth={2.2} className="text-purple-600" />
                               <span className="hidden md:inline">Powitanie</span>
                             </button>
 
@@ -1695,7 +1695,7 @@ export default function QuarantineTab({
                       <td className="hidden md:table-cell px-3 py-2.5 align-middle text-left whitespace-nowrap print:table-cell print:w-[14%] print:min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="font-mono text-xs text-slate-600">{ts.date}</span>
-                          <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                          <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-50 text-purple-800 border border-purple-200">
                             {a.academicYear || '2026/2027'}
                           </span>
                         </div>

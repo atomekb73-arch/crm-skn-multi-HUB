@@ -110,53 +110,60 @@ export const TENANT_THEMES = {
 
   psychoonkologia: {
     id: 'psychoonkologia',
-    name: 'Pudrowy Róż & Szlachetny Rubin (Psychoonkologia)',
+    name: 'Delikatna Lawenda & Wrzosowy Fiolet (Psychoonkologia)',
     orgShortName: 'SKN Psychoonkologii',
-    badgeText: 'PSYCHO',
-    colorKey: 'rose',
+    badgeText: 'ONKO',
+    colorKey: 'purple',
 
-    // Tło zewnętrzne aplikacji (backdrop) - elegancki pudrowy róż
-    backdropGradientClass: 'from-slate-50 via-rose-50/40 to-pink-50/50',
+    // Tło zewnętrzne aplikacji (backdrop) - delikatny, pastelowy odcień fioletu (lawendowy/wrzosowy)
+    backdropGradientClass: 'from-slate-50 via-purple-50/40 to-violet-50/50',
     backdropStyle: {
-      background: 'linear-gradient(135deg, #f8fafc 0%, #fff1f2 45%, #fdf2f8 100%)',
+      background: 'linear-gradient(135deg, #fbfaff 0%, #f6f3ff 45%, #ede9fe 100%)',
     },
 
-    // Header Avatar & Badge
-    headerBadgeGradient: 'bg-gradient-to-br from-rose-600 via-pink-600 to-rose-700 shadow-rose-500/25',
-    headerTagBadge: 'bg-rose-50 text-rose-800 border-rose-200/90',
-    headerHoverTitle: 'group-hover:text-rose-600',
-    headerHoverIcon: 'group-hover:text-rose-600',
+    // Header Avatar & Badge - nasycony, elegancki wrzos z wyraźnym białym napisem ONKO
+    headerBadgeGradient: 'bg-gradient-to-br from-purple-700 via-violet-700 to-indigo-800 shadow-purple-500/25',
+    headerTagBadge: 'bg-purple-50 text-purple-900 border-purple-200/90 font-bold',
+    headerHoverTitle: 'group-hover:text-purple-700',
+    headerHoverIcon: 'group-hover:text-purple-700',
 
-    // Primary Action Button
-    primaryBtn: 'bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white shadow-xs shadow-rose-600/20 focus:ring-rose-500',
-    primaryBtnOutline: 'border-rose-300 text-rose-800 hover:bg-rose-50',
+    // Primary Action Button (Odśwież dane, Zatwierdź, Dodaj ręcznie)
+    primaryBtn: 'bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white shadow-xs shadow-purple-600/20 focus:ring-purple-500',
+    primaryBtnOutline: 'border-purple-300 text-purple-900 hover:bg-purple-50',
 
     // Nawigacja i Aktywne zakładki
-    navActiveTabIcon: 'text-rose-600',
-    navActiveSubtabText: 'text-rose-950',
-    navActiveIndicator: 'bg-rose-600',
-    navBadge: 'bg-rose-600 text-white',
+    navActiveTabBorder: 'border-purple-300 ring-1 ring-purple-200/50',
+    navActiveTabIcon: 'text-purple-600',
+    navActiveSubtabText: 'text-purple-950 font-bold',
+    navActiveIndicator: 'bg-purple-600',
+    navBadge: 'bg-purple-600 text-white',
+
+    // Kontenery widżetów, statystyk i filtrów (bardzo jasny, pastelowy odcień fioletu)
+    widgetCardBg: 'bg-purple-50/50 border-purple-100',
+    statDotColor: 'bg-purple-500',
+    statIconColor: 'text-purple-600',
+    filterBarBg: 'bg-purple-50/40 border-purple-200/70',
 
     // Dropdown wyboru organizacji
-    dropdownSelectedClass: 'bg-rose-50/90 text-rose-950 font-bold border-rose-200 shadow-xs',
-    dropdownSelectedIcon: 'text-rose-600',
+    dropdownSelectedClass: 'bg-purple-50/90 text-purple-950 font-bold border-purple-200 shadow-xs',
+    dropdownSelectedIcon: 'text-purple-600',
 
     // Akcenty kart i wskaźników
-    accentRing: 'focus:ring-rose-500',
-    accentBorder: 'border-rose-200',
-    accentSoftBg: 'bg-rose-50/70',
-    accentText: 'text-rose-800',
+    accentRing: 'focus:ring-purple-500',
+    accentBorder: 'border-purple-200',
+    accentSoftBg: 'bg-purple-50/70',
+    accentText: 'text-purple-900',
 
     // Zmienne CSS
     cssVars: {
-      '--tenant-primary': '#e11d48',
-      '--tenant-primary-hover': '#be123c',
-      '--tenant-primary-light': '#fff1f2',
-      '--tenant-primary-border': '#fecdd3',
-      '--tenant-accent': '#db2777',
-      '--tenant-backdrop-from': '#f8fafc',
-      '--tenant-backdrop-via': '#fff1f2',
-      '--tenant-backdrop-to': '#fdf2f8',
+      '--tenant-primary': '#7c3aed',
+      '--tenant-primary-hover': '#6d28d9',
+      '--tenant-primary-light': '#f5f3ff',
+      '--tenant-primary-border': '#ddd6fe',
+      '--tenant-accent': '#8b5cf6',
+      '--tenant-backdrop-from': '#fbfaff',
+      '--tenant-backdrop-via': '#f6f3ff',
+      '--tenant-backdrop-to': '#ede9fe',
     },
   },
 };
@@ -175,7 +182,7 @@ export function getTenantTheme(orgOrId) {
     return TENANT_THEMES.uzaleznienia;
   }
 
-  if (cleanId === 'psychoonkologia' || cleanId === 'skn_psychoonkologii' || cleanId === 'skn-psychoonkologia' || cleanId.includes('psycho')) {
+  if (cleanId === 'psychoonkologia' || cleanId === 'skn_psychoonkologii' || cleanId === 'skn-psychoonkologia' || cleanId.includes('psycho') || cleanId.includes('onko')) {
     return TENANT_THEMES.psychoonkologia;
   }
 

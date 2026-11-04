@@ -2917,9 +2917,9 @@ export default function App() {
           <div className="flex items-center justify-between xl:justify-start gap-2 sm:gap-3 min-w-0 w-full xl:w-auto relative">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 xl:flex-none">
               <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center shadow-md text-white font-black text-xs tracking-wider shrink-0 transition-all duration-300 ${
-                theme?.headerBadgeGradient || 'bg-gradient-to-br from-indigo-600 via-sky-600 to-indigo-700 shadow-indigo-500/25'
+                theme?.headerBadgeGradient || 'bg-gradient-to-br from-purple-700 via-violet-700 to-indigo-800 shadow-purple-500/25'
               }`}>
-                {theme?.badgeText || (currentOrg.id === 'uzaleznienia' ? 'UZAL' : 'SEKS')}
+                {theme?.badgeText || (currentOrg.id === 'uzaleznienia' ? 'UZAL' : currentOrg.id === 'psychoonkologia' ? 'ONKO' : 'SEKS')}
               </div>
               
               <div className="relative min-w-0 flex-1 xl:flex-none">
@@ -2982,7 +2982,7 @@ export default function App() {
                                 <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-[10px] text-white shrink-0 shadow-2xs ${
                                   orgTheme.headerBadgeGradient || 'bg-gradient-to-br from-indigo-600 to-violet-700'
                                 }`}>
-                                  {orgTheme.badgeText || (org.id === 'uzaleznienia' ? 'UZAL' : 'SEKS')}
+                                  {orgTheme.badgeText || (org.id === 'uzaleznienia' ? 'UZAL' : org.id === 'psychoonkologia' ? 'ONKO' : 'SEKS')}
                                 </div>
                                 <div className="min-w-0">
                                   <p className="truncate font-bold leading-snug">{org.name}</p>
