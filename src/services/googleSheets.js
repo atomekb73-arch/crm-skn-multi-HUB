@@ -8,6 +8,7 @@ import { supabase, fetchAllTenantRows } from '../supabaseClient.js';
 function normalizeOrg(orgId) {
   const str = String(orgId || 'skn_seksuologii').trim();
   if (str === 'skn-template' || str === 'default' || !str) return 'skn_seksuologii';
+  if (str === 'skn_psychoonkologii' || str === 'skn-psychoonkologia') return 'psychoonkologia';
   return str;
 }
 
@@ -187,15 +188,19 @@ export async function fetchGasData(orgId = 'skn_seksuologii') {
   }
 }
 
-export async function fetchMemberDetails(memberIdOrIndex) {
+export async function fetchMemberDetails(memberIdOrIndex, orgId = null) {
   if (!memberIdOrIndex) return null;
   const cleanId = String(memberIdOrIndex).trim();
+  const cleanOrg = orgId ? normalizeOrg(orgId) : (typeof window !== 'undefined' ? localStorage.getItem('crm_active_org_id') : null);
   try {
-    const { data } = await supabase
+    let q = supabase
       .from('members')
       .select('*')
-      .eq('index_number', cleanId)
-      .limit(1);
+      .eq('index_number', cleanId);
+    if (cleanOrg) {
+      q = q.eq('organization_id', cleanOrg);
+    }
+    const { data } = await q.limit(1);
     return data && data[0] ? data[0] : null;
   } catch {
     return null;
@@ -553,10 +558,11 @@ export async function initializeSubmissionsRegistryInGAS() {
   return { status: 'success' };
 }
 
-export async function editMemberInGAS({ nrIndeksu, imieNazwisko, email, telefon, kierunek, aliasy }) {
+export async function editMemberInGAS({ nrIndeksu, imieNazwisko, email, telefon, kierunek, aliasy, orgId }) {
   const cleanIdx = String(nrIndeksu || '').replace(/\D/g, '').trim();
   if (!cleanIdx) return { status: 'error' };
-  await supabase
+  const cleanOrg = orgId ? normalizeOrg(orgId) : (typeof window !== 'undefined' ? localStorage.getItem('crm_active_org_id') : null);
+  let q = supabase
     .from('members')
     .update({
       full_name: imieNazwisko,
@@ -566,22 +572,31 @@ export async function editMemberInGAS({ nrIndeksu, imieNazwisko, email, telefon,
       custom_fields: { aliasy: aliasy || '', dataAktualizacji: new Date().toISOString() }
     })
     .eq('index_number', cleanIdx);
+  if (cleanOrg) {
+    q = q.eq('organization_id', cleanOrg);
+  }
+  await q;
   return { status: 'success' };
 }
 
 /**
  * Automatyczny zapis / aktualizacja aliasu członka w bazie Supabase (`members.custom_fields.aliasy`).
  */
-export async function updateMemberAliasesInGAS(nrIndeksu, nowyAlias) {
+export async function updateMemberAliasesInGAS(nrIndeksu, nowyAlias, orgId = null) {
   const cleanNr = String(nrIndeksu || '').replace(/\D/g, '').trim();
   const cleanAlias = String(nowyAlias || '').trim();
   if (!cleanNr || !cleanAlias) return null;
+  const cleanOrg = orgId ? normalizeOrg(orgId) : (typeof window !== 'undefined' ? localStorage.getItem('crm_active_org_id') : null);
 
-  const { data: existing } = await supabase
+  let q = supabase
     .from('members')
     .select('id, custom_fields')
-    .eq('index_number', cleanNr)
-    .limit(1);
+    .eq('index_number', cleanNr);
+  if (cleanOrg) {
+    q = q.eq('organization_id', cleanOrg);
+  }
+
+  const { data: existing } = await q.limit(1);
 
   if (existing && existing[0]) {
     const cf = existing[0].custom_fields || {};

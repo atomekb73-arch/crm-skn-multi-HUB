@@ -107,6 +107,58 @@ export const TENANT_THEMES = {
       '--tenant-backdrop-to': '#f0fdfa',
     },
   },
+
+  psychoonkologia: {
+    id: 'psychoonkologia',
+    name: 'Pudrowy Róż & Szlachetny Rubin (Psychoonkologia)',
+    orgShortName: 'SKN Psychoonkologii',
+    badgeText: 'PSYCHO',
+    colorKey: 'rose',
+
+    // Tło zewnętrzne aplikacji (backdrop) - elegancki pudrowy róż
+    backdropGradientClass: 'from-slate-50 via-rose-50/40 to-pink-50/50',
+    backdropStyle: {
+      background: 'linear-gradient(135deg, #f8fafc 0%, #fff1f2 45%, #fdf2f8 100%)',
+    },
+
+    // Header Avatar & Badge
+    headerBadgeGradient: 'bg-gradient-to-br from-rose-600 via-pink-600 to-rose-700 shadow-rose-500/25',
+    headerTagBadge: 'bg-rose-50 text-rose-800 border-rose-200/90',
+    headerHoverTitle: 'group-hover:text-rose-600',
+    headerHoverIcon: 'group-hover:text-rose-600',
+
+    // Primary Action Button
+    primaryBtn: 'bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white shadow-xs shadow-rose-600/20 focus:ring-rose-500',
+    primaryBtnOutline: 'border-rose-300 text-rose-800 hover:bg-rose-50',
+
+    // Nawigacja i Aktywne zakładki
+    navActiveTabIcon: 'text-rose-600',
+    navActiveSubtabText: 'text-rose-950',
+    navActiveIndicator: 'bg-rose-600',
+    navBadge: 'bg-rose-600 text-white',
+
+    // Dropdown wyboru organizacji
+    dropdownSelectedClass: 'bg-rose-50/90 text-rose-950 font-bold border-rose-200 shadow-xs',
+    dropdownSelectedIcon: 'text-rose-600',
+
+    // Akcenty kart i wskaźników
+    accentRing: 'focus:ring-rose-500',
+    accentBorder: 'border-rose-200',
+    accentSoftBg: 'bg-rose-50/70',
+    accentText: 'text-rose-800',
+
+    // Zmienne CSS
+    cssVars: {
+      '--tenant-primary': '#e11d48',
+      '--tenant-primary-hover': '#be123c',
+      '--tenant-primary-light': '#fff1f2',
+      '--tenant-primary-border': '#fecdd3',
+      '--tenant-accent': '#db2777',
+      '--tenant-backdrop-from': '#f8fafc',
+      '--tenant-backdrop-via': '#fff1f2',
+      '--tenant-backdrop-to': '#fdf2f8',
+    },
+  },
 };
 
 /**
@@ -121,6 +173,10 @@ export function getTenantTheme(orgOrId) {
 
   if (cleanId === 'uzaleznienia' || cleanId === 'sknu' || cleanId.includes('uzalez')) {
     return TENANT_THEMES.uzaleznienia;
+  }
+
+  if (cleanId === 'psychoonkologia' || cleanId === 'skn_psychoonkologii' || cleanId === 'skn-psychoonkologia' || cleanId.includes('psycho')) {
+    return TENANT_THEMES.psychoonkologia;
   }
 
   // Domyślny motyw Seksuologii (lub dopasowanie bezpośrednie)

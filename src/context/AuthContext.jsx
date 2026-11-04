@@ -349,6 +349,8 @@ export function AuthProvider({ children }) {
       // mapowanie aliasów: seksuologia <-> skn_seksuologii
       if (orgId === 'skn_seksuologii' && allowedOrgs.includes('seksuologia')) return true;
       if (orgId === 'seksuologia' && allowedOrgs.includes('skn_seksuologii')) return true;
+      if (orgId === 'psychoonkologia' && (allowedOrgs.includes('skn_psychoonkologii') || allowedOrgs.includes('skn-psychoonkologia'))) return true;
+      if ((orgId === 'skn_psychoonkologii' || orgId === 'skn-psychoonkologia') && allowedOrgs.includes('psychoonkologia')) return true;
     }
     return false;
   }, [user, isAuthenticated, isMasterUser]);

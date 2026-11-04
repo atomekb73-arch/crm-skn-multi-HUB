@@ -97,6 +97,47 @@ export const DEFAULT_ORGS = [
       },
     ],
   },
+  {
+    id: 'psychoonkologia',
+    name: 'Studenckie Koło Naukowe Psychoonkologii WSKZ',
+    shortName: 'SKN Psychoonkologii',
+    tag: 'SKN-PSYCHO',
+    faculty: 'Instytut Psychologii WSKZ',
+    unit: 'Instytut Psychologii WSKZ',
+    academicYear: '2026/2027',
+    sheetId: '1Omb7RbsMeiUs8IlXuKDAteXyd8lnkAXehX1nhofOTAY',
+    calendarKey: 'ks9aiux4jiza1ronpd',
+    calendarId: 'ks9aiux4jiza1ronpd',
+    teamupApiKey: '20dc4242d0d74be314e5ee108dc618cf3f6fbcb7647865568775fe4d9a89c112',
+    teamupToken: '20dc4242d0d74be314e5ee108dc618cf3f6fbcb7647865568775fe4d9a89c112',
+    subcalendarId: '15520558',
+    subcalendarName: '07 🎗️ SKN Psychoonkologii',
+    description: 'Studenckie Koło Naukowe Psychoonkologii WSKZ - Oficjalna ewidencja i harmonogram',
+    color: 'rose',
+    isDefault: false,
+    supervisors: [
+      {
+        id: 'sup_skupinska_psycho',
+        academicTitle: 'mgr',
+        name: 'Ewa Skupińska',
+        fullName: 'mgr Ewa Skupińska',
+        affiliation: 'Instytut Psychologii WSKZ',
+        role: 'Opiekun Naukowy Koła',
+        email: 'ewa.skupinska@wskz.pl',
+        isActive: true,
+      },
+      {
+        id: 'sup_dziekan_psycho',
+        academicTitle: 'mgr',
+        name: 'Martyna Dziekan',
+        fullName: 'mgr Martyna Dziekan',
+        affiliation: 'Instytut Psychologii WSKZ',
+        role: 'Opiekun Naukowy Koła',
+        email: 'martyna.dziekan@wskz.pl',
+        isActive: true,
+      },
+    ],
+  },
 ];
 
 const OrgContext = createContext(null);
@@ -149,12 +190,29 @@ export function OrgProvider({ children }) {
               subcalendarName: '05 🏷️ SKN Psychologii Zachowań Ryzykownych i Uzależnień',
             };
           }
+          if (o.id === 'psychoonkologia' || o.id === 'skn_psychoonkologii' || o.name?.includes('Psychoonkol')) {
+            return {
+              ...DEFAULT_ORGS[2],
+              ...o,
+              id: 'psychoonkologia',
+              calendarKey: 'ks9aiux4jiza1ronpd',
+              calendarId: 'ks9aiux4jiza1ronpd',
+              subcalendarId: '15520558',
+              teamupApiKey: '20dc4242d0d74be314e5ee108dc618cf3f6fbcb7647865568775fe4d9a89c112',
+              teamupToken: '20dc4242d0d74be314e5ee108dc618cf3f6fbcb7647865568775fe4d9a89c112',
+              subcalendarName: '07 🎗️ SKN Psychoonkologii',
+            };
+          }
           return o;
         });
 
         // Ensure uzaleznienia exists in the list
         if (!mapped.some(o => o.id === 'uzaleznienia')) {
           mapped.push(DEFAULT_ORGS[1]);
+        }
+        // Ensure psychoonkologia exists in the list
+        if (!mapped.some(o => o.id === 'psychoonkologia')) {
+          mapped.push(DEFAULT_ORGS[2]);
         }
         return mapped;
       }
@@ -303,7 +361,7 @@ export function OrgProvider({ children }) {
 
   // Delete organization (cannot delete default orgs)
   const deleteOrganization = useCallback((id) => {
-    if (id === 'skn-template' || id === 'skn_seksuologii' || id === 'uzaleznienia') {
+    if (id === 'skn-template' || id === 'skn_seksuologii' || id === 'uzaleznienia' || id === 'psychoonkologia') {
       showToast('Nie można usunąć oficjalnego Koła Naukowego WSKZ.');
       return false;
     }

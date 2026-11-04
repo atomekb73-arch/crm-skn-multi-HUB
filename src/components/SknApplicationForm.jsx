@@ -69,12 +69,14 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
       const urlOrg = params.get('org') || params.get('organization_id') || params.get('kolo') || params.get('tenant');
       if (urlOrg) {
         const clean = urlOrg.toLowerCase();
+        if (clean.includes('psycho')) return 'psychoonkologia';
         if (clean.includes('uzalez') || clean === 'sknu') return 'uzaleznienia';
         if (clean.includes('seks')) return 'skn_seksuologii';
         return clean;
       }
       if (window.location.hash) {
         const hash = window.location.hash.toLowerCase();
+        if (hash.includes('psycho')) return 'psychoonkologia';
         if (hash.includes('uzalez') || hash.includes('sknu')) return 'uzaleznienia';
         if (hash.includes('seks')) return 'skn_seksuologii';
       }
@@ -90,19 +92,26 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
   }, [propOrgId, orgCtx?.currentOrg?.id]);
 
   const isUzaleznienia = targetOrgId === 'uzaleznienia' || targetOrgId === 'sknu';
+  const isPsychoonkologia = targetOrgId === 'psychoonkologia' || targetOrgId?.includes('psycho');
 
   // Nazwy i etykiety formalne organizacji
   const orgLine1 = 'Studenckie Koło Naukowe';
   const orgLine2 = isUzaleznienia
     ? 'Zachowań Ryzykowych i Uzależnień'
-    : 'Seksuologii WSKZ';
+    : isPsychoonkologia
+      ? 'Psychoonkologii WSKZ'
+      : 'Seksuologii WSKZ';
   const orgFullName = `${orgLine1} ${orgLine2}`;
   const orgGenitive = isUzaleznienia
     ? 'Studenckiego Koła Naukowego Zachowań Ryzykowych i Uzależnień'
-    : 'Studenckiego Koła Naukowego Seksuologii WSKZ';
+    : isPsychoonkologia
+      ? 'Studenckiego Koła Naukowego Psychoonkologii WSKZ'
+      : 'Studenckiego Koła Naukowego Seksuologii WSKZ';
   const orgBoardName = isUzaleznienia
     ? 'Zarząd Koła Naukowego Zachowań Ryzykowych i Uzależnień'
-    : 'Zarząd SKN Seksuologii';
+    : isPsychoonkologia
+      ? 'Zarząd Koła Naukowego Psychoonkologii'
+      : 'Zarząd SKN Seksuologii';
 
   const [formData, setFormData] = useState({
     full_name: '',

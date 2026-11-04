@@ -13,9 +13,13 @@ export default function CalendarSelector({
   const { currentOrg } = useOrg();
 
   const orgSubId = String(currentOrg?.subcalendarId || DEFAULT_CALENDAR_SUB_ID).trim();
-  const orgSubName = currentOrg?.subcalendarName || (currentOrg?.id === 'uzaleznienia'
-    ? '05 🏷️ SKN Psychologii Zachowań Ryzykownych i Uzależnień'
-    : DEFAULT_CALENDAR_SUB_NAME);
+  const orgSubName = currentOrg?.subcalendarName || (
+    currentOrg?.id === 'uzaleznienia'
+      ? '05 🏷️ SKN Psychologii Zachowań Ryzykownych i Uzależnień'
+      : currentOrg?.id === 'psychoonkologia'
+        ? '07 🎗️ SKN Psychoonkologii'
+        : DEFAULT_CALENDAR_SUB_NAME
+  );
 
   const activeValue = String(selectedSubcalendar || orgSubId).trim();
 

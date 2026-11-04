@@ -11,6 +11,7 @@ import { supabase } from '../supabaseClient.js';
 function normalizeOrgId(orgId) {
   const str = String(orgId || 'skn_seksuologii').trim();
   if (str === 'skn-template' || str === 'default' || !str) return 'skn_seksuologii';
+  if (str === 'skn_psychoonkologii' || str === 'skn-psychoonkologia') return 'psychoonkologia';
   return str;
 }
 

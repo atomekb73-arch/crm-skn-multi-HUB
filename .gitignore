@@ -52,3 +52,7 @@ lerna-debug.log*
 ehthumbs.db
 Thumbs.db
 [Dd]esktop.ini
+
+# Migrated local data & spreadsheets
+*.xlsx
+scripts/psychoonkologia_data/
