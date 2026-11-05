@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo, useCall
 import {
   saveUserPasswordToDB,
   saveAccessUsersToDB,
+  fetchLoginAccessForEmail,
 } from '../services/settingsService';
 
 export const ROLES = {
@@ -150,6 +151,20 @@ export const DEFAULT_AUTHORIZED_ACCOUNTS = [
     tempPassword: DEFAULT_STARTER_PASSWORD,
     accessibleOrgs: ['*'],
   },
+  {
+    // HOTFIX: stały dostęp Liliany Sienkiewicz do Koła Psychoonkologii
+    email: 'lajlasienkiewicz@gmail.com',
+    name: 'Liliana Sienkiewicz',
+    full_name: 'Liliana Sienkiewicz',
+    role: 'Koordynator / Pełny dostęp',
+    roleLabel: 'Koordynator / Pełny dostęp',
+    organizations: ['psychoonkologia'],
+    accessibleOrgs: ['psychoonkologia'],
+    organization_id: 'psychoonkologia',
+    is_global_admin: false,
+    isFirstLogin: true,
+    tempPassword: DEFAULT_STARTER_PASSWORD,
+  },
 ];
 
 export const STARTER_PASSWORDS = {
@@ -207,6 +222,106 @@ export const DEMO_ACCOUNTS = [
 ];
 
 const AuthContext = createContext(null);
+
+// ── Uprawnienia z Supabase (SSOT) dla ekranu logowania ─────────────────────────
+// Cache wyników zapytań do Supabase per e-mail (wypełniany asynchronicznie przez refreshRemoteAccess,
+// odczytywany synchronicznie przez checkEmailStatus / loginWithPassword).
+const remoteAccessCache = new Map();
+const REMOTE_ACCESS_TIMEOUT_MS = 6000;
+
+const STARTER_PASSWORD_SET = new Set([DEFAULT_STARTER_PASSWORD, 'StartCRM2026!', 'Start2026!']);
+
+/** Ujednolicenie identyfikatorów kół (aliasy) – zgodne z normalizeOrgId w settingsService */
+function normalizeAuthOrgId(orgId) {
+  const str = String(orgId || '').trim();
+  if (!str || str === '*') return str;
+  if (str === 'skn-template' || str === 'default' || str === 'seksuologia') return 'skn_seksuologii';
+  if (str === 'skn_psychoonkologii' || str === 'skn-psychoonkologia') return 'psychoonkologia';
+  return str;
+}
+
+/** Odczyt JSON z localStorage bez wyjątków */
+function readStorageJson(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Zbiera wpisy z localStorage ze wszystkich kół dla kluczy pasujących do wzorca.
+ * @param {RegExp} pattern – wzorzec z grupą przechwytującą identyfikator koła (lub bez grupy = brak koła)
+ * @returns {Array<{orgId: string|null, list: Array}>}
+ */
+function collectLocalLists(pattern) {
+  const out = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      const m = key && key.match(pattern);
+      if (!m) continue;
+      const list = readStorageJson(key);
+      if (Array.isArray(list)) {
+        out.push({ orgId: m[1] ? normalizeAuthOrgId(m[1]) : null, list, key });
+      }
+    }
+  } catch {}
+  return out;
+}
+
+/**
+ * Pobiera z Supabase aktualne uprawnienia adresu e-mail (wszystkie koła) i zapisuje je w cache.
+ * Wywoływane przed weryfikacją e-maila na ekranie logowania – działa z dowolnego urządzenia.
+ */
+export async function refreshRemoteAccess(email) {
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  if (!cleanEmail) return null;
+  try {
+    const timeout = new Promise(resolve => setTimeout(() => resolve(null), REMOTE_ACCESS_TIMEOUT_MS));
+    const res = await Promise.race([fetchLoginAccessForEmail(cleanEmail), timeout]);
+    if (res && res.ok) {
+      remoteAccessCache.set(cleanEmail, res);
+      return res;
+    }
+  } catch (err) {
+    console.warn('[AuthContext] Nie udało się pobrać uprawnień z Supabase:', err);
+  }
+  return remoteAccessCache.get(cleanEmail) || null;
+}
+
+/**
+ * Zapis hasła stałego w Supabase dla każdego koła, do którego użytkownik ma dostęp
+ * (dzięki temu logowanie działa z dowolnego urządzenia). Dla kont globalnych – aktywne koło.
+ */
+function persistPasswordToSupabase(cleanEmail, password, userData = null) {
+  const orgs = (userData?.accessibleOrgs || userData?.organizations || [])
+    .filter(o => o && o !== '*')
+    .map(normalizeAuthOrgId);
+  if (orgs.length === 0) {
+    const current = (typeof window !== 'undefined'
+      ? (localStorage.getItem('crm_skn_current_org_id') || localStorage.getItem('crm_active_org_id'))
+      : null) || 'skn_seksuologii';
+    orgs.push(normalizeAuthOrgId(current));
+  }
+  Array.from(new Set(orgs)).forEach(orgId => {
+    saveUserPasswordToDB(orgId, cleanEmail, password, false).catch(console.warn);
+  });
+  remoteAccessCache.delete(cleanEmail);
+}
+
+/** Usunięcie hasła tymczasowego z wpisów uprawnień (per koło, lokalnie i w Supabase) */
+function clearTempPasswordInAccessLists(cleanEmail) {
+  collectLocalLists(/^skn_access_users_(.+)$/).forEach(({ orgId, list, key }) => {
+    if (!list.some(u => (u?.email || '').toLowerCase() === cleanEmail)) return;
+    const updated = list.map(u => ((u?.email || '').toLowerCase() === cleanEmail
+      ? { ...u, isFirstLogin: false, tempPassword: null }
+      : u));
+    try { localStorage.setItem(key, JSON.stringify(updated)); } catch {}
+    saveAccessUsersToDB(orgId, updated).catch(console.warn);
+  });
+}
 
 /** Pobierz zapisane hasło użytkownika */
 export function getUserStoredPassword(email) {
@@ -391,41 +506,59 @@ export function AuthProvider({ children }) {
     const demoMatch = DEMO_ACCOUNTS.find(d => d.email.toLowerCase() === cleanEmail);
     const defaultAuthMatch = DEFAULT_AUTHORIZED_ACCOUNTS.find(d => d.email.toLowerCase() === cleanEmail);
 
-    let accessUsers = [];
-    try {
-      const savedUsers = localStorage.getItem('skn_access_users');
-      if (savedUsers) {
-        accessUsers = JSON.parse(savedUsers);
-      }
-    } catch {}
+    // Źródła uprawnień (wszystkie koła):
+    //  a) Supabase SSOT (cache z refreshRemoteAccess) – działa z każdego urządzenia,
+    //  b) localStorage – klucze per koło (skn_access_users_<org>, crm_skn_<org>_supervisors, skn_board_tenures_<org>)
+    //     oraz klucze globalne (legacy, bez przypisania do koła).
+    const remote = remoteAccessCache.get(cleanEmail) || null;
+    const sameEmail = (v) => String(v || '').trim().toLowerCase() === cleanEmail;
 
-    let supervisors = [];
-    try {
-      const savedSup = localStorage.getItem('skn_faculty_supervisors');
-      if (savedSup) {
-        supervisors = JSON.parse(savedSup);
-      }
-    } catch {}
+    const collectMatches = (lists, emailOf, extraFilter = () => true) => {
+      const found = [];
+      lists.forEach(({ orgId, list }) => {
+        list.forEach(item => {
+          if (item && sameEmail(emailOf(item)) && extraFilter(item)) found.push({ ...item, orgId: orgId || null });
+        });
+      });
+      return found;
+    };
 
-    let boardTenures = [];
-    try {
-      const activeOrg = localStorage.getItem('crm_active_org_id') || 'skn_seksuologii';
-      const savedTenures = localStorage.getItem(`skn_board_tenures_${activeOrg}`) || localStorage.getItem('skn_board_tenures');
-      if (savedTenures) {
-        boardTenures = JSON.parse(savedTenures);
-      }
-    } catch {}
+    const accessMatches = [
+      ...(remote?.accessMatches || []),
+      ...collectMatches(collectLocalLists(/^skn_access_users_(.+)$/), u => u.email),
+      ...collectMatches(collectLocalLists(/^skn_access_users$/), u => u.email),
+    ];
 
-    const accessMatch = (Array.isArray(accessUsers) ? accessUsers : DEFAULT_AUTHORIZED_ACCOUNTS)
-      .find(u => (u?.email || '').toLowerCase() === cleanEmail) || defaultAuthMatch;
+    const supervisorMatches = [
+      ...(remote?.supervisorMatches || []),
+      ...collectMatches(collectLocalLists(/^crm_skn_(.+)_supervisors$/), s => s.email),
+      ...collectMatches(collectLocalLists(/^skn_faculty_supervisors$/), s => s.email),
+    ];
 
-    const supervisorMatch = Array.isArray(supervisors)
-      ? supervisors.find(s => (s?.email || '').toLowerCase() === cleanEmail)
-      : null;
+    const boardMatches = [
+      ...(remote?.boardMatches || []),
+      ...collectMatches(collectLocalLists(/^skn_board_tenures_(.+)$/), t => t.memberEmail || t.email, t => t.isActive !== false),
+      ...collectMatches(collectLocalLists(/^skn_board_tenures$/), t => t.memberEmail || t.email, t => t.isActive !== false),
+    ];
 
-    const boardMatch = Array.isArray(boardTenures)
-      ? boardTenures.find(t => (t?.memberEmail || t?.email || '').toLowerCase() === cleanEmail && (t.isActive !== false))
-      : null;
+    // Najsilniejsza rola wśród wpisów ręcznych (ADMIN > pełny dostęp > koordynator > odczyt)
+    const accessRank = (u) => {
+      const r = String(u?.role || '');
+      if (r === 'ADMIN' || r === 'SUPER_ADMIN') return 4;
+      if (r === 'Dostęp pełny' || r === 'Koordynator / Pełny dostęp' || r === 'MODERATOR') return 3;
+      if (r === 'COORDINATOR') return 2;
+      if (r === 'VIEWER') return 1;
+      return 2;
+    };
+    const accessMatch = [...accessMatches].sort((a, b) => accessRank(b) - accessRank(a))[0] || defaultAuthMatch;
+
+    const supervisorMatch = supervisorMatches[0] || null;
+
+    const isBoardAdminRole = (t) => {
+      const roleStr = String(t?.roleName || t?.role || '').toLowerCase();
+      return roleStr.includes('sekretarz') || roleStr.includes('przewodnicz');
+    };
+    const boardMatch = boardMatches.find(isBoardAdminRole) || boardMatches[0] || null;
 
     if (!isMaster && !isDefaultBoard && !demoMatch && !accessMatch && !supervisorMatch && !boardMatch) {
       return {
@@ -434,10 +567,24 @@ export function AuthProvider({ children }) {
       };
     }
 
+    // 1b. Ustal koła, do których użytkownik ma dostęp (izolacja tenantów)
+    const orgSet = new Set();
+    let hasLegacyUntagged = false;
+    [...accessMatches, ...supervisorMatches, ...boardMatches].forEach(m => {
+      if (m.orgId) orgSet.add(normalizeAuthOrgId(m.orgId));
+      else hasLegacyUntagged = true;
+    });
+    let hasWildcard = Boolean(isMaster || isDefaultBoard || demoMatch);
+    if (defaultAuthMatch) {
+      const defOrgs = defaultAuthMatch.accessibleOrgs || defaultAuthMatch.organizations || ['*'];
+      defOrgs.forEach(o => (o === '*' ? (hasWildcard = true) : orgSet.add(normalizeAuthOrgId(o))));
+    }
+    if (orgSet.size === 0 && hasLegacyUntagged) hasWildcard = true;
+
     // 2. Utwórz profil użytkownika z uwzględnieniem dziedziczenia ról (Zarząd, Sekretarz, Opiekun)
     let role = 'COORDINATOR';
     let name = cleanEmail.split('@')[0];
-    let accessibleOrgs = ['*'];
+    let accessibleOrgs = hasWildcard || orgSet.size === 0 ? ['*'] : Array.from(orgSet);
     let inheritedRole = null;
 
     if (isMaster) {
@@ -448,8 +595,7 @@ export function AuthProvider({ children }) {
       name = 'Zarząd Koła';
     } else if (boardMatch) {
       // Dziedziczenie ról funkcyjnych Zarządu: Sekretarz, Przewodniczący, Wiceprzewodniczący mają pełny dostęp (SUPER_ADMIN)
-      const roleStr = String(boardMatch.roleName || boardMatch.role || '').toLowerCase();
-      if (roleStr.includes('sekretarz') || roleStr.includes('przewodnicz')) {
+      if (isBoardAdminRole(boardMatch)) {
         role = 'SUPER_ADMIN';
       } else {
         role = 'COORDINATOR';
@@ -469,26 +615,38 @@ export function AuthProvider({ children }) {
       name = demoMatch.name;
     }
 
+    // 3. Stan aktywacji konta: konto aktywowane (własne hasło) na dowolnym urządzeniu → hasło startowe nieważne
+    const remotePassword = remote?.password || null;
+    const activated = Boolean(
+      remote?.firstLogin === false ||
+      (remotePassword && !STARTER_PASSWORD_SET.has(remotePassword)) ||
+      getUserFirstLoginStatus(cleanEmail, null) === false
+    );
+
+    const tempPass = activated ? null : (accessMatch?.tempPassword || null);
+
     const authUser = {
       email: cleanEmail,
       name,
       role,
       accessibleOrgs,
+      organizations: accessibleOrgs,
+      organization_id: accessibleOrgs[0] !== '*' ? accessibleOrgs[0] : undefined,
       inheritedRole,
-      tempPassword: accessMatch?.tempPassword || null,
+      tempPassword: tempPass,
       loggedAt: new Date().toISOString(),
     };
 
-    // 3. Sprawdź czy użytkownik ma zdefiniowane hasło lub hasło tymczasowe
     const storedPass = getUserStoredPassword(cleanEmail);
-    const tempPass = accessMatch?.tempPassword || null;
-    const hasPassword = Boolean(storedPass || tempPass);
-    const isFirstLogin = Boolean(tempPass || accessMatch?.isFirstLogin || getUserFirstLoginStatus(cleanEmail, accessMatch));
+    const hasPassword = Boolean(storedPass || tempPass || remotePassword);
+    const isFirstLogin = !activated && Boolean(tempPass || accessMatch?.isFirstLogin || getUserFirstLoginStatus(cleanEmail, accessMatch));
 
     return {
       authorized: true,
       hasPassword,
       isFirstLogin,
+      activated,
+      remotePassword,
       user: authUser,
     };
   }, []);
@@ -502,7 +660,7 @@ export function AuthProvider({ children }) {
     const cleanEmail = email.trim().toLowerCase();
 
     // Zabezpieczenie kont SUPER_ADMIN / ADMIN: nie mogą być aktywowane/zmieniane bez weryfikacji
-    const isAdminAccount = MASTER_ADMIN_PASSWORDS[cleanEmail] || INITIAL_USERS.some(u => u.email.toLowerCase() === cleanEmail && (u.role === 'SUPER_ADMIN' || u.role === 'ADMIN'));
+    const isAdminAccount = MASTER_ADMIN_PASSWORDS[cleanEmail] || DEFAULT_AUTHORIZED_ACCOUNTS.some(u => u.email.toLowerCase() === cleanEmail && (u.role === 'SUPER_ADMIN' || u.role === 'ADMIN'));
     if (isAdminAccount && !STARTER_PASSWORDS[cleanEmail]) {
       return { success: false, error: 'Konto administratora wymaga standardowego logowania hasłem lub kontaktu z Zarządem.' };
     }
@@ -542,9 +700,8 @@ export function AuthProvider({ children }) {
       passwords[cleanEmail] = p1;
       localStorage.setItem('skn_user_passwords', JSON.stringify(passwords));
 
-      // Zapis do Supabase SSOT w tle
-      const activeOrgId = (typeof window !== 'undefined' ? localStorage.getItem('crm_active_org_id') : null) || 'skn_seksuologii';
-      saveUserPasswordToDB(activeOrgId, cleanEmail, p1, false).catch(console.warn);
+      // Zapis do Supabase SSOT w tle – dla wszystkich kół użytkownika (logowanie z dowolnego urządzenia)
+      persistPasswordToSupabase(cleanEmail, p1, userData);
 
       // 2. Oznacz isFirstLogin jako false
       let statusMap = {};
@@ -555,7 +712,8 @@ export function AuthProvider({ children }) {
       statusMap[cleanEmail] = false;
       localStorage.setItem('skn_user_first_login_status', JSON.stringify(statusMap));
 
-      // 3. Zaktualizuj rekord w skn_access_users i usuń hasło tymczasowe
+      // 3. Zaktualizuj rekordy uprawnień (per koło) i usuń hasło tymczasowe
+      clearTempPasswordInAccessLists(cleanEmail);
       try {
         const rawUsers = localStorage.getItem('skn_access_users');
         if (rawUsers) {
@@ -568,7 +726,6 @@ export function AuthProvider({ children }) {
               return u;
             });
             localStorage.setItem('skn_access_users', JSON.stringify(updatedUsers));
-            saveAccessUsersToDB(activeOrgId, updatedUsers).catch(console.warn);
           }
         }
       } catch {}
@@ -651,14 +808,34 @@ export function AuthProvider({ children }) {
     const tempPassword = status.user?.tempPassword || null;
     const isMasterOrBoard = MASTER_ADMIN_EMAILS.some(e => e.toLowerCase() === cleanEmail) || cleanEmail === 'zarzad@wskz.pl';
 
-    const isStarterMatch = cleanPassword === DEFAULT_STARTER_PASSWORD || cleanPassword === 'Start2026!';
+    const isStarterPassword = STARTER_PASSWORD_SET.has(cleanPassword);
+    // Po aktywacji konta (własne hasło zapisane w Supabase lub lokalnie) hasło startowe przestaje działać
+    if (status.activated && isStarterPassword && !isMasterOrBoard) {
+      return { success: false, error: 'Konto zostało już aktywowane. Zaloguj się swoim hasłem stałym.' };
+    }
+
+    const isStarterMatch = isStarterPassword;
     const isTempPasswordMatch = (tempPassword && cleanPassword === tempPassword) || isStarterMatch;
+    const isRemotePasswordMatch = Boolean(status.remotePassword && status.remotePassword === cleanPassword);
     const isPasswordValid = (storedPassword && storedPassword === cleanPassword) ||
+                            isRemotePasswordMatch ||
                             isTempPasswordMatch ||
                             (isMasterOrBoard && (cleanPassword === ADMIN_PASSWORD || cleanPassword === 'Ntx2t44V'));
 
     if (!isPasswordValid) {
       return { success: false, error: 'Nieprawidłowe hasło dostępowe.' };
+    }
+
+    // Hasło potwierdzone przez Supabase – zapamiętaj je lokalnie na tym urządzeniu
+    if (isRemotePasswordMatch && !isStarterPassword) {
+      try {
+        const passwords = readStorageJson('skn_user_passwords') || {};
+        passwords[cleanEmail] = cleanPassword;
+        localStorage.setItem('skn_user_passwords', JSON.stringify(passwords));
+        const statusMap = readStorageJson('skn_user_first_login_status') || {};
+        statusMap[cleanEmail] = false;
+        localStorage.setItem('skn_user_first_login_status', JSON.stringify(statusMap));
+      } catch {}
     }
 
     // Wymuszenie zmiany hasła przy pierwszym logowaniu lub gdy podano hasło startowe StartCRM2026!
@@ -737,6 +914,9 @@ export function AuthProvider({ children }) {
       } catch {}
       passwords[cleanEmail] = p1;
       localStorage.setItem('skn_user_passwords', JSON.stringify(passwords));
+
+      // Zapis nowego hasła w Supabase SSOT (logowanie z dowolnego urządzenia)
+      persistPasswordToSupabase(cleanEmail, p1, userData);
 
       // 2. Oznacz isFirstLogin jako false
       let statusMap = {};
@@ -901,6 +1081,7 @@ export function AuthProvider({ children }) {
     isViewer,
     canAccessOrg,
     checkEmailStatus,
+    refreshRemoteAccess,
     authenticateMagda,
     MAGDA_DUAL_ACCESS_USER,
     checkMagdaBypass,

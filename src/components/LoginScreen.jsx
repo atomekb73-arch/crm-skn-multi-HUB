@@ -19,7 +19,7 @@ import {
 import { useAuth, DEFAULT_STARTER_PASSWORD } from '../context/AuthContext';
 
 export default function LoginScreen({ onOpenPublicForm }) {
-  const { checkEmailStatus, activateAccount, loginWithPassword } = useAuth();
+  const { checkEmailStatus, refreshRemoteAccess, activateAccount, loginWithPassword } = useAuth();
 
   // Step state: 'email' | 'password' | 'activate'
   const [step, setStep] = useState('email');
@@ -47,7 +47,7 @@ export default function LoginScreen({ onOpenPublicForm }) {
   const isActivationValid = hasMinLength && passwordsMatch && isNotStarterPassword;
 
   // STEP 1: Verify Email
-  const handleEmailSubmit = (e) => {
+  const handleEmailSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     const cleanEmail = email.trim().toLowerCase();
@@ -59,6 +59,12 @@ export default function LoginScreen({ onOpenPublicForm }) {
 
     setLoading(true);
     try {
+      // Pobierz aktualne uprawnienia z Supabase (SSOT) – działa z dowolnego urządzenia,
+      // niezależnie od zawartości localStorage tej przeglądarki
+      if (typeof refreshRemoteAccess === 'function') {
+        await refreshRemoteAccess(cleanEmail);
+      }
+
       const res = checkEmailStatus(cleanEmail);
 
       if (!res.authorized) {

@@ -23,6 +23,7 @@ import {
 } from '../utils/storage';
 import { fetchOrgSettingsFromDB } from '../services/settingsService';
 import { getTenantTheme, applyTenantThemeToDom } from '../theme/tenantTheme';
+import { useAuth } from './AuthContext';
 
 export const DEFAULT_ORGS = [
   {
@@ -307,6 +308,18 @@ export function OrgProvider({ children }) {
       localStorage.setItem('crm_skn_current_org_id', cleanId);
     } catch {}
   }, []);
+
+  // Izolacja tenantów po zalogowaniu: jeżeli aktywne koło nie należy do uprawnień użytkownika,
+  // przełącz na pierwsze dostępne koło (np. Psychoonkologia dla osób dodanych tylko tam).
+  const { isAuthenticated, canAccessOrg } = useAuth();
+  useEffect(() => {
+    if (!isAuthenticated || typeof canAccessOrg !== 'function') return;
+    if (canAccessOrg(currentOrgId)) return;
+    const firstAllowed = organizations.find(o => canAccessOrg(o.id));
+    if (firstAllowed && firstAllowed.id !== currentOrgId) {
+      switchOrg(firstAllowed.id);
+    }
+  }, [isAuthenticated, canAccessOrg, currentOrgId, organizations, switchOrg]);
 
   // Helper to construct organization-isolated localStorage keys
   const getStorageKey = useCallback((baseKey) => {

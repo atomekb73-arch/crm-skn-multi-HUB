@@ -403,6 +403,86 @@ export async function saveUserPasswordToDB(orgId = 'skn_seksuologii', email, pas
   return res1;
 }
 
+/**
+ * Pobiera z Supabase (SSOT) wszystkie uprawnienia danego adresu e-mail ze WSZYSTKICH kół,
+ * na potrzeby ekranu logowania (przed zalogowaniem, z dowolnego urządzenia).
+ * Źródła: organization_settings (access_users, supervisors, user_passwords, user_first_login_status)
+ * oraz board_terms (aktywne kadencje zarządu). Porównanie e-maili bez rozróżniania wielkości liter.
+ *
+ * @returns {Promise<{ok:boolean, accessMatches:Array, supervisorMatches:Array, boardMatches:Array, password:string|null, firstLogin:boolean|null}>}
+ */
+export async function fetchLoginAccessForEmail(email) {
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  const result = {
+    ok: false,
+    accessMatches: [],
+    supervisorMatches: [],
+    boardMatches: [],
+    password: null,
+    firstLogin: null,
+  };
+  if (!cleanEmail) return result;
+
+  const sameEmail = (v) => String(v || '').trim().toLowerCase() === cleanEmail;
+
+  // 1. organization_settings – wszystkie koła naraz
+  try {
+    const { data, error } = await supabase
+      .from('organization_settings')
+      .select('organization_id, settings_key, settings_value')
+      .in('settings_key', ['access_users', 'supervisors', 'user_passwords', 'user_first_login_status']);
+
+    if (!error && Array.isArray(data)) {
+      result.ok = true;
+      data.forEach(row => {
+        const orgId = normalizeOrgId(row.organization_id);
+        const value = row.settings_value;
+        if (row.settings_key === 'access_users' && Array.isArray(value)) {
+          value.filter(u => sameEmail(u?.email)).forEach(u => result.accessMatches.push({ ...u, orgId }));
+        } else if (row.settings_key === 'supervisors' && Array.isArray(value)) {
+          value.filter(s => sameEmail(s?.email)).forEach(s => result.supervisorMatches.push({ ...s, orgId }));
+        } else if (row.settings_key === 'user_passwords' && value && typeof value === 'object') {
+          const key = Object.keys(value).find(k => sameEmail(k));
+          if (key && value[key] && !result.password) result.password = value[key];
+        } else if (row.settings_key === 'user_first_login_status' && value && typeof value === 'object') {
+          const key = Object.keys(value).find(k => sameEmail(k));
+          if (key !== undefined) {
+            // Jeżeli którekolwiek koło potwierdza aktywację (false) – konto jest aktywne
+            result.firstLogin = result.firstLogin === false ? false : Boolean(value[key]);
+          }
+        }
+      });
+    }
+  } catch (err) {
+    console.warn('[fetchLoginAccessForEmail] Błąd odczytu organization_settings:', err);
+  }
+
+  // 2. board_terms – aktywne kadencje zarządu we wszystkich kołach
+  try {
+    const { data, error } = await supabase
+      .from('board_terms')
+      .select('organization_id, member_name, member_email, role_name, is_active')
+      .ilike('member_email', cleanEmail);
+
+    if (!error && Array.isArray(data)) {
+      result.ok = true;
+      data
+        .filter(r => sameEmail(r.member_email) && r.is_active !== false)
+        .forEach(r => result.boardMatches.push({
+          orgId: normalizeOrgId(r.organization_id),
+          memberName: r.member_name,
+          memberEmail: r.member_email,
+          roleName: r.role_name,
+          isActive: r.is_active !== false,
+        }));
+    }
+  } catch (err) {
+    console.warn('[fetchLoginAccessForEmail] Błąd odczytu board_terms:', err);
+  }
+
+  return result;
+}
+
 // ── 5. SUPABASE SSOT BACKUP & SNAPSHOT OPERATIONS ──────────────────────────
 
 /**
