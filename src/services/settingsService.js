@@ -475,16 +475,16 @@ export async function fetchLoginAccessForEmail(email) {
 
   const sameEmail = (v) => String(v || '').trim().toLowerCase() === cleanEmail;
 
-  // 1. Dedykowana tabela relacyjna club_memberships oraz widok v_effective_access
+  // 1. Dedykowany widok v_effective_access lub relacyjna tabela club_memberships
   try {
-    const { data: relMemberships, error: relErr } = await supabase
-      .from('club_memberships')
+    const { data: effData, error: effErr } = await supabase
+      .from('v_effective_access')
       .select('club_id, email, member_name, role, role_label, source, active')
       .eq('active', true);
 
-    if (!relErr && Array.isArray(relMemberships) && relMemberships.length > 0) {
+    if (!effErr && Array.isArray(effData) && effData.length > 0) {
       result.ok = true;
-      relMemberships.filter(m => sameEmail(m.email)).forEach(m => {
+      effData.filter(m => sameEmail(m.email)).forEach(m => {
         result.accessMatches.push({
           orgId: normalizeOrgId(m.club_id),
           name: m.member_name,
@@ -494,6 +494,25 @@ export async function fetchLoginAccessForEmail(email) {
           source: m.source,
         });
       });
+    } else {
+      const { data: relMemberships, error: relErr } = await supabase
+        .from('club_memberships')
+        .select('club_id, email, member_name, role, role_label, source, active')
+        .eq('active', true);
+
+      if (!relErr && Array.isArray(relMemberships) && relMemberships.length > 0) {
+        result.ok = true;
+        relMemberships.filter(m => sameEmail(m.email)).forEach(m => {
+          result.accessMatches.push({
+            orgId: normalizeOrgId(m.club_id),
+            name: m.member_name,
+            email: m.email,
+            role: m.role,
+            roleLabel: m.role_label,
+            source: m.source,
+          });
+        });
+      }
     }
   } catch (err) {}
 
