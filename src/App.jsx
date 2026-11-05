@@ -2034,9 +2034,11 @@ export default function App() {
 
   // ── Quarantine Handlers (Supabase SSOT) ──────
   async function handleApprove(id) {
+    const now = new Date();
     const entry = (Array.isArray(quarantine) ? quarantine : []).find(q => q.id === id);
     if (!entry) return;
 
+    const currentOrgCleanId = (currentOrg?.id === 'skn-template' ? 'skn_seksuologii' : currentOrg?.id) || 'skn_seksuologii';
     const rawIndex = String(entry.index || entry.cleanIndex || entry.nrIndeksu || entry.index_number || '').replace(/\D/g, '').trim();
     const rawEmail = String(entry.email || '').trim().toLowerCase();
     const validUuid = (isValidUUID(entry.supabaseId) && entry.supabaseId) || (isValidUUID(entry.id) && entry.id) || null;
@@ -2065,7 +2067,7 @@ export default function App() {
         .from('quarantine_submissions')
         .update({
           decision_status: 'Zatwierdzony',
-          decision_date: new Date().toISOString(),
+          decision_date: now.toISOString(),
           decision_author: 'Administrator CRM'
         })
         .eq('organization_id', currentOrgCleanId);
@@ -2083,7 +2085,6 @@ export default function App() {
       }
 
       // 2. Wpisanie/aktualizacja w tabeli members w Supabase
-      const currentOrgCleanId = (currentOrg?.id === 'skn-template' ? 'skn_seksuologii' : currentOrg?.id) || 'skn_seksuologii';
       const memberPayload = {
         organization_id: currentOrgCleanId,
         index_number: rawIndex || (fullName.toLowerCase().includes('opiekun') ? 'OPIEKUN' : `TEMP_${Date.now()}`),
@@ -2093,13 +2094,13 @@ export default function App() {
         field_of_study: entry.field || entry.kierunek || entry.field_of_study || 'Psychologia',
         study_year: entry.year || entry.rokStudiow || entry.study_year || 'Rok 1',
         activity_status: 'Aktywny',
-        verification_date: new Date().toISOString().split('T')[0],
-        joined_date: new Date().toISOString().split('T')[0],
+        verification_date: now.toISOString().split('T')[0],
+        joined_date: now.toISOString().split('T')[0],
         mailing_consent: Boolean(entry.zgody || entry.zgodyOk || entry.consents_ok || entry.mailing_consent),
         total_points: entry.points || 0,
         custom_fields: {
           ...(entry.custom_fields || {}),
-          approvedFromQuarantineAt: new Date().toISOString()
+          approvedFromQuarantineAt: now.toISOString()
         }
       };
 
@@ -2117,7 +2118,6 @@ export default function App() {
         console.error('[handleApprove] Błąd zapisu do members w Supabase:', mError);
       }
 
-      const now = new Date();
       setLastSync(now);
       setCloudSyncStatus({ status: 'synced', lastSyncTime: now, errorMessage: null });
       setToastMessage("Pomyślnie zatwierdzono studenta i zapisano w bazie Supabase");
@@ -2130,6 +2130,8 @@ export default function App() {
   }
 
   async function handleBulkApprove(ids) {
+    const now = new Date();
+    const currentOrgCleanId = (currentOrg?.id === 'skn-template' ? 'skn_seksuologii' : currentOrg?.id) || 'skn_seksuologii';
     const entriesToApprove = (Array.isArray(quarantine) ? quarantine : []).filter(q => ids.includes(q.id));
     if (entriesToApprove.length === 0) return;
 
@@ -2164,7 +2166,7 @@ export default function App() {
 
       const updatePayload = {
         decision_status: 'Zatwierdzony',
-        decision_date: new Date().toISOString(),
+        decision_date: now.toISOString(),
         decision_author: 'Administrator CRM'
       };
 
@@ -2179,7 +2181,6 @@ export default function App() {
       }
 
       // Upsert do tabeli members
-      const currentOrgCleanId = (currentOrg?.id === 'skn-template' ? 'skn_seksuologii' : currentOrg?.id) || 'skn_seksuologii';
       const membersToUpsert = entriesToApprove.map(entry => {
         const rawIndex = String(entry.index || entry.cleanIndex || entry.nrIndeksu || entry.index_number || '').replace(/\D/g, '').trim();
         const rawEmail = String(entry.email || '').trim().toLowerCase();
@@ -2194,13 +2195,13 @@ export default function App() {
           field_of_study: entry.field || entry.kierunek || entry.field_of_study || 'Psychologia',
           study_year: entry.year || entry.rokStudiow || entry.study_year || 'Rok 1',
           activity_status: 'Aktywny',
-          verification_date: new Date().toISOString().split('T')[0],
-          joined_date: new Date().toISOString().split('T')[0],
+          verification_date: now.toISOString().split('T')[0],
+          joined_date: now.toISOString().split('T')[0],
           mailing_consent: Boolean(entry.zgody || entry.zgodyOk || entry.consents_ok || entry.mailing_consent),
           total_points: entry.points || 0,
           custom_fields: {
             ...(entry.custom_fields || {}),
-            approvedFromQuarantineAt: new Date().toISOString()
+            approvedFromQuarantineAt: now.toISOString()
           }
         };
       });
@@ -2223,7 +2224,6 @@ export default function App() {
         }
       }
 
-      const now = new Date();
       setLastSync(now);
       setCloudSyncStatus({ status: 'synced', lastSyncTime: now, errorMessage: null });
       setToastMessage(`Pomyślnie zatwierdzono ${entriesToApprove.length} zgłoszeń w bazie Supabase`);
