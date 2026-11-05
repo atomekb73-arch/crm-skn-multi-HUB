@@ -360,8 +360,38 @@ export async function saveEmailConfigToDB(orgId = 'skn_seksuologii', emailConfig
 
 // ── 4. ZARZĄDZANIE DOSTĘPEM I LOGOWANIEM (ACCESS CONTROL) ────────────────────
 
+/**
+ * Odczyt uprawnionych użytkowników koła (SSOT).
+ * 1. Najpierw próba odczytu z relacyjnej tabeli club_memberships (lub widoku v_effective_access)
+ * 2. Fallback na organization_settings / attendance fallback.
+ */
 export async function fetchAccessUsersFromDB(orgId = 'skn_seksuologii') {
   const cleanOrg = normalizeOrgId(orgId);
+
+  // 1. Relacyjna tabela club_memberships
+  try {
+    const { data, error } = await supabase
+      .from('club_memberships')
+      .select('*')
+      .eq('club_id', cleanOrg)
+      .eq('active', true);
+
+    if (!error && Array.isArray(data) && data.length > 0) {
+      const users = data.map(r => ({
+        id: r.id,
+        name: r.member_name,
+        email: r.email,
+        role: r.role,
+        roleLabel: r.role_label || r.role,
+        source: r.source,
+        memberId: r.member_id,
+        isPermanent: r.source === 'system',
+      }));
+      return { ok: true, source: 'club_memberships', users };
+    }
+  } catch (err) {}
+
+  // 2. Fallback na organization_settings / attendance fallback
   const res = await fetchOrgSettingsFromDB(cleanOrg);
   if (res.ok && res.settings && Array.isArray(res.settings.access_users)) {
     return { ok: true, source: res.source, users: res.settings.access_users };
@@ -369,19 +399,42 @@ export async function fetchAccessUsersFromDB(orgId = 'skn_seksuologii') {
   return { ok: false, users: [] };
 }
 
+/**
+ * Zapis uprawnień użytkowników koła (SSOT).
+ * Zapisuje do dedykowanej tabeli club_memberships oraz utrzymuje kompatybilność wsteczną w settings.
+ */
 export async function saveAccessUsersToDB(orgId = 'skn_seksuologii', users = []) {
   const cleanOrg = normalizeOrgId(orgId);
   const listToSave = Array.isArray(users) ? users : [];
+
+  // 1. Zapis do relacyjnej tabeli club_memberships
+  try {
+    // Usuń manualne wpisy dla danego koła i wstaw zaktualizowane
+    await supabase.from('club_memberships').delete().eq('club_id', cleanOrg).eq('source', 'manual');
+    if (listToSave.length > 0) {
+      const rows = listToSave.map(u => ({
+        club_id: cleanOrg,
+        email: String(u.email || '').trim().toLowerCase(),
+        member_name: u.name || (u.email ? u.email.split('@')[0] : 'Użytkownik'),
+        role: u.role === 'ADMIN' ? 'ADMIN' : (u.role === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : (u.role === 'VIEWER' ? 'VIEWER' : 'COORDINATOR')),
+        role_label: u.roleLabel || u.role,
+        source: 'manual',
+        active: true,
+      }));
+      await supabase.from('club_memberships').upsert(rows, { onConflict: 'club_id,email,source' });
+    }
+  } catch (err) {}
+
+  // 2. Fallback kompatybilności wstecznej
   return saveOrgSettingsKeyToDB(cleanOrg, 'access_users', listToSave);
 }
 
+/**
+ * Bezpieczne zarządzanie hasłami - hasła stałe są zarządzane w localStorage i Supabase Auth.
+ * Wycofano zapisywanie haseł w jawnym tekście w bazie danych.
+ */
 export async function fetchUserPasswordsFromDB(orgId = 'skn_seksuologii') {
-  const cleanOrg = normalizeOrgId(orgId);
-  const res = await fetchOrgSettingsFromDB(cleanOrg);
-  if (res.ok && res.settings && typeof res.settings.user_passwords === 'object') {
-    return { ok: true, passwords: res.settings.user_passwords || {} };
-  }
-  return { ok: false, passwords: {} };
+  return { ok: true, passwords: {} };
 }
 
 export async function saveUserPasswordToDB(orgId = 'skn_seksuologii', email, password, isFirstLogin = false) {
@@ -389,18 +442,15 @@ export async function saveUserPasswordToDB(orgId = 'skn_seksuologii', email, pas
   const cleanEmail = String(email || '').trim().toLowerCase();
   if (!cleanEmail) return { ok: false, error: 'Brak adresu email' };
 
-  const passRes = await fetchUserPasswordsFromDB(cleanOrg);
-  const currentPasswords = passRes.passwords || {};
-  currentPasswords[cleanEmail] = password;
+  // Zapisujemy wyłącznie status pierwszego logowania (boolean), nigdy hasło jawnym tekstem!
+  try {
+    const resStatus = await fetchOrgSettingsFromDB(cleanOrg);
+    const currentStatus = resStatus.settings?.user_first_login_status || {};
+    currentStatus[cleanEmail] = Boolean(isFirstLogin);
+    await saveOrgSettingsKeyToDB(cleanOrg, 'user_first_login_status', currentStatus);
+  } catch {}
 
-  const res1 = await saveOrgSettingsKeyToDB(cleanOrg, 'user_passwords', currentPasswords);
-
-  const resStatus = await fetchOrgSettingsFromDB(cleanOrg);
-  const currentStatus = resStatus.settings?.user_first_login_status || {};
-  currentStatus[cleanEmail] = Boolean(isFirstLogin);
-  await saveOrgSettingsKeyToDB(cleanOrg, 'user_first_login_status', currentStatus);
-
-  return res1;
+  return { ok: true };
 }
 
 /**
@@ -425,7 +475,29 @@ export async function fetchLoginAccessForEmail(email) {
 
   const sameEmail = (v) => String(v || '').trim().toLowerCase() === cleanEmail;
 
-  // 1. organization_settings – wszystkie koła naraz
+  // 1. Dedykowana tabela relacyjna club_memberships oraz widok v_effective_access
+  try {
+    const { data: relMemberships, error: relErr } = await supabase
+      .from('club_memberships')
+      .select('club_id, email, member_name, role, role_label, source, active')
+      .eq('active', true);
+
+    if (!relErr && Array.isArray(relMemberships) && relMemberships.length > 0) {
+      result.ok = true;
+      relMemberships.filter(m => sameEmail(m.email)).forEach(m => {
+        result.accessMatches.push({
+          orgId: normalizeOrgId(m.club_id),
+          name: m.member_name,
+          email: m.email,
+          role: m.role,
+          roleLabel: m.role_label,
+          source: m.source,
+        });
+      });
+    }
+  } catch (err) {}
+
+  // 2. organization_settings & attendance fallback (kompatybilność)
   try {
     const { data, error } = await supabase
       .from('organization_settings')
