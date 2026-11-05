@@ -216,7 +216,7 @@ export async function saveBoardTenuresToDB(orgId = 'skn_seksuologii', tenures = 
 
   // 2. Bezpieczny fallback: zapis do tabeli attendance pod kodem [BOARD_TERM]:<orgId>:<id>
   try {
-    await supabase.from('attendance').delete().like('meeting_code', `[BOARD_TERM]:${cleanOrg}%`);
+    await supabase.from('attendance').delete().eq('organization_id', cleanOrg).like('meeting_code', `[BOARD_TERM]:${cleanOrg}%`);
 
     if (listToSave.length > 0) {
       const attRows = listToSave.map(t => {

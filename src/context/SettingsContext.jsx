@@ -101,23 +101,17 @@ export function SettingsProvider({ children }) {
 
   const [supervisors, setSupervisors] = useState(() => {
     try {
-      const orgId = currentOrg?.id || 'seksuologia';
+      const orgId = currentOrg?.id || 'skn_seksuologii';
       const key = getOrgSupervisorsKey(orgId);
-      const saved = localStorage.getItem(key) ||
-                    (getStorageKey ? localStorage.getItem(getStorageKey('crm_supervisors_config')) : null) ||
-                    localStorage.getItem('skn_supervisors_config');
+      const saved = localStorage.getItem(key);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           return parsed;
         }
       }
     } catch (e) {}
-
-    if (currentOrg && Array.isArray(currentOrg.supervisors) && currentOrg.supervisors.length > 0) {
-      return currentOrg.supervisors;
-    }
-    return getStoredSupervisors(currentOrg?.id || 'seksuologia');
+    return [];
   });
 
   const [driveFolderUrl, setDriveFolderUrl] = useState(() => {
@@ -137,58 +131,49 @@ export function SettingsProvider({ children }) {
   // Re-sync supervisors, attendanceConfig and driveFolderUrl when active organization changes (with Supabase SSOT)
   useEffect(() => {
     if (currentOrg) {
-      const orgId = currentOrg?.id || 'seksuologia';
+      const orgId = currentOrg?.id || 'skn_seksuologii';
 
-      // 1. Natychmiastowe załadowanie pamięci lokalnej (Local Cache First)
-      try {
-        const key = getOrgSupervisorsKey(orgId);
-        const orgSaved = localStorage.getItem(key) ||
-                         localStorage.getItem(getStorageKey('crm_supervisors_config'));
-        if (orgSaved) {
+      // 1. Natychmiastowy reset stanu dla nowego koła (eliminacja ghost data ze starego koła)
+      const key = getOrgSupervisorsKey(orgId);
+      const orgSaved = localStorage.getItem(key);
+      if (orgSaved) {
+        try {
           const parsed = JSON.parse(orgSaved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setSupervisors(parsed);
-          }
-        } else if (Array.isArray(currentOrg.supervisors) && currentOrg.supervisors.length > 0) {
-          setSupervisors(currentOrg.supervisors);
-        } else {
-          setSupervisors(getStoredSupervisors(orgId));
+          setSupervisors(Array.isArray(parsed) ? parsed : []);
+        } catch {
+          setSupervisors([]);
         }
-      } catch {}
+      } else {
+        setSupervisors([]);
+      }
 
       try {
         const attSaved = localStorage.getItem(getStorageKey('crm_attendance_config'));
-        if (attSaved) {
-          setAttendanceConfig({ ...DEFAULT_ATTENDANCE_CONFIG, ...JSON.parse(attSaved) });
-        } else {
-          const globalAtt = localStorage.getItem('crm_attendance_config') || localStorage.getItem('skn_attendance_config');
-          if (globalAtt) {
-            setAttendanceConfig({ ...DEFAULT_ATTENDANCE_CONFIG, ...JSON.parse(globalAtt) });
-          } else {
-            setAttendanceConfig(DEFAULT_ATTENDANCE_CONFIG);
-          }
-        }
-      } catch {}
+        setAttendanceConfig(attSaved ? { ...DEFAULT_ATTENDANCE_CONFIG, ...JSON.parse(attSaved) } : DEFAULT_ATTENDANCE_CONFIG);
+      } catch {
+        setAttendanceConfig(DEFAULT_ATTENDANCE_CONFIG);
+      }
 
       try {
         const driveSaved = localStorage.getItem(getStorageKey('crm_drive_folder_url')) ||
                            localStorage.getItem(getStorageKey('gdrive_url')) ||
                            currentOrg?.driveFolderUrl ||
                            currentOrg?.gdriveUrl ||
-                           localStorage.getItem('crm_drive_folder_url') ||
                            '';
         setDriveFolderUrl(driveSaved);
-      } catch {}
+      } catch {
+        setDriveFolderUrl('');
+      }
 
       // 2. Pobranie z Supabase jako Jedynego Źródła Prawdy (SSOT Revalidation)
       fetchOrgSettingsFromDB(orgId).then(res => {
         if (res.ok && res.settings) {
-          if (Array.isArray(res.settings.supervisors) && res.settings.supervisors.length > 0) {
-            setSupervisors(res.settings.supervisors);
-            try {
-              localStorage.setItem(getOrgSupervisorsKey(orgId), JSON.stringify(res.settings.supervisors));
-            } catch {}
-          }
+          const remoteSupervisors = Array.isArray(res.settings.supervisors) ? res.settings.supervisors : [];
+          setSupervisors(remoteSupervisors);
+          try {
+            localStorage.setItem(getOrgSupervisorsKey(orgId), JSON.stringify(remoteSupervisors));
+          } catch {}
+
           if (res.settings.attendanceConfig) {
             setAttendanceConfig(prev => ({ ...prev, ...res.settings.attendanceConfig }));
           }
@@ -198,6 +183,9 @@ export function SettingsProvider({ children }) {
           if (res.settings.driveFolderUrl) {
             setDriveFolderUrl(res.settings.driveFolderUrl);
           }
+        } else {
+          // Brak rekordu w Supabase oznacza czystą listę
+          setSupervisors([]);
         }
       }).catch(err => {
         console.warn('[SettingsContext] Cichy błąd odczytu ustawień z Supabase:', err);
@@ -339,9 +327,8 @@ export function SettingsProvider({ children }) {
   const resetSupervisors = useCallback(() => {
     saveSupervisorsList([]);
     try {
-      const orgId = currentOrg?.id || 'seksuologia';
+      const orgId = currentOrg?.id || 'skn_seksuologii';
       localStorage.removeItem(getOrgSupervisorsKey(orgId));
-      localStorage.removeItem('skn_supervisors_config');
       if (currentOrg) {
         localStorage.removeItem(getStorageKey('crm_supervisors_config'));
       }

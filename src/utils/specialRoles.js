@@ -1,45 +1,22 @@
 // ─── Special Roles & Faculty Supervisors (Clean Template) ───────────────────
 
-export const DEFAULT_FACULTY_SUPERVISORS = [
-  {
-    id: 'sup_ewa_skupinska',
-    name: 'Ewa Skupińska',
-    fullName: 'dr Ewa Skupińska',
-    academicTitle: 'dr',
-    email: '',
-    role: 'Opiekun Koła',
-    isActive: true,
-    aliases: ['Ewa Skupińska', 'dr Ewa Skupińska', 'Skupińska Ewa', 'dr hab. Ewa Skupińska', 'prof. Ewa Skupińska', 'Ewa Skupinska', 'dr Ewa Skupinska'],
-  },
-  {
-    id: 'sup_martyna_dziekan',
-    name: 'Martyna Dziekan',
-    fullName: 'dr Martyna Dziekan',
-    academicTitle: 'dr',
-    email: '',
-    role: 'Opiekun Koła',
-    isActive: true,
-    aliases: ['Martyna Dziekan', 'dr Martyna Dziekan', 'Dziekan Martyna', 'Martyna Dziekan-Kowalska', 'dr Martyna Dziekan-Kowalska'],
-  },
-];
+export const DEFAULT_FACULTY_SUPERVISORS = [];
 
 export const FACULTY_SUPERVISORS = DEFAULT_FACULTY_SUPERVISORS;
 
-export function getStoredSupervisors(orgId = 'seksuologia') {
-  if (typeof window === 'undefined') return DEFAULT_FACULTY_SUPERVISORS;
+export function getStoredSupervisors(orgId = 'skn_seksuologii') {
+  if (typeof window === 'undefined') return [];
   try {
-    const key = `crm_skn_${orgId || 'seksuologia'}_supervisors`;
-    const saved = localStorage.getItem(key) ||
-                  localStorage.getItem('skn_supervisors_config') ||
-                  localStorage.getItem('crm_supervisors_config');
+    const key = `crm_skn_${orgId || 'skn_seksuologii'}_supervisors`;
+    const saved = localStorage.getItem(key);
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     }
   } catch {}
-  return DEFAULT_FACULTY_SUPERVISORS;
+  return [];
 }
 
 export const PARTICIPANT_ROLES = {

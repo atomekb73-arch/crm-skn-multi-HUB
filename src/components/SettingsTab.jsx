@@ -236,40 +236,35 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
   // Refresh snapshots, board tenures, email config and access users when active organization switches (Supabase SSOT)
   useEffect(() => {
     if (orgId) {
+      // 1. Natychmiastowy reset do stanu czystego (eliminacja ghost data ze starego koła)
       setSnapshots(getOrgSnapshots(orgId));
       setEmailConfig(getEmailConfig(orgId));
 
-      try {
-        const savedOrgUsers = localStorage.getItem(`skn_access_users_${orgId}`);
-        setAccessUsers(savedOrgUsers ? JSON.parse(savedOrgUsers) : DEFAULT_ACCESS_USERS);
-      } catch {}
+      const savedOrgUsers = localStorage.getItem(`skn_access_users_${orgId}`);
+      setAccessUsers(savedOrgUsers ? JSON.parse(savedOrgUsers) : []);
 
-      try {
-        const savedOrgTenures = localStorage.getItem(`skn_board_tenures_${orgId}`);
-        setBoardTenures(savedOrgTenures ? JSON.parse(savedOrgTenures) : []);
-      } catch {}
+      const savedOrgTenures = localStorage.getItem(`skn_board_tenures_${orgId}`);
+      setBoardTenures(savedOrgTenures ? JSON.parse(savedOrgTenures) : []);
 
-      // Pobranie użytkowników uprawnień z Supabase
+      // 2. Pobranie użytkowników uprawnień z Supabase
       fetchAccessUsersFromDB(orgId).then(res => {
-        if (res.ok && Array.isArray(res.users)) {
-          setAccessUsers(res.users);
-          try {
-            localStorage.setItem(`skn_access_users_${orgId}`, JSON.stringify(res.users));
-          } catch {}
-        }
+        const users = res.ok && Array.isArray(res.users) ? res.users : [];
+        setAccessUsers(users);
+        try {
+          localStorage.setItem(`skn_access_users_${orgId}`, JSON.stringify(users));
+        } catch {}
       }).catch(console.warn);
 
-      // Pobranie kadencji zarządu z Supabase
+      // 3. Pobranie kadencji zarządu z Supabase
       fetchBoardTenuresFromDB(orgId).then(res => {
-        if (res.ok && Array.isArray(res.tenures)) {
-          setBoardTenures(res.tenures);
-          try {
-            localStorage.setItem(`skn_board_tenures_${orgId}`, JSON.stringify(res.tenures));
-          } catch {}
-        }
+        const tenures = res.ok && Array.isArray(res.tenures) ? res.tenures : [];
+        setBoardTenures(tenures);
+        try {
+          localStorage.setItem(`skn_board_tenures_${orgId}`, JSON.stringify(tenures));
+        } catch {}
       }).catch(console.warn);
 
-      // Pobranie konfiguracji e-mail z Supabase
+      // 4. Pobranie konfiguracji e-mail z Supabase
       fetchEmailConfigFromDB(orgId).then(res => {
         if (res.ok && res.config) {
           setEmailConfig(prev => ({ ...prev, ...res.config }));
@@ -499,10 +494,8 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
     try {
       const savedOrgUsers = localStorage.getItem(`skn_access_users_${orgId}`);
       if (savedOrgUsers) return JSON.parse(savedOrgUsers);
-      const savedLegacy = localStorage.getItem('skn_access_users');
-      if (savedLegacy && orgId === 'skn_seksuologii') return JSON.parse(savedLegacy);
     } catch {}
-    return DEFAULT_ACCESS_USERS;
+    return [];
   });
 
   const [newAccountModal, setNewAccountModal] = useState(null);
@@ -542,7 +535,7 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
       const saved = localStorage.getItem(`skn_board_tenures_${orgId}`);
       if (saved) return JSON.parse(saved);
     } catch {}
-    return DEFAULT_BOARD_TENURES;
+    return [];
   });
 
   // Logika dziedziczenia ról (Automatyczny dostęp dla Sekretarza, Zarządu i Opiekunów)
