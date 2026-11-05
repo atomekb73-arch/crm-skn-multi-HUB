@@ -38,57 +38,10 @@ export const ROLES = {
   },
 };
 
-export const ADMIN_PASSWORD = import.meta.env?.VITE_ADMIN_PASSWORD || 'Ntx2t44V';
+export const ADMIN_PASSWORD = import.meta.env?.VITE_ADMIN_PASSWORD || '';
 
 /** Stałe domyślne hasło startowe dla wszystkich nowych użytkowników */
 export const DEFAULT_STARTER_PASSWORD = 'StartCRM2026!';
-
-// Stały profil dostępu dla Magdy Czepirska do obu kół (Seksuologia + Uzależnienia)
-export const MAGDA_DUAL_ACCESS_USER = {
-  id: "magda-czepirska-dual-id",
-  email: "w.czepirska@gmail.com",
-  full_name: "Magda Czepirska",
-  name: "Magda Czepirska",
-  role: "Koordynator / Pełny dostęp",
-  roleLabel: "Koordynator / Pełny dostęp",
-  organizations: ["seksuologia", "uzaleznienia"], // Dostęp do obu kół
-  accessibleOrgs: ["skn_seksuologii", "seksuologia", "uzaleznienia"],
-  organization_id: "uzaleznienia",
-  is_global_admin: false, // Bez uprawnień administratora głównego
-  must_change_password: false,
-  status: "active"
-};
-
-// Funkcja weryfikująca logowanie Magdy
-export function authenticateMagda(email, password) {
-  if (!email || !password) return null;
-  const cleanEmail = email.toLowerCase().trim();
-  const cleanPass = password.trim();
-  const isMagda = cleanEmail === "w.czepirska@gmail.com" || cleanEmail === "m.czepirek@gmail.com";
-
-  if (isMagda && (cleanPass === "StartCRM2026!" || cleanPass.length >= 8)) {
-    return { 
-      success: true, 
-      user: {
-        ...MAGDA_DUAL_ACCESS_USER,
-        email: cleanEmail,
-      },
-      redirectUrl: "/dashboard" 
-    };
-  }
-  return null;
-}
-
-export const MOCK_MAGDA_USER = MAGDA_DUAL_ACCESS_USER;
-
-// Funkcja autoryzacji sprawdzająca bezpośrednio wpis Magdy (kompatybilność)
-export function checkMagdaBypass(email, password) {
-  const res = authenticateMagda(email, password);
-  if (res && res.success) {
-    return res;
-  }
-  return { success: false, error: "Nieprawidłowe dane logowania" };
-}
 
 export const MASTER_ADMIN_EMAILS = [
   'admin@wskz.pl',
@@ -101,7 +54,6 @@ export const MASTER_ADMIN_PASSWORDS = {
   'admin@wskz.pl': ADMIN_PASSWORD,
   'admin': ADMIN_PASSWORD,
   'zarzad@wskz.pl': ADMIN_PASSWORD,
-  'atomekb73@gmail.com': '730273',
 };
 
 export const DEFAULT_AUTHORIZED_ACCOUNTS = [
@@ -111,12 +63,11 @@ export const DEFAULT_AUTHORIZED_ACCOUNTS = [
     full_name: 'Magda Czepirska',
     role: 'Koordynator / Pełny dostęp',
     roleLabel: 'Koordynator / Pełny dostęp',
-    organizations: ['seksuologia', 'uzaleznienia'],
-    accessibleOrgs: ['skn_seksuologii', 'seksuologia', 'uzaleznienia'],
+    organizations: ['skn_seksuologii', 'uzaleznienia'],
+    accessibleOrgs: ['skn_seksuologii', 'uzaleznienia'],
     is_global_admin: false,
     must_change_password: false,
     isFirstLogin: false,
-    tempPassword: DEFAULT_STARTER_PASSWORD,
     organization_id: 'uzaleznienia',
   },
   {
@@ -125,12 +76,11 @@ export const DEFAULT_AUTHORIZED_ACCOUNTS = [
     full_name: 'Magda Czepirska',
     role: 'Koordynator / Pełny dostęp',
     roleLabel: 'Koordynator / Pełny dostęp',
-    organizations: ['seksuologia', 'uzaleznienia'],
-    accessibleOrgs: ['skn_seksuologii', 'seksuologia', 'uzaleznienia'],
+    organizations: ['skn_seksuologii', 'uzaleznienia'],
+    accessibleOrgs: ['skn_seksuologii', 'uzaleznienia'],
     is_global_admin: false,
     must_change_password: false,
     isFirstLogin: false,
-    tempPassword: DEFAULT_STARTER_PASSWORD,
     organization_id: 'uzaleznienia',
   },
   {
@@ -139,7 +89,6 @@ export const DEFAULT_AUTHORIZED_ACCOUNTS = [
     role: 'SUPER_ADMIN',
     roleLabel: 'Przewodniczący SKNS',
     isFirstLogin: true,
-    tempPassword: DEFAULT_STARTER_PASSWORD,
     accessibleOrgs: ['*'],
   },
   {
@@ -148,11 +97,9 @@ export const DEFAULT_AUTHORIZED_ACCOUNTS = [
     role: 'ADMIN',
     roleLabel: 'Zarząd Koła',
     isFirstLogin: true,
-    tempPassword: DEFAULT_STARTER_PASSWORD,
     accessibleOrgs: ['*'],
   },
   {
-    // HOTFIX: stały dostęp Liliany Sienkiewicz do Koła Psychoonkologii
     email: 'lajlasienkiewicz@gmail.com',
     name: 'Liliana Sienkiewicz',
     full_name: 'Liliana Sienkiewicz',
@@ -163,7 +110,6 @@ export const DEFAULT_AUTHORIZED_ACCOUNTS = [
     organization_id: 'psychoonkologia',
     is_global_admin: false,
     isFirstLogin: true,
-    tempPassword: DEFAULT_STARTER_PASSWORD,
   },
 ];
 
@@ -176,15 +122,12 @@ export const STARTER_PASSWORDS = {
   'm.czepirek@gmail.com': DEFAULT_STARTER_PASSWORD,
   '15998@student.wskz.pl': DEFAULT_STARTER_PASSWORD,
   'gabriel.creart@gmail.com': DEFAULT_STARTER_PASSWORD,
-  'atomekb73@gmail.com': '730273',
+  'lajlasienkiewicz@gmail.com': DEFAULT_STARTER_PASSWORD,
 };
 
 export const ACCESS_PASSWORDS = [
   ADMIN_PASSWORD,
-  'Ntx2t44V',
   DEFAULT_STARTER_PASSWORD,
-  'Start2026!',
-  '730273',
   import.meta.env?.VITE_ACCESS_PASSWORD,
   import.meta.env?.VITE_ADMIN_PASSWORD,
 ].filter(Boolean);
@@ -485,21 +428,6 @@ export function AuthProvider({ children }) {
 
     const cleanEmail = inputEmail.trim().toLowerCase();
 
-    // Stały profil dla Magdy Czepirskiej (Seksuologia + Uzależnienia)
-    if (cleanEmail === 'w.czepirska@gmail.com' || cleanEmail === 'm.czepirek@gmail.com') {
-      const magdaUser = {
-        ...MAGDA_DUAL_ACCESS_USER,
-        email: cleanEmail,
-      };
-      return {
-        authorized: true,
-        hasPassword: true,
-        isFirstLogin: false,
-        mustChangePassword: false,
-        user: magdaUser,
-      };
-    }
-
     // 1. Sprawdź czy konto jest w bazie uprawnionych lub dziedziczy rolę
     const isMaster = MASTER_ADMIN_EMAILS.some(e => e.toLowerCase() === cleanEmail);
     const isDefaultBoard = cleanEmail === 'zarzad@wskz.pl';
@@ -766,30 +694,6 @@ export function AuthProvider({ children }) {
     const cleanEmail = inputEmail.trim().toLowerCase();
     const cleanPassword = inputPassword.trim();
 
-    // Stały profil dostępu dla Magdy Czepirskiej (Seksuologia + Uzależnienia)
-    const magdaAuth = authenticateMagda(cleanEmail, cleanPassword);
-    if (magdaAuth && magdaAuth.success) {
-      setUser(magdaAuth.user);
-      setIsAuthenticated(true);
-      try {
-        localStorage.setItem('crm_skn_auth_session', JSON.stringify({
-          email: cleanEmail,
-          name: magdaAuth.user.name || magdaAuth.user.full_name,
-          role: magdaAuth.user.role,
-          timestamp: Date.now(),
-        }));
-        localStorage.setItem('crm_skn_auth_user', JSON.stringify(magdaAuth.user));
-        // Zachowaj obecne koło jeśli jest jednym z dozwolonych (uzaleznienia lub skn_seksuologii)
-        const currentOrg = localStorage.getItem('crm_skn_current_org_id');
-        if (!currentOrg || (currentOrg !== 'uzaleznienia' && currentOrg !== 'skn_seksuologii')) {
-          localStorage.setItem('crm_skn_current_org_id', 'uzaleznienia');
-        }
-      } catch (e) {
-        console.warn('Błąd zapisu sesji:', e);
-      }
-      return { success: true, user: magdaAuth.user, redirectUrl: magdaAuth.redirectUrl || '/dashboard' };
-    }
-
     const status = checkEmailStatus(cleanEmail);
     if (!status.authorized) {
       return { success: false, error: status.error };
@@ -820,7 +724,7 @@ export function AuthProvider({ children }) {
     const isPasswordValid = (storedPassword && storedPassword === cleanPassword) ||
                             isRemotePasswordMatch ||
                             isTempPasswordMatch ||
-                            (isMasterOrBoard && (cleanPassword === ADMIN_PASSWORD || cleanPassword === 'Ntx2t44V'));
+                            (isMasterOrBoard && cleanPassword === ADMIN_PASSWORD);
 
     if (!isPasswordValid) {
       return { success: false, error: 'Nieprawidłowe hasło dostępowe.' };
@@ -1082,10 +986,6 @@ export function AuthProvider({ children }) {
     canAccessOrg,
     checkEmailStatus,
     refreshRemoteAccess,
-    authenticateMagda,
-    MAGDA_DUAL_ACCESS_USER,
-    checkMagdaBypass,
-    MOCK_MAGDA_USER,
     activateAccount,
     loginWithPassword,
     loginWithCredentials,

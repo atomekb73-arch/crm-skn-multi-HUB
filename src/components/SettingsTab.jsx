@@ -251,11 +251,10 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
 
       // Pobranie użytkowników uprawnień z Supabase
       fetchAccessUsersFromDB(orgId).then(res => {
-        if (res.ok && Array.isArray(res.users) && res.users.length > 0) {
+        if (res.ok && Array.isArray(res.users)) {
           setAccessUsers(res.users);
           try {
             localStorage.setItem(`skn_access_users_${orgId}`, JSON.stringify(res.users));
-            localStorage.setItem('skn_access_users', JSON.stringify(res.users));
           } catch {}
         }
       }).catch(console.warn);
@@ -498,8 +497,10 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
   // ── Sektor 1: Access Control State ──────────────────────────────────────────
   const [accessUsers, setAccessUsers] = useState(() => {
     try {
-      const saved = localStorage.getItem('skn_access_users');
-      if (saved) return JSON.parse(saved);
+      const savedOrgUsers = localStorage.getItem(`skn_access_users_${orgId}`);
+      if (savedOrgUsers) return JSON.parse(savedOrgUsers);
+      const savedLegacy = localStorage.getItem('skn_access_users');
+      if (savedLegacy && orgId === 'skn_seksuologii') return JSON.parse(savedLegacy);
     } catch {}
     return DEFAULT_ACCESS_USERS;
   });
@@ -622,12 +623,11 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
     setLocalWeights({ ...weights });
   }, [weights]);
 
-  // Sync access users to localStorage and Supabase SSOT
+  // Sync access users to localStorage and Supabase SSOT (ściśle per tenant)
   const saveAccessUsers = async (updated) => {
     setAccessUsers(updated);
     try {
       localStorage.setItem(`skn_access_users_${orgId}`, JSON.stringify(updated));
-      localStorage.setItem('skn_access_users', JSON.stringify(updated));
     } catch {}
     await saveAccessUsersToDB(orgId, updated).catch(console.warn);
   };
