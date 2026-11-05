@@ -33,6 +33,7 @@ import {
 } from '../utils/academicScope';
 import { calculateMemberStats, hasMeetingAttendanceLogs } from '../utils/meetingTypes';
 import { DEFAULT_FACULTY_SUPERVISORS } from '../utils/specialRoles';
+import { getOrgKey } from '../utils/storage';
 
 export function getAcademicYearShortSlug(academicYear = getCurrentAcademicYear()) {
   const str = String(academicYear || '');
@@ -80,7 +81,15 @@ export function getOrgMetadata(org) {
   let unit = resolvedOrg?.unit || resolvedOrg?.faculty || 'Instytut Psychologii WSKZ';
   const faculty = resolvedOrg?.faculty || unit;
 
-  return { id, name, shortName, tag, unit, faculty };
+  return {
+    id,
+    name,
+    shortName,
+    tag,
+    unit,
+    faculty,
+    resolvedOrg: resolvedOrg || { id, name, shortName, tag, unit, faculty },
+  };
 }
 
 /**
@@ -1132,7 +1141,9 @@ export function MembersRegistryTemplate({
   attendanceConfig = {},
   precalculatedStatsMap = null,
 }) {
-  const { id: orgId, name: orgName, shortName: orgShortName, tag: orgTag, unit: orgUnit } = getOrgMetadata(org);
+  const orgMeta = getOrgMetadata(org);
+  const { id: orgId, name: orgName, shortName: orgShortName, tag: orgTag, unit: orgUnit } = orgMeta;
+  const resolvedOrg = org || orgMeta?.resolvedOrg || { id: orgId || 'test', name: orgName || 'Koło Naukowe', shortName: orgShortName || 'SKN' };
 
   const scope = useMemo(() => getAcademicScope(academicYear), [academicYear]);
   const timeStatus = getAcademicYearTimeStatus(academicYear);
@@ -1150,13 +1161,13 @@ export function MembersRegistryTemplate({
     let raw = [];
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
-        const ewKey = getOrgKey(resolvedOrg.id, 'crm_ewidencja');
+        const ewKey = getOrgKey(resolvedOrg?.id || orgId, 'crm_ewidencja');
         const s = localStorage.getItem(ewKey);
         if (s) raw = JSON.parse(s);
       } catch {}
     }
     return (Array.isArray(raw) ? raw : []).filter(e => isEwidencjaInAcademicScope(e, scope, scopedMeetings));
-  }, [scope, scopedMeetings, resolvedOrg.id]);
+  }, [scope, scopedMeetings, resolvedOrg?.id, orgId]);
 
   // Zlicz zrealizowane spotkania
   const conductedMeetingsCount = useMemo(() => {
