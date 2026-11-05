@@ -166,6 +166,57 @@ export const TENANT_THEMES = {
       '--tenant-backdrop-to': '#ede9fe',
     },
   },
+
+  test: {
+    id: 'test',
+    name: 'Ciepły Bursztyn & Miód (Instancja Testowa)',
+    orgShortName: 'SKN Testowe',
+    badgeText: 'TEST',
+    colorKey: 'amber',
+
+    backdropGradientClass: 'from-slate-50 via-amber-50/45 to-orange-50/55',
+    backdropStyle: {
+      background: 'linear-gradient(135deg, #f8fafc 0%, #fffbeb 45%, #fff7ed 100%)',
+    },
+
+    headerBadgeGradient: 'bg-gradient-to-br from-amber-600 via-amber-700 to-orange-700 shadow-amber-500/25',
+    headerTagBadge: 'bg-amber-50 text-amber-900 border-amber-200/90 font-bold',
+    headerHoverTitle: 'group-hover:text-amber-700',
+    headerHoverIcon: 'group-hover:text-amber-700',
+
+    primaryBtn: 'bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white shadow-xs shadow-amber-600/20 focus:ring-amber-500',
+    primaryBtnOutline: 'border-amber-300 text-amber-900 hover:bg-amber-50',
+
+    navActiveTabBorder: 'border-amber-300 ring-1 ring-amber-200/50',
+    navActiveTabIcon: 'text-amber-600',
+    navActiveSubtabText: 'text-amber-950 font-bold',
+    navActiveIndicator: 'bg-amber-600',
+    navBadge: 'bg-amber-600 text-white',
+
+    widgetCardBg: 'bg-white/95 border-amber-200',
+    statDotColor: 'bg-amber-500',
+    statIconColor: 'text-amber-600',
+    filterBarBg: 'bg-amber-50/40 border-amber-200/70',
+
+    dropdownSelectedClass: 'bg-amber-50/90 text-amber-950 font-bold border-amber-200 shadow-xs',
+    dropdownSelectedIcon: 'text-amber-600',
+
+    accentRing: 'focus:ring-amber-500',
+    accentBorder: 'border-amber-200',
+    accentSoftBg: 'bg-amber-50/70',
+    accentText: 'text-amber-900',
+
+    cssVars: {
+      '--tenant-primary': '#d97706',
+      '--tenant-primary-hover': '#b45309',
+      '--tenant-primary-light': '#fef3c7',
+      '--tenant-primary-border': '#fde68a',
+      '--tenant-accent': '#f59e0b',
+      '--tenant-backdrop-from': '#f8fafc',
+      '--tenant-backdrop-via': '#fffbeb',
+      '--tenant-backdrop-to': '#fff7ed',
+    },
+  },
 };
 
 /**
@@ -184,6 +235,10 @@ export function getTenantTheme(orgOrId) {
 
   if (cleanId === 'psychoonkologia' || cleanId === 'skn_psychoonkologii' || cleanId === 'skn-psychoonkologia' || cleanId.includes('psycho') || cleanId.includes('onko')) {
     return TENANT_THEMES.psychoonkologia;
+  }
+
+  if (cleanId === 'test' || cleanId === 'demo' || cleanId.includes('test')) {
+    return TENANT_THEMES.test;
   }
 
   // Domyślny motyw Seksuologii (lub dopasowanie bezpośrednie)

@@ -87,6 +87,20 @@ export const DEFAULT_ORGS = [
     isDefault: false,
     supervisors: [],
   },
+  {
+    id: 'test',
+    name: 'Koło Testowe (Instancja Demonstracyjna)',
+    shortName: 'SKN Testowe (Demo)',
+    tag: 'SKN-TEST',
+    badgeText: 'TEST',
+    faculty: 'Instytut Psychologii WSKZ',
+    unit: 'Instytut Psychologii WSKZ',
+    academicYear: '2025/2026',
+    description: 'Instancja testowa i demonstracyjna z pełnym pakietem danych (25 członków, kwarantanna, obecności, zarząd)',
+    color: 'amber',
+    isDefault: false,
+    supervisors: [],
+  },
 ];
 
 const OrgContext = createContext(null);
@@ -155,6 +169,16 @@ export function OrgProvider({ children }) {
               subcalendarName: '07 🎗️ SKN Psychoonkologii',
             };
           }
+          if (o.id === 'test' || o.name?.includes('Testow')) {
+            return {
+              ...DEFAULT_ORGS[3],
+              ...o,
+              id: 'test',
+              tag: 'SKN-TEST',
+              badgeText: 'TEST',
+              color: 'amber',
+            };
+          }
           return o;
         });
 
@@ -165,6 +189,10 @@ export function OrgProvider({ children }) {
         // Ensure psychoonkologia exists in the list
         if (!mapped.some(o => o.id === 'psychoonkologia')) {
           mapped.push(DEFAULT_ORGS[2]);
+        }
+        // Ensure test exists in the list
+        if (!mapped.some(o => o.id === 'test')) {
+          mapped.push(DEFAULT_ORGS[3]);
         }
         return mapped;
       }
