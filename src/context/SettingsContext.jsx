@@ -62,7 +62,7 @@ export const DEFAULT_ATTENDANCE_CONFIG = {
 import { useOrg } from './OrgContext';
 import { DEFAULT_FACULTY_SUPERVISORS, getStoredSupervisors } from '../utils/specialRoles';
 import { ACTIVITY_OPTIONS, HISTORICAL_MEMBER_ACTIVITIES, getMemberPointsSum } from '../utils/activityRegistry';
-import { fetchOrgSettingsFromDB, saveOrgSettingsKeyToDB } from '../services/settingsService';
+import { fetchOrgSettingsFromDB, saveOrgSettingsKeyToDB, deduplicateSupervisors } from '../services/settingsService';
 
 /**
  * Oblicza sumaryczny licznik punktów aktywności dla studenta
@@ -79,8 +79,10 @@ export function SettingsProvider({ children }) {
 
   const [weights, setWeights] = useState(() => {
     try {
-      const saved = localStorage.getItem('crm_point_weights');
-      if (saved) return { ...DEFAULT_POINT_WEIGHTS, ...JSON.parse(saved) };
+      if (currentOrg) {
+        const saved = localStorage.getItem(getStorageKey('crm_point_weights'));
+        if (saved) return { ...DEFAULT_POINT_WEIGHTS, ...JSON.parse(saved) };
+      }
     } catch {}
     return DEFAULT_POINT_WEIGHTS;
   });
@@ -91,13 +93,11 @@ export function SettingsProvider({ children }) {
         const orgSaved = localStorage.getItem(getStorageKey('crm_attendance_config'));
         if (orgSaved) return { ...DEFAULT_ATTENDANCE_CONFIG, ...JSON.parse(orgSaved) };
       }
-      const saved = localStorage.getItem('crm_attendance_config') || localStorage.getItem('skn_attendance_config');
-      if (saved) return { ...DEFAULT_ATTENDANCE_CONFIG, ...JSON.parse(saved) };
     } catch {}
     return DEFAULT_ATTENDANCE_CONFIG;
   });
 
-  const getOrgSupervisorsKey = (id) => `crm_skn_${id || 'seksuologia'}_supervisors`;
+  const getOrgSupervisorsKey = (id) => `crm_skn_${id || 'skn_seksuologii'}_supervisors`;
 
   const [supervisors, setSupervisors] = useState(() => {
     try {
@@ -106,8 +106,19 @@ export function SettingsProvider({ children }) {
       const saved = localStorage.getItem(key);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return deduplicateSupervisors(parsed, orgId);
+        }
+      }
+      if (Array.isArray(currentOrg?.supervisors) && currentOrg.supervisors.length > 0) {
+        return deduplicateSupervisors(currentOrg.supervisors, orgId);
+      }
+      const orgsRaw = localStorage.getItem('crm_skn_organizations');
+      if (orgsRaw) {
+        const orgs = JSON.parse(orgsRaw);
+        const match = Array.isArray(orgs) ? orgs.find(o => o.id === orgId) : null;
+        if (match && Array.isArray(match.supervisors) && match.supervisors.length > 0) {
+          return deduplicateSupervisors(match.supervisors, orgId);
         }
       }
     } catch (e) {}
@@ -123,88 +134,120 @@ export function SettingsProvider({ children }) {
                          currentOrg?.gdriveUrl;
         if (orgSaved) return orgSaved;
       }
-      return localStorage.getItem('crm_drive_folder_url') || localStorage.getItem('skn_drive_folder_url') || '';
     } catch {}
     return '';
   });
 
-  // Re-sync supervisors, attendanceConfig and driveFolderUrl when active organization changes (with Supabase SSOT)
+  // Re-sync supervisors, weights, attendanceConfig and driveFolderUrl when active organization changes (with Supabase SSOT & cancellation guard)
   useEffect(() => {
-    if (currentOrg) {
-      const orgId = currentOrg?.id || 'skn_seksuologii';
+    if (!currentOrg?.id) return;
+    let isCancelled = false;
+    const orgId = currentOrg.id;
 
-      // 1. Natychmiastowy reset stanu dla nowego koła (eliminacja ghost data ze starego koła)
-      const key = getOrgSupervisorsKey(orgId);
-      const orgSaved = localStorage.getItem(key);
-      if (orgSaved) {
-        try {
-          const parsed = JSON.parse(orgSaved);
-          setSupervisors(Array.isArray(parsed) ? parsed : []);
-        } catch {
-          setSupervisors([]);
+    // 1. Natychmiastowy reset i odczyt z izolowanego klucza localStorage dla nowego koła
+    const key = getOrgSupervisorsKey(orgId);
+    const orgSaved = localStorage.getItem(key);
+    let localSups = [];
+    if (orgSaved) {
+      try {
+        const parsed = JSON.parse(orgSaved);
+        if (Array.isArray(parsed) && parsed.length > 0) localSups = deduplicateSupervisors(parsed, orgId);
+      } catch {}
+    }
+    if (localSups.length === 0 && Array.isArray(currentOrg?.supervisors) && currentOrg.supervisors.length > 0) {
+      localSups = deduplicateSupervisors(currentOrg.supervisors, orgId);
+    }
+    if (localSups.length === 0) {
+      try {
+        const orgsRaw = localStorage.getItem('crm_skn_organizations');
+        if (orgsRaw) {
+          const orgs = JSON.parse(orgsRaw);
+          const match = Array.isArray(orgs) ? orgs.find(o => o.id === orgId) : null;
+          if (match && Array.isArray(match.supervisors) && match.supervisors.length > 0) {
+            localSups = deduplicateSupervisors(match.supervisors, orgId);
+          }
         }
-      } else {
-        setSupervisors([]);
-      }
+      } catch {}
+    }
+    setSupervisors(localSups);
 
-      try {
-        const attSaved = localStorage.getItem(getStorageKey('crm_attendance_config'));
-        setAttendanceConfig(attSaved ? { ...DEFAULT_ATTENDANCE_CONFIG, ...JSON.parse(attSaved) } : DEFAULT_ATTENDANCE_CONFIG);
-      } catch {
-        setAttendanceConfig(DEFAULT_ATTENDANCE_CONFIG);
-      }
+    try {
+      const weightsSaved = localStorage.getItem(getStorageKey('crm_point_weights'));
+      setWeights(weightsSaved ? { ...DEFAULT_POINT_WEIGHTS, ...JSON.parse(weightsSaved) } : DEFAULT_POINT_WEIGHTS);
+    } catch {
+      setWeights(DEFAULT_POINT_WEIGHTS);
+    }
 
-      try {
-        const driveSaved = localStorage.getItem(getStorageKey('crm_drive_folder_url')) ||
-                           localStorage.getItem(getStorageKey('gdrive_url')) ||
-                           currentOrg?.driveFolderUrl ||
-                           currentOrg?.gdriveUrl ||
-                           '';
-        setDriveFolderUrl(driveSaved);
-      } catch {
-        setDriveFolderUrl('');
-      }
+    try {
+      const attSaved = localStorage.getItem(getStorageKey('crm_attendance_config'));
+      setAttendanceConfig(attSaved ? { ...DEFAULT_ATTENDANCE_CONFIG, ...JSON.parse(attSaved) } : DEFAULT_ATTENDANCE_CONFIG);
+    } catch {
+      setAttendanceConfig(DEFAULT_ATTENDANCE_CONFIG);
+    }
 
-      // 2. Pobranie z Supabase jako Jedynego Źródła Prawdy (SSOT Revalidation)
-      fetchOrgSettingsFromDB(orgId).then(res => {
-        if (res.ok && res.settings) {
-          const remoteSupervisors = Array.isArray(res.settings.supervisors) ? res.settings.supervisors : [];
+    try {
+      const driveSaved = localStorage.getItem(getStorageKey('crm_drive_folder_url')) ||
+                         localStorage.getItem(getStorageKey('gdrive_url')) ||
+                         currentOrg?.driveFolderUrl ||
+                         currentOrg?.gdriveUrl ||
+                         '';
+      setDriveFolderUrl(driveSaved);
+    } catch {
+      setDriveFolderUrl('');
+    }
+
+    // 2. Pobranie z Supabase jako Jedynego Źródła Prawdy (SSOT Revalidation z ochroną przed race condition)
+    fetchOrgSettingsFromDB(orgId).then(res => {
+      if (isCancelled) return;
+      if (res.ok && res.settings) {
+        if (Array.isArray(res.settings.supervisors) && res.settings.supervisors.length > 0) {
+          const remoteSupervisors = deduplicateSupervisors(res.settings.supervisors, orgId);
           setSupervisors(remoteSupervisors);
           try {
             localStorage.setItem(getOrgSupervisorsKey(orgId), JSON.stringify(remoteSupervisors));
+            updateOrganization(orgId, { supervisors: remoteSupervisors });
+            const orgsRaw = localStorage.getItem('crm_skn_organizations');
+            if (orgsRaw) {
+              const orgs = JSON.parse(orgsRaw);
+              if (Array.isArray(orgs)) {
+                const updatedOrgs = orgs.map(o => o.id === orgId ? { ...o, supervisors: remoteSupervisors } : o);
+                localStorage.setItem('crm_skn_organizations', JSON.stringify(updatedOrgs));
+              }
+            }
           } catch {}
-
-          if (res.settings.attendanceConfig) {
-            setAttendanceConfig(prev => ({ ...prev, ...res.settings.attendanceConfig }));
-          }
-          if (res.settings.weights) {
-            setWeights(prev => ({ ...prev, ...res.settings.weights }));
-          }
-          if (res.settings.driveFolderUrl) {
-            setDriveFolderUrl(res.settings.driveFolderUrl);
-          }
-        } else {
-          // Brak rekordu w Supabase oznacza czystą listę
-          setSupervisors([]);
         }
-      }).catch(err => {
+
+        if (res.settings.attendanceConfig) {
+          setAttendanceConfig(prev => ({ ...prev, ...res.settings.attendanceConfig }));
+        }
+        if (res.settings.weights) {
+          setWeights(prev => ({ ...prev, ...res.settings.weights }));
+        }
+        if (res.settings.driveFolderUrl) {
+          setDriveFolderUrl(res.settings.driveFolderUrl);
+        }
+      }
+    }).catch(err => {
+      if (!isCancelled) {
         console.warn('[SettingsContext] Cichy błąd odczytu ustawień z Supabase:', err);
-      });
-    }
-  }, [currentOrg?.id, getStorageKey]);
+      }
+    });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [currentOrg?.id, getStorageKey, updateOrganization]);
 
   const updateDriveFolderUrl = useCallback((url) => {
     const cleanUrl = String(url || '').trim();
     setDriveFolderUrl(cleanUrl);
-    const orgId = currentOrg?.id || 'seksuologia';
+    const orgId = currentOrg?.id || 'skn_seksuologii';
     try {
       if (currentOrg) {
         localStorage.setItem(getStorageKey('crm_drive_folder_url'), cleanUrl);
         localStorage.setItem(getStorageKey('gdrive_url'), cleanUrl);
         updateOrganization(currentOrg.id, { driveFolderUrl: cleanUrl, gdriveUrl: cleanUrl });
       }
-      localStorage.setItem('crm_drive_folder_url', cleanUrl);
-      localStorage.setItem('skn_drive_folder_url', cleanUrl);
     } catch {}
     saveOrgSettingsKeyToDB(orgId, 'driveFolderUrl', cleanUrl).catch(console.warn);
   }, [currentOrg, getStorageKey, updateOrganization]);
@@ -212,13 +255,11 @@ export function SettingsProvider({ children }) {
   const updateAttendanceConfig = useCallback((patch) => {
     setAttendanceConfig(prev => {
       const updated = { ...prev, ...patch };
-      const orgId = currentOrg?.id || 'seksuologia';
+      const orgId = currentOrg?.id || 'skn_seksuologii';
       try {
         if (currentOrg) {
           localStorage.setItem(getStorageKey('crm_attendance_config'), JSON.stringify(updated));
         }
-        localStorage.setItem('crm_attendance_config', JSON.stringify(updated));
-        localStorage.setItem('skn_attendance_config', JSON.stringify(updated));
       } catch {}
       saveOrgSettingsKeyToDB(orgId, 'attendanceConfig', updated).catch(console.warn);
       return updated;
@@ -227,13 +268,11 @@ export function SettingsProvider({ children }) {
 
   const resetAttendanceConfig = useCallback(() => {
     setAttendanceConfig(DEFAULT_ATTENDANCE_CONFIG);
-    const orgId = currentOrg?.id || 'seksuologia';
+    const orgId = currentOrg?.id || 'skn_seksuologii';
     try {
       if (currentOrg) {
         localStorage.removeItem(getStorageKey('crm_attendance_config'));
       }
-      localStorage.removeItem('crm_attendance_config');
-      localStorage.removeItem('skn_attendance_config');
     } catch {}
     saveOrgSettingsKeyToDB(orgId, 'attendanceConfig', DEFAULT_ATTENDANCE_CONFIG).catch(console.warn);
   }, [currentOrg, getStorageKey]);
@@ -244,39 +283,54 @@ export function SettingsProvider({ children }) {
         ...prev,
         [id]: { ...prev[id], points: Number(newPoints) || 0 },
       };
-      const orgId = currentOrg?.id || 'seksuologia';
+      const orgId = currentOrg?.id || 'skn_seksuologii';
       try {
-        localStorage.setItem('crm_point_weights', JSON.stringify(updated));
+        if (currentOrg) {
+          localStorage.setItem(getStorageKey('crm_point_weights'), JSON.stringify(updated));
+        }
       } catch {}
       saveOrgSettingsKeyToDB(orgId, 'weights', updated).catch(console.warn);
       return updated;
     });
-  }, [currentOrg?.id]);
+  }, [currentOrg, getStorageKey]);
 
   const resetWeights = useCallback(() => {
     setWeights(DEFAULT_POINT_WEIGHTS);
-    const orgId = currentOrg?.id || 'seksuologia';
+    const orgId = currentOrg?.id || 'skn_seksuologii';
     try {
-      localStorage.removeItem('crm_point_weights');
+      if (currentOrg) {
+        localStorage.removeItem(getStorageKey('crm_point_weights'));
+      }
     } catch {}
     saveOrgSettingsKeyToDB(orgId, 'weights', DEFAULT_POINT_WEIGHTS).catch(console.warn);
-  }, [currentOrg?.id]);
+  }, [currentOrg, getStorageKey]);
 
   const saveSupervisorsList = useCallback((newList) => {
-    setSupervisors(newList);
-    const orgId = currentOrg?.id || 'seksuologia';
+    const orgId = currentOrg?.id || 'skn_seksuologii';
+    const cleanList = deduplicateSupervisors(newList, orgId);
+    setSupervisors(cleanList);
     try {
       const key = getOrgSupervisorsKey(orgId);
-      const json = JSON.stringify(newList);
+      const json = JSON.stringify(cleanList);
       localStorage.setItem(key, json);
       if (currentOrg) {
         localStorage.setItem(getStorageKey('crm_supervisors_config'), json);
-        localStorage.setItem(getStorageKey('settings'), JSON.stringify({ supervisors: newList }));
-        updateOrganization(currentOrg.id, { supervisors: newList });
+        localStorage.setItem(getStorageKey('settings'), JSON.stringify({ supervisors: cleanList }));
+        updateOrganization(currentOrg.id, { supervisors: cleanList });
       }
-      localStorage.setItem('skn_supervisors_config', json);
+      localStorage.removeItem('skn_supervisors_config');
+
+      // Aktualizacja crm_skn_organizations w localStorage
+      const orgsRaw = localStorage.getItem('crm_skn_organizations');
+      if (orgsRaw) {
+        const orgs = JSON.parse(orgsRaw);
+        if (Array.isArray(orgs)) {
+          const updatedOrgs = orgs.map(o => o.id === orgId ? { ...o, supervisors: cleanList } : o);
+          localStorage.setItem('crm_skn_organizations', JSON.stringify(updatedOrgs));
+        }
+      }
     } catch {}
-    saveOrgSettingsKeyToDB(orgId, 'supervisors', newList).catch(console.warn);
+    saveOrgSettingsKeyToDB(orgId, 'supervisors', cleanList).catch(console.warn);
   }, [currentOrg, getStorageKey, updateOrganization]);
 
   const addSupervisor = useCallback((sup) => {

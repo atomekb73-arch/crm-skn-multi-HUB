@@ -4,15 +4,25 @@ export const DEFAULT_FACULTY_SUPERVISORS = [];
 
 export const FACULTY_SUPERVISORS = DEFAULT_FACULTY_SUPERVISORS;
 
-export function getStoredSupervisors(orgId = 'skn_seksuologii') {
+export function getStoredSupervisors(orgId = null) {
   if (typeof window === 'undefined') return [];
   try {
-    const key = `crm_skn_${orgId || 'skn_seksuologii'}_supervisors`;
+    const activeOrg = orgId || localStorage.getItem('crm_skn_current_org_id') || 'skn_seksuologii';
+    const key = `crm_skn_${activeOrg}_supervisors`;
     const saved = localStorage.getItem(key);
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed)) {
+      if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed;
+      }
+    }
+    // Sprawdzenie fallbacku z crm_skn_organizations
+    const orgsRaw = localStorage.getItem('crm_skn_organizations');
+    if (orgsRaw) {
+      const orgs = JSON.parse(orgsRaw);
+      const match = Array.isArray(orgs) ? orgs.find(o => o.id === activeOrg) : null;
+      if (match && Array.isArray(match.supervisors) && match.supervisors.length > 0) {
+        return match.supervisors;
       }
     }
   } catch {}

@@ -5,13 +5,16 @@ import {
   restoreOrgFullSupabaseData,
   fetchMasterSupabaseData,
   restoreMasterSupabaseData,
+  deduplicateBoard,
+  deduplicateSupervisors,
+  normalizeOrgId,
 } from '../services/settingsService.js';
 
 // ─── Multi-Tenant Workspace Storage Engine ─────────────────────────────────
 // Ensures complete data isolation between different Student Science Clubs (KN).
 
 /**
- * Automatically purges legacy storage cache from previous club instances
+ * Automatically purges legacy and unscoped global storage cache to prevent cross-tenant state pollution
  */
 export function purgeLegacyStorageCache() {
   if (typeof window === 'undefined' || !window.localStorage) return;
@@ -23,6 +26,28 @@ export function purgeLegacyStorageCache() {
       'skn_seks_',
       'skn_psycho_',
     ];
+    const unscopedGlobalKeys = [
+      'skn_board_tenures',
+      'crm_board_tenures',
+      'CACHE_APP_STATE_SNAPSHOT',
+      'CACHE_APP_STATE_SNAPSHOT_skn-template',
+      'skn_supervisors_config',
+      'crm_point_weights',
+      'crm_attendance_config',
+      'skn_attendance_config',
+      'crm_drive_folder_url',
+      'skn_drive_folder_url',
+      'skn_settings_config',
+      'crm_meeting_types',
+      'crm_meet_aliases',
+      'crm_members',
+      'crm_czlonkowie',
+      'crm_dorobek',
+      'crm_ewidencja',
+    ];
+    unscopedGlobalKeys.forEach(k => {
+      try { localStorage.removeItem(k); } catch {}
+    });
     const keysToRemove = [];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
@@ -456,16 +481,27 @@ if (typeof window !== 'undefined') {
  */
 export async function createOrgSnapshot(orgId, reason = 'Automatyczna migawka') {
   if (typeof window === 'undefined' || !orgId) return null;
-  const cleanId = String(orgId).trim().toLowerCase();
+  const cleanId = normalizeOrgId(orgId);
   const prefix = `crm_skn_${cleanId}_`;
+  const boardKey = `skn_board_tenures_${cleanId}`;
+  const usersKey = `skn_access_users_${cleanId}`;
+  const dorobekKey = `crm_dorobek_${cleanId}`;
 
   const snapshotData = {};
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
-    if (k && k.startsWith(prefix)) {
+    if (!k) continue;
+    const isOrgKey = k.startsWith(prefix) || k === boardKey || k === usersKey || k === dorobekKey;
+    if (isOrgKey) {
       if (k.includes('_snap_content_') || k.includes('_snapshots_meta') || k.includes('_backup_')) continue;
       try {
-        snapshotData[k] = JSON.parse(localStorage.getItem(k));
+        let parsed = JSON.parse(localStorage.getItem(k));
+        if (k.includes('board_tenures') && Array.isArray(parsed)) {
+          parsed = deduplicateBoard(parsed, cleanId);
+        } else if (k.includes('supervisors') && Array.isArray(parsed)) {
+          parsed = deduplicateSupervisors(parsed, cleanId);
+        }
+        snapshotData[k] = parsed;
       } catch {
         snapshotData[k] = localStorage.getItem(k);
       }
@@ -476,6 +512,21 @@ export async function createOrgSnapshot(orgId, reason = 'Automatyczna migawka') 
   let supabaseData = null;
   try {
     supabaseData = await fetchOrgFullSupabaseData(cleanId);
+    if (supabaseData && Array.isArray(supabaseData.organization_settings)) {
+      supabaseData.organization_settings = supabaseData.organization_settings.map(row => {
+        if (row.settings && typeof row.settings === 'object') {
+          const cleanSettings = { ...row.settings };
+          if (Array.isArray(cleanSettings.board)) {
+            cleanSettings.board = deduplicateBoard(cleanSettings.board, cleanId);
+          }
+          if (Array.isArray(cleanSettings.supervisors)) {
+            cleanSettings.supervisors = deduplicateSupervisors(cleanSettings.supervisors, cleanId);
+          }
+          return { ...row, settings: cleanSettings };
+        }
+        return row;
+      });
+    }
   } catch (err) {
     console.warn('[createOrgSnapshot] Pobranie zrzutu Supabase:', err);
   }
@@ -601,7 +652,7 @@ export async function restoreOrgSnapshot(orgId, snapshotObjOrKey) {
   if (typeof window === 'undefined' || !orgId) {
     throw new Error('Brak wymaganych parametrów do przywrócenia migawki.');
   }
-  const cleanId = String(orgId).trim().toLowerCase();
+  const cleanId = normalizeOrgId(orgId);
 
   let snapshot = null;
   const key = typeof snapshotObjOrKey === 'object' ? snapshotObjOrKey?.key || snapshotObjOrKey?.id : snapshotObjOrKey;
@@ -622,13 +673,41 @@ export async function restoreOrgSnapshot(orgId, snapshotObjOrKey) {
     throw new Error('Nie znaleziono zawartości wybranej migawki w pamięci lokalnej. Skorzystaj z opcji „Przywróć z pliku”.');
   }
 
-  // 1. Wyczyszczenie i odtworzenie localStorage
+  // Walidacja przynależności migawki do aktualnego koła (blokada cross-tenant restore)
+  if (snapshot.orgId && normalizeOrgId(snapshot.orgId) !== cleanId) {
+    throw new Error(`Migawka należy do koła "${snapshot.orgId}", a nie do "${cleanId}". Przywrócenie zostało zablokowane.`);
+  }
+
+  // 1. Wyczyszczenie i odtworzenie localStorage z twardą deduplikacją
   if (snapshot.data && typeof snapshot.data === 'object') {
     clearOrgWorkspace(cleanId);
     let restored = 0;
+    const expectedPrefix = `crm_skn_${cleanId}_`;
     Object.keys(snapshot.data).forEach((k) => {
       try {
+        // Ignoruj klucze należące do obcych organizacji
+        if (k.startsWith('crm_skn_') && !k.startsWith(expectedPrefix)) return;
+        if (k.startsWith('skn_board_tenures_') && k !== `skn_board_tenures_${cleanId}`) return;
+
         const val = snapshot.data[k];
+        if (k && k.includes('board_tenures')) {
+          let list = typeof val === 'string' ? JSON.parse(val) : val;
+          if (Array.isArray(list)) {
+            const cleanList = deduplicateBoard(list, cleanId);
+            localStorage.setItem(k, JSON.stringify(cleanList));
+            restored++;
+            return;
+          }
+        }
+        if (k && k.includes('supervisors')) {
+          let list = typeof val === 'string' ? JSON.parse(val) : val;
+          if (Array.isArray(list)) {
+            const cleanList = deduplicateSupervisors(list, cleanId);
+            localStorage.setItem(k, JSON.stringify(cleanList));
+            restored++;
+            return;
+          }
+        }
         localStorage.setItem(k, typeof val === 'string' ? val : JSON.stringify(val));
         restored++;
       } catch (e) {
@@ -637,11 +716,27 @@ export async function restoreOrgSnapshot(orgId, snapshotObjOrKey) {
     });
   }
 
-  // 2. Przywrócenie danych w Supabase SSOT
+  // 2. Przywrócenie danych w Supabase SSOT (z deduplikacją przed zapisem)
   let supabaseRestored = null;
   if (snapshot.supabase && typeof snapshot.supabase === 'object') {
     try {
-      supabaseRestored = await restoreOrgFullSupabaseData(cleanId, snapshot.supabase);
+      const sanitizedSupabase = { ...snapshot.supabase };
+      if (Array.isArray(sanitizedSupabase.organization_settings)) {
+        sanitizedSupabase.organization_settings = sanitizedSupabase.organization_settings.map(row => {
+          if (row.settings && typeof row.settings === 'object') {
+            const cleanSettings = { ...row.settings };
+            if (Array.isArray(cleanSettings.board)) {
+              cleanSettings.board = deduplicateBoard(cleanSettings.board, cleanId);
+            }
+            if (Array.isArray(cleanSettings.supervisors)) {
+              cleanSettings.supervisors = deduplicateSupervisors(cleanSettings.supervisors, cleanId);
+            }
+            return { ...row, settings: cleanSettings, organization_id: cleanId };
+          }
+          return { ...row, organization_id: cleanId };
+        });
+      }
+      supabaseRestored = await restoreOrgFullSupabaseData(cleanId, sanitizedSupabase);
     } catch (e) {
       console.warn('[Snapshot Restore] Błąd przywracania Supabase:', e);
     }
@@ -1413,22 +1508,22 @@ export function saveEmailConfig(orgId, config) {
 
 // ─── GOOGLE MEET ALIASES (crm_meet_aliases) ──────────────────────────────
 
-export function getAliasesFromStorage(orgId = 'default') {
+export function getAliasesFromStorage(orgId = 'skn_seksuologii') {
   if (typeof window === 'undefined') return {};
   try {
-    const raw = localStorage.getItem(getOrgKey(orgId, 'meet_aliases')) || localStorage.getItem('crm_meet_aliases');
+    const raw = localStorage.getItem(getOrgKey(orgId, 'meet_aliases'));
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
   }
 }
 
-export function saveAliasesToStorage(aliases, orgId = 'default') {
+export function saveAliasesToStorage(aliases, orgId = 'skn_seksuologii') {
   if (typeof window === 'undefined') return;
   try {
     const json = JSON.stringify(aliases || {});
     localStorage.setItem(getOrgKey(orgId, 'meet_aliases'), json);
-    localStorage.setItem('crm_meet_aliases', json);
+    localStorage.removeItem('crm_meet_aliases');
   } catch {}
 }
 

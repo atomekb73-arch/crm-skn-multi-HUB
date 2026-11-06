@@ -86,6 +86,13 @@ import {
   saveUserPasswordToDB,
   saveOrgSettingsKeyToDB,
   fetchOrgSettingsFromDB,
+  uniqueTenures,
+  deduplicateBoard,
+  deduplicateBoardTenures,
+  deduplicateSupervisors,
+  getDefaultBoardTenuresForOrg,
+  getTenureDedupeKey,
+  DEFAULT_BOARD_TENURES_SEKSUOLOGIA,
 } from '../services/settingsService';
 
 const DEFAULT_ACCESS_USERS = [];
@@ -123,10 +130,18 @@ const BOARD_ROLE_OPTIONS = [
 
 const DEFAULT_BOARD_TENURES = [];
 
+const getInitialBoardTenuresForOrg = (targetOrgId, rawList) => {
+  const deduped = deduplicateBoard(rawList, targetOrgId);
+  if (deduped.length === 0) {
+    return getDefaultBoardTenuresForOrg(targetOrgId);
+  }
+  return deduped;
+};
+
 export default function SettingsTab({ members = [], meetings = [], onRefreshData }) {
-  const { currentOrg, currentOrgId } = useOrg();
+  const { currentOrg, currentOrgId, updateOrganization } = useOrg();
   const { currentUser, isSuperAdmin } = useAuth();
-  const orgId = currentOrg?.id || currentOrgId || 'skn-template';
+  const orgId = currentOrg?.id || currentOrgId || 'skn_seksuologii';
 
   const {
     attendanceConfig,
@@ -233,47 +248,87 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
   const [showSmtpPassword, setShowSmtpPassword] = useState(false);
   const [emailSaveFeedback, setEmailSaveFeedback] = useState(null);
 
-  // Refresh snapshots, board tenures, email config and access users when active organization switches (Supabase SSOT)
+  // Refresh snapshots, board tenures, email config and access users when active organization switches (Supabase SSOT + Race Condition Guard)
   useEffect(() => {
-    if (orgId) {
-      // 1. Natychmiastowy reset do stanu czystego (eliminacja ghost data ze starego koła)
-      setSnapshots(getOrgSnapshots(orgId));
-      setEmailConfig(getEmailConfig(orgId));
+    if (!orgId) return;
+    let isCancelled = false;
 
+    // 1. Natychmiastowy reset do stanu czystego (eliminacja ghost data ze starego koła)
+    setSnapshots(getOrgSnapshots(orgId));
+    setEmailConfig(getEmailConfig(orgId));
+    setEditingTenureId(null);
+    setEditingSupId(null);
+    setRoleReplacementConflict(null);
+    setTenureSyncFeedback(null);
+    setSupervisorFeedback(null);
+
+    try {
       const savedOrgUsers = localStorage.getItem(`skn_access_users_${orgId}`);
       setAccessUsers(savedOrgUsers ? JSON.parse(savedOrgUsers) : []);
-
-      const savedOrgTenures = localStorage.getItem(`skn_board_tenures_${orgId}`);
-      setBoardTenures(savedOrgTenures ? JSON.parse(savedOrgTenures) : []);
-
-      // 2. Pobranie użytkowników uprawnień z Supabase
-      fetchAccessUsersFromDB(orgId).then(res => {
-        const users = res.ok && Array.isArray(res.users) ? res.users : [];
-        setAccessUsers(users);
-        try {
-          localStorage.setItem(`skn_access_users_${orgId}`, JSON.stringify(users));
-        } catch {}
-      }).catch(console.warn);
-
-      // 3. Pobranie kadencji zarządu z Supabase
-      fetchBoardTenuresFromDB(orgId).then(res => {
-        const tenures = res.ok && Array.isArray(res.tenures) ? res.tenures : [];
-        setBoardTenures(tenures);
-        try {
-          localStorage.setItem(`skn_board_tenures_${orgId}`, JSON.stringify(tenures));
-        } catch {}
-      }).catch(console.warn);
-
-      // 4. Pobranie konfiguracji e-mail z Supabase
-      fetchEmailConfigFromDB(orgId).then(res => {
-        if (res.ok && res.config) {
-          setEmailConfig(prev => ({ ...prev, ...res.config }));
-          try {
-            saveEmailConfig(orgId, res.config);
-          } catch {}
-        }
-      }).catch(console.warn);
+    } catch {
+      setAccessUsers([]);
     }
+
+    // Sprawdzenie wyłącznie izolowanego klucza localStorage i migawki dla danego orgId
+    let loadedData = [];
+    try {
+      const savedOrgTenures = localStorage.getItem(`skn_board_tenures_${orgId}`);
+      if (savedOrgTenures) {
+        loadedData = JSON.parse(savedOrgTenures);
+      } else {
+        const snapshotKey = `CACHE_APP_STATE_SNAPSHOT_${orgId}`;
+        const rawSnap = localStorage.getItem(snapshotKey);
+        if (rawSnap) {
+          const parsedSnap = JSON.parse(rawSnap);
+          const snapData = parsedSnap?.data || parsedSnap;
+          if (snapData && (!snapData.orgId || snapData.orgId === orgId) && Array.isArray(snapData.boardTenures)) {
+            loadedData = snapData.boardTenures;
+          }
+        }
+      }
+    } catch {}
+
+    const cleanInitial = getInitialBoardTenuresForOrg(orgId, loadedData);
+    setBoardTenures(cleanInitial);
+    try {
+      localStorage.setItem(`skn_board_tenures_${orgId}`, JSON.stringify(cleanInitial));
+    } catch {}
+
+    // 2. Pobranie użytkowników uprawnień z Supabase
+    fetchAccessUsersFromDB(orgId).then(res => {
+      if (isCancelled) return;
+      const users = res.ok && Array.isArray(res.users) ? res.users : [];
+      setAccessUsers(users);
+      try {
+        localStorage.setItem(`skn_access_users_${orgId}`, JSON.stringify(users));
+      } catch {}
+    }).catch(console.warn);
+
+    // 3. Pobranie kadencji zarządu z Supabase (ze ścisłą deduplikacją i izolowanym fallbackiem)
+    fetchBoardTenuresFromDB(orgId).then(res => {
+      if (isCancelled) return;
+      const tenures = res.ok && Array.isArray(res.tenures) ? res.tenures : [];
+      const cleanTenures = getInitialBoardTenuresForOrg(orgId, tenures);
+      setBoardTenures(cleanTenures);
+      try {
+        localStorage.setItem(`skn_board_tenures_${orgId}`, JSON.stringify(cleanTenures));
+      } catch {}
+    }).catch(console.warn);
+
+    // 4. Pobranie konfiguracji e-mail z Supabase
+    fetchEmailConfigFromDB(orgId).then(res => {
+      if (isCancelled) return;
+      if (res.ok && res.config) {
+        setEmailConfig(prev => ({ ...prev, ...res.config }));
+        try {
+          saveEmailConfig(orgId, res.config);
+        } catch {}
+      }
+    }).catch(console.warn);
+
+    return () => {
+      isCancelled = true;
+    };
   }, [orgId]);
 
   const handleSaveEmailConfig = async (e) => {
@@ -532,10 +587,30 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
   // ── Sektor 3: Board Tenures State ───────────────────────────────────────────
   const [boardTenures, setBoardTenures] = useState(() => {
     try {
+      let loadedData = [];
       const saved = localStorage.getItem(`skn_board_tenures_${orgId}`);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        loadedData = JSON.parse(saved);
+      } else {
+        const snapshotKey = `CACHE_APP_STATE_SNAPSHOT_${orgId}`;
+        const rawSnap = localStorage.getItem(snapshotKey);
+        if (rawSnap) {
+          const parsedSnap = JSON.parse(rawSnap);
+          const snapData = parsedSnap?.data || parsedSnap;
+          if (snapData && (!snapData.orgId || snapData.orgId === orgId) && Array.isArray(snapData.boardTenures)) {
+            loadedData = snapData.boardTenures;
+          }
+        }
+      }
+      const initial = getInitialBoardTenuresForOrg(orgId, loadedData);
+      if (initial.length > 0 && (!saved || loadedData.length === 0)) {
+        try {
+          localStorage.setItem(`skn_board_tenures_${orgId}`, JSON.stringify(initial));
+        } catch {}
+      }
+      return initial;
     } catch {}
-    return [];
+    return getInitialBoardTenuresForOrg(orgId, []);
   });
 
   // Logika dziedziczenia ról (Automatyczny dostęp dla Sekretarza, Zarządu i Opiekunów)
@@ -627,11 +702,12 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
 
   // Sync board tenures to localStorage and Supabase SSOT
   const saveBoardTenures = (updated) => {
-    setBoardTenures(updated);
+    const deduped = deduplicateBoard(updated, orgId);
+    setBoardTenures(deduped);
     try {
-      localStorage.setItem(`skn_board_tenures_${orgId}`, JSON.stringify(updated));
+      localStorage.setItem(`skn_board_tenures_${orgId}`, JSON.stringify(deduped));
     } catch {}
-    saveBoardTenuresToDB(orgId, updated).catch(console.warn);
+    saveBoardTenuresToDB(orgId, deduped).catch(console.warn);
   };
 
   // ── Access Control Handlers ────────────────────────────────────────────────
@@ -696,6 +772,26 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
   }, [members, newUserQuery]);
 
   // ── Faculty Supervisors Handlers ───────────────────────────────────────────
+  const persistSupervisorsToStorageAndDB = (newList) => {
+    if (!Array.isArray(newList)) return;
+    const cleanList = deduplicateSupervisors(newList, orgId);
+    try {
+      localStorage.setItem(`crm_skn_${orgId}_supervisors`, JSON.stringify(cleanList));
+      if (updateOrganization) updateOrganization(orgId, { supervisors: cleanList });
+      const orgsRaw = localStorage.getItem('crm_skn_organizations');
+      if (orgsRaw) {
+        const orgs = JSON.parse(orgsRaw);
+        if (Array.isArray(orgs)) {
+          const updatedOrgs = orgs.map(o => o.id === orgId ? { ...o, supervisors: cleanList } : o);
+          localStorage.setItem('crm_skn_organizations', JSON.stringify(updatedOrgs));
+        }
+      }
+    } catch (e) {
+      console.warn('[SettingsTab] Błąd zapisu opiekunów do localStorage:', e);
+    }
+    saveOrgSettingsKeyToDB(orgId, 'supervisors', cleanList).catch(console.warn);
+  };
+
   const handleSaveSupervisor = (e) => {
     e.preventDefault();
     if (!supName.trim()) return;
@@ -704,8 +800,9 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
     const cleanName = supName.trim();
     const fullName = `${cleanTitle} ${cleanName}`;
 
+    let updatedList;
     if (editingSupId) {
-      updateSupervisor(editingSupId, {
+      updatedList = updateSupervisor(editingSupId, {
         academicTitle: cleanTitle,
         name: cleanName,
         fullName,
@@ -721,7 +818,7 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
       });
       setEditingSupId(null);
     } else {
-      addSupervisor({
+      updatedList = addSupervisor({
         id: Date.now(),
         academicTitle: cleanTitle,
         name: cleanName,
@@ -739,6 +836,10 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
       });
     }
 
+    if (Array.isArray(updatedList)) {
+      persistSupervisorsToStorageAndDB(updatedList);
+    }
+
     setTimeout(() => setSupervisorFeedback(null), 4000);
 
     // Reset Form
@@ -752,7 +853,10 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
   };
 
   const handleDeleteSupervisor = (sup) => {
-    deleteSupervisor(sup.id);
+    const updatedList = deleteSupervisor(sup.id);
+    if (Array.isArray(updatedList)) {
+      persistSupervisorsToStorageAndDB(updatedList);
+    }
     const displayName = sup.fullName || `${sup.academicTitle || 'mgr'} ${sup.name || ''}`;
     setSupervisorFeedback({
       type: 'info',
@@ -890,10 +994,10 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
   };
 
   const commitTenureSave = (newTenureObj, previousToClose = null, closeEndDate = '') => {
-    let updated = [...(boardTenures || [])];
+    let currentList = deduplicateBoard(boardTenures || [], orgId);
 
     if (previousToClose && closeEndDate) {
-      updated = updated.map(t => {
+      currentList = currentList.map(t => {
         if (t.id === previousToClose.id) {
           return {
             ...t,
@@ -905,14 +1009,20 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
       });
     }
 
-    const existsIndex = updated.findIndex(t => t.id === newTenureObj.id);
+    const newKey = `${(newTenureObj.memberIndex || newTenureObj.nrIndeksu || newTenureObj.memberName || '').trim()}_${(newTenureObj.roleName || newTenureObj.role || '').trim()}_${(newTenureObj.startDate || '').trim()}`;
+    const existsIndex = currentList.findIndex(t => {
+      const k = `${(t.memberIndex || t.nrIndeksu || t.memberName || '').trim()}_${(t.roleName || t.role || '').trim()}_${(t.startDate || '').trim()}`;
+      return t.id === newTenureObj.id || (k !== '__' && k === newKey);
+    });
+
     if (existsIndex >= 0) {
-      updated[existsIndex] = newTenureObj;
+      currentList[existsIndex] = { ...currentList[existsIndex], ...newTenureObj };
     } else {
-      updated.unshift(newTenureObj);
+      currentList.unshift(newTenureObj);
     }
 
-    saveBoardTenures(updated);
+    const deduped = deduplicateBoard(currentList, orgId);
+    saveBoardTenures(deduped);
     handleCancelTenureEdit();
     setRoleReplacementConflict(null);
   };
@@ -929,7 +1039,7 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
   };
 
   const handleDeleteTenure = (id) => {
-    const updated = boardTenures.filter(t => t.id !== id);
+    const updated = (boardTenures || []).filter(t => t.id !== id);
     saveBoardTenures(updated);
   };
 
@@ -938,7 +1048,7 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
       setIsSyncingTenures(true);
       setTenureSyncFeedback(null);
 
-      // a) Pobierz i wzbogać wpisy kadencji zarządu o naliczone punkty
+      // a) Pobierz bieżący stan boardTenures (lub fallback z localStorage dla tego orgId)
       let currentTenures = boardTenures || [];
       if (currentTenures.length === 0 && typeof window !== 'undefined' && window.localStorage) {
         try {
@@ -947,25 +1057,48 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
         } catch {}
       }
 
-      const enrichedTenures = currentTenures.map(t => {
+      currentTenures = getInitialBoardTenuresForOrg(orgId, currentTenures);
+
+      // b) ZASTĄPIENIE (nie doklejamy starych wpisów!) - przepuszczamy przez deduplicateBoard
+      const dedupedTenures = deduplicateBoard(currentTenures, orgId);
+
+      const enrichedTenures = dedupedTenures.map(t => {
         const pts = calculateTenurePoints(t.startDate, t.endDate, t.isActive, t.roleName);
+        const memIdx = String(t.memberIndex || t.nrIndeksu || t.index || '').trim();
+        const memName = String(t.memberName || t.name || t.fullName || '').trim();
+        const rName = String(t.roleName || t.role || t.rola || '').trim();
         return {
           ...t,
-          nrIndeksu: t.memberIndex || '',
-          index: t.memberIndex || '',
-          name: t.memberName || '',
-          fullName: t.memberName || '',
-          rola: t.roleName || '',
-          role: t.roleName || '',
+          id: t.id || `tenure_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          organization_id: orgId,
+          memberIndex: memIdx,
+          nrIndeksu: memIdx,
+          index: memIdx,
+          memberName: memName,
+          name: memName,
+          fullName: memName,
+          roleName: rName,
+          role: rName,
+          rola: rName,
           punkty: pts,
           points: pts,
-          opisAktywnosci: `Pełnienie funkcji: ${t.roleName}`,
+          opisAktywnosci: `Pełnienie funkcji: ${rName}`,
         };
       });
 
-      // Zapisz w lokalnym stanie i bazie Supabase SSOT
-      saveBoardTenures(enrichedTenures);
-      await saveBoardTenuresToDB(orgId, enrichedTenures);
+      const cleanFinalList = deduplicateBoard(enrichedTenures, orgId);
+
+      // c) ZASTĄP stan w React
+      setBoardTenures(cleanFinalList);
+
+      // d) ZASTĄP wpisy w localStorage wyłącznie pod kluczem organizacji (brak globalnego skn_board_tenures!)
+      const cleanJson = JSON.stringify(cleanFinalList);
+      try {
+        localStorage.setItem(`skn_board_tenures_${orgId}`, cleanJson);
+      } catch {}
+
+      // e) ZASTĄP w Supabase (nadpisując poprzedni stan kadencji dla tego koła)
+      await saveBoardTenuresToDB(orgId, cleanFinalList);
 
       if (typeof onRefreshData === 'function') {
         await onRefreshData({ force: true, silent: true });
@@ -973,7 +1106,7 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
 
       setTenureSyncFeedback({
         type: 'success',
-        message: 'Punkty funkcyjne oraz kadencje Zarządu zostały trwale zapisane w bazie Supabase.',
+        message: `Kadencje Zarządu (${cleanFinalList.length}) zostały zdeduplikowane i trwale zastąpione w bazie Supabase oraz w rejestrze lokalnym dla koła ${orgId}.`,
       });
       setTimeout(() => setTenureSyncFeedback(null), 5000);
     } catch (err) {
@@ -1014,8 +1147,9 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
     });
 
     try {
-      localStorage.setItem('crm_point_weights', JSON.stringify(localWeights));
-      localStorage.setItem('skn_settings_config', JSON.stringify({
+      localStorage.setItem(getOrgKey(orgId, 'crm_point_weights'), JSON.stringify(localWeights));
+      localStorage.setItem(getOrgKey(orgId, 'skn_settings_config'), JSON.stringify({
+        orgId,
         weights: localWeights,
         accessUsers,
         boardTenures,

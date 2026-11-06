@@ -6,9 +6,13 @@ import { getAcademicYearFromDate } from '../utils/helpers.js';
 import { supabase, fetchAllTenantRows } from '../supabaseClient.js';
 
 function normalizeOrg(orgId) {
-  const str = String(orgId || 'skn_seksuologii').trim();
+  const fallbackOrg = typeof window !== 'undefined' && window.localStorage
+    ? (localStorage.getItem('crm_skn_current_org_id') || localStorage.getItem('crm_active_org_id'))
+    : null;
+  const str = String(orgId || fallbackOrg || 'skn_seksuologii').trim();
   if (str === 'skn-template' || str === 'default' || !str) return 'skn_seksuologii';
   if (str === 'skn_psychoonkologii' || str === 'skn-psychoonkologia') return 'psychoonkologia';
+  if (str === 'skn_uzaleznien' || str === 'sknu') return 'uzaleznienia';
   return str;
 }
 

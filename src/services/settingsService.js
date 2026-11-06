@@ -8,17 +8,163 @@ import { supabase } from '../supabaseClient.js';
 
 // ── 1. USTAWIENIA ORGANIZACJI I OPIEKUNOWIE ──────────────────────────────────
 
-function normalizeOrgId(orgId) {
-  const str = String(orgId || 'skn_seksuologii').trim();
-  if (str === 'skn-template' || str === 'default' || !str) return 'skn_seksuologii';
+export function normalizeOrgId(orgId) {
+  const str = String(orgId || 'skn_seksuologii').trim().toLowerCase();
+  if (str === 'skn-template' || str === 'skn_template' || str === 'default' || str === 'seksuologia' || str === 'skn-seksuologia' || !str) return 'skn_seksuologii';
   if (str === 'skn_psychoonkologii' || str === 'skn-psychoonkologia') return 'psychoonkologia';
+  if (str === 'skn_uzaleznienia' || str === 'skn-uzaleznienia') return 'uzaleznienia';
   return str;
+}
+
+export const DEFAULT_BOARD_TENURES_SEKSUOLOGIA = [
+  {
+    id: "tenure_tomasz_bratkowski_pres",
+    organization_id: "skn_seksuologii",
+    memberName: "Tomasz Bratkowski",
+    memberIndex: "15998",
+    memberEmail: "15998@student.wskz.pl",
+    roleName: "Przewodniczący / Przewodnicząca",
+    startDate: "2026-07-06",
+    endDate: "",
+    isActive: true,
+    points: 12
+  },
+  {
+    id: "tenure_1793565289863",
+    organization_id: "skn_seksuologii",
+    memberName: "Magda Czepirska",
+    memberIndex: "26535",
+    memberEmail: "m.czepirek@gmail.com",
+    roleName: "Sekretarz Koła",
+    startDate: "2026-04-20",
+    endDate: "",
+    isActive: true,
+    points: 21
+  },
+  {
+    id: "tenure_1793565348183",
+    organization_id: "skn_seksuologii",
+    memberName: "Michał Rodak",
+    memberIndex: "11654",
+    memberEmail: "gabriel.creart@gmail.com",
+    roleName: "Członek Zarządu",
+    startDate: "2026-07-06",
+    endDate: "",
+    isActive: true,
+    points: 12
+  }
+];
+
+export const DEFAULT_BOARD_TENURES_BY_ORG = {
+  skn_seksuologii: DEFAULT_BOARD_TENURES_SEKSUOLOGIA,
+  uzaleznienia: [],
+  psychoonkologia: [],
+  test: [],
+};
+
+export const deduplicateBoard = (list, targetOrgId = null) => {
+  if (!Array.isArray(list)) return [];
+  const cleanTarget = targetOrgId ? normalizeOrgId(targetOrgId) : null;
+  const map = new Map();
+  const seenPersonRoleActive = new Set();
+  const seenNameRoleStart = new Set();
+
+  list.forEach(item => {
+    if (!item || typeof item !== 'object') return;
+    const itemOrg = item.organization_id || item.orgId;
+    if (cleanTarget && itemOrg && normalizeOrgId(itemOrg) !== cleanTarget) {
+      return;
+    }
+
+    const idxPart = String(item.memberIndex || item.nrIndeksu || item.index || '').trim();
+    const namePart = String(item.memberName || item.name || item.fullName || '').trim();
+    const rolePart = String(item.roleName || item.role || item.rola || '').trim();
+    const startPart = String(item.startDate || item.start_date || '').trim();
+
+    const memberKey = idxPart || namePart;
+    if (!memberKey && !rolePart) return;
+
+    const compositeKey = `${memberKey}_${rolePart}_${startPart}`;
+    const personRoleKey = `${memberKey.toLowerCase()}_${rolePart.toLowerCase()}`;
+    const nameRoleStartKey = namePart ? `${namePart.toLowerCase()}_${rolePart.toLowerCase()}_${startPart}` : '';
+
+    if (compositeKey === '__' || compositeKey.startsWith('_')) return;
+    if (map.has(compositeKey)) return;
+    if (nameRoleStartKey && seenNameRoleStart.has(nameRoleStartKey)) return;
+    if (item.isActive !== false && seenPersonRoleActive.has(personRoleKey)) return;
+
+    map.set(compositeKey, cleanTarget ? { ...item, organization_id: cleanTarget } : item);
+    if (nameRoleStartKey) seenNameRoleStart.add(nameRoleStartKey);
+    if (item.isActive !== false) seenPersonRoleActive.add(personRoleKey);
+  });
+  return Array.from(map.values());
+};
+
+export const uniqueTenures = deduplicateBoard;
+export const deduplicateBoardTenures = deduplicateBoard;
+
+export function getDefaultBoardTenuresForOrg(orgId) {
+  const cleanOrg = normalizeOrgId(orgId);
+  const defaults = DEFAULT_BOARD_TENURES_BY_ORG[cleanOrg] || [];
+  return deduplicateBoard(defaults, cleanOrg);
+}
+
+export const deduplicateSupervisors = (list, targetOrgId = null) => {
+  if (!Array.isArray(list)) return [];
+  const cleanTarget = targetOrgId ? normalizeOrgId(targetOrgId) : null;
+  const map = new Map();
+  list.forEach(s => {
+    if (!s || typeof s !== 'object') return;
+    const itemOrg = s.organization_id || s.orgId;
+    if (cleanTarget && itemOrg && normalizeOrgId(itemOrg) !== cleanTarget) {
+      return;
+    }
+    const academicTitle = String(s.academicTitle || s.academic_title || 'mgr').trim();
+    const name = String(s.name || '').trim();
+    const fullName = String(s.fullName || (name ? `${academicTitle} ${name}`.trim() : '')).trim();
+    const email = String(s.email || '').toLowerCase().trim();
+    const role = String(s.role || 'Opiekun Naukowy Koła').trim();
+    const startDate = String(s.startDate || s.start_date || '2025-10-01').trim();
+
+    const identityKey = (email || name.toLowerCase() || fullName.toLowerCase()).trim();
+    if (!identityKey) return;
+
+    const personRoleKey = `${identityKey}_${role.toLowerCase()}`;
+    const compositeKey = `${personRoleKey}_${startDate}`;
+    if (map.has(compositeKey) || map.has(personRoleKey)) return;
+
+    const normalizedSup = {
+      ...s,
+      id: s.id || `sup_${name.replace(/\s+/g, '_').toLowerCase() || Date.now()}`,
+      academicTitle,
+      name,
+      fullName,
+      affiliation: s.affiliation || 'Instytut Psychologii WSKZ',
+      role,
+      email,
+      startDate,
+      endDate: s.endDate || s.end_date || '',
+      isActive: s.isActive !== undefined ? s.isActive : (s.is_active !== undefined ? s.is_active : true),
+      aliases: Array.isArray(s.aliases) && s.aliases.length > 0 ? s.aliases : [
+        name.toLowerCase(),
+        fullName.toLowerCase(),
+      ].filter(Boolean),
+      ...(cleanTarget ? { organization_id: cleanTarget } : {}),
+    };
+    map.set(personRoleKey, normalizedSup);
+  });
+  return Array.from(map.values());
+};
+
+export function getTenureDedupeKey(t) {
+  if (!t) return '';
+  return `${(t.memberIndex || t.nrIndeksu || t.memberName || '').trim()}_${(t.roleName || t.role || '').trim()}_${(t.startDate || '').trim()}`;
 }
 
 export async function fetchOrgSettingsFromDB(orgId = 'skn_seksuologii') {
   const cleanOrg = normalizeOrgId(orgId);
 
-  // Próba odczytu z dedykowanej tabeli organization_settings
+  // 1. Próba odczytu z tabeli organization_settings (kolumna JSONB 'settings')
   try {
     const { data, error } = await supabase
       .from('organization_settings')
@@ -26,19 +172,32 @@ export async function fetchOrgSettingsFromDB(orgId = 'skn_seksuologii') {
       .eq('organization_id', cleanOrg);
 
     if (!error && Array.isArray(data) && data.length > 0) {
-      const merged = {};
+      let merged = {};
       data.forEach(row => {
-        merged[row.settings_key] = row.settings_value;
+        if (row.settings && typeof row.settings === 'object') {
+          merged = { ...merged, ...row.settings };
+        } else if (row.settings_key) {
+          merged[row.settings_key] = row.settings_value;
+        }
       });
+
+      // Normalizacja i deduplikacja listy opiekunów
+      if (Array.isArray(merged.supervisors)) {
+        merged.supervisors = deduplicateSupervisors(merged.supervisors, cleanOrg);
+      }
+
       return { ok: true, source: 'organization_settings', settings: merged };
     }
-  } catch (err) {}
+  } catch (err) {
+    console.warn('[fetchOrgSettingsFromDB] Błąd odczytu organization_settings:', err);
+  }
 
-  // Bezpieczny fallback: odczyt z tabeli attendance pod kodem [SETTINGS]:<orgId>
+  // 2. Bezpieczny fallback: odczyt z tabeli attendance pod kodem [SETTINGS]:<orgId>
   try {
     const { data: attRows, error: attError } = await supabase
       .from('attendance')
       .select('*')
+      .eq('organization_id', cleanOrg)
       .like('meeting_code', `[SETTINGS]:${cleanOrg}%`);
 
     if (!attError && Array.isArray(attRows) && attRows.length > 0) {
@@ -50,6 +209,9 @@ export async function fetchOrgSettingsFromDB(orgId = 'skn_seksuologii') {
           merged[key] = parsed;
         } catch {}
       });
+      if (Array.isArray(merged.supervisors)) {
+        merged.supervisors = deduplicateSupervisors(merged.supervisors, cleanOrg);
+      }
       return { ok: true, source: 'attendance_fallback', settings: merged };
     }
   } catch (err) {
@@ -64,39 +226,54 @@ export async function saveOrgSettingsKeyToDB(orgId = 'skn_seksuologii', key, val
   const settingKey = String(key || '').trim();
   if (!settingKey) return { ok: false, error: 'Brak klucza ustawień' };
 
-  // 1. Próba zapisu do dedykowanej tabeli organization_settings
+  const cleanValue = settingKey === 'supervisors'
+    ? deduplicateSupervisors(Array.isArray(value) ? value : [], cleanOrg)
+    : settingKey === 'board'
+    ? deduplicateBoard(Array.isArray(value) ? value : [], cleanOrg)
+    : value;
+
+  // 1. Zapis do dedykowanej tabeli organization_settings (obiekt JSONB w kolumnie 'settings')
   try {
-    const recordId = `${cleanOrg}_${settingKey}`;
     const { data: existing, error: selErr } = await supabase
       .from('organization_settings')
-      .select('id')
-      .eq('id', recordId)
+      .select('id, settings')
+      .eq('organization_id', cleanOrg)
       .maybeSingle();
 
-    if (!selErr) {
-      if (existing?.id) {
-        const { error: updateErr } = await supabase
-          .from('organization_settings')
-          .update({
-            settings_value: value,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', recordId);
-        if (!updateErr) return { ok: true, target: 'organization_settings_update' };
-      } else {
-        const { error: insertErr } = await supabase
-          .from('organization_settings')
-          .insert({
-            id: recordId,
-            organization_id: cleanOrg,
-            settings_key: settingKey,
-            settings_value: value,
-            updated_at: new Date().toISOString()
-          });
-        if (!insertErr) return { ok: true, target: 'organization_settings_insert' };
+    if (!selErr && existing?.id) {
+      const currentSettings = (existing.settings && typeof existing.settings === 'object') ? existing.settings : {};
+      const updatedSettings = {
+        ...currentSettings,
+        [settingKey]: cleanValue
+      };
+      const { error: updateErr } = await supabase
+        .from('organization_settings')
+        .update({
+          settings: updatedSettings,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existing.id);
+
+      if (!updateErr) {
+        return { ok: true, target: 'organization_settings_update' };
+      }
+    } else if (!selErr && !existing) {
+      const newSettings = { [settingKey]: cleanValue };
+      const { error: insertErr } = await supabase
+        .from('organization_settings')
+        .insert({
+          organization_id: cleanOrg,
+          settings: newSettings,
+          updated_at: new Date().toISOString()
+        });
+
+      if (!insertErr) {
+        return { ok: true, target: 'organization_settings_insert' };
       }
     }
-  } catch (err) {}
+  } catch (err) {
+    console.warn('[saveOrgSettingsKeyToDB] Błąd zapisu do organization_settings, uruchamiam fallback:', err);
+  }
 
   // 2. Bezpieczny fallback: zapis do tabeli attendance
   try {
@@ -110,7 +287,7 @@ export async function saveOrgSettingsKeyToDB(orgId = 'skn_seksuologii', key, val
       index_number: settingKey,
       role: 'Ustawienia',
       points: 0,
-      activity_description: JSON.stringify(value)
+      activity_description: JSON.stringify(cleanValue)
     });
 
     if (insErr) throw insErr;
@@ -126,36 +303,31 @@ export async function saveOrgSettingsKeyToDB(orgId = 'skn_seksuologii', key, val
 export async function fetchBoardTenuresFromDB(orgId = 'skn_seksuologii') {
   const cleanOrg = normalizeOrgId(orgId);
 
-  // Próba odczytu z dedykowanej tabeli board_terms
+  // 1. Próba odczytu z tabeli organization_settings (klucz 'board' w obiekcie settings)
   try {
-    const { data, error } = await supabase
-      .from('board_terms')
-      .select('*')
+    const { data: orgData, error: orgErr } = await supabase
+      .from('organization_settings')
+      .select('settings')
       .eq('organization_id', cleanOrg)
-      .order('start_date', { ascending: false });
+      .maybeSingle();
 
-    if (!error && Array.isArray(data) && data.length > 0) {
-      const tenures = data.map(row => ({
-        id: row.id,
-        memberName: row.member_name,
-        memberIndex: row.member_index,
-        memberEmail: row.member_email,
-        roleName: row.role_name,
-        startDate: row.start_date,
-        endDate: row.end_date || '',
-        isActive: Boolean(row.is_active),
-        points: Number(row.points || 0),
-        punkty: Number(row.points || 0),
-      }));
-      return { ok: true, source: 'board_terms', tenures };
+    if (!orgErr && orgData?.settings) {
+      const rawBoard = orgData.settings.board || orgData.settings.board_tenures;
+      if (Array.isArray(rawBoard) && rawBoard.length > 0) {
+        const cleanList = deduplicateBoard(rawBoard, cleanOrg);
+        if (cleanList.length > 0) {
+          return { ok: true, source: 'organization_settings', tenures: cleanList };
+        }
+      }
     }
   } catch (err) {}
 
-  // Bezpieczny fallback: odczyt z tabeli attendance pod kodem [BOARD_TERM]:<orgId>
+  // 2. Fallback: odczyt z tabeli attendance pod kodem [BOARD_TERM]:<orgId>
   try {
     const { data: attRows, error: attError } = await supabase
       .from('attendance')
       .select('*')
+      .eq('organization_id', cleanOrg)
       .like('meeting_code', `[BOARD_TERM]:${cleanOrg}%`);
 
     if (!attError && Array.isArray(attRows) && attRows.length > 0) {
@@ -167,6 +339,7 @@ export async function fetchBoardTenuresFromDB(orgId = 'skn_seksuologii') {
             tenures.push({
               ...parsed,
               id: parsed.id || row.id,
+              organization_id: cleanOrg,
               memberIndex: parsed.memberIndex || row.index_number,
               points: Number(parsed.points ?? row.points ?? 0),
               punkty: Number(parsed.punkty ?? row.points ?? 0),
@@ -174,47 +347,59 @@ export async function fetchBoardTenuresFromDB(orgId = 'skn_seksuologii') {
           }
         } catch {}
       });
-      return { ok: true, source: 'attendance_fallback', tenures };
+      const cleanTenures = deduplicateBoard(tenures, cleanOrg);
+      if (cleanTenures.length > 0) {
+        return { ok: true, source: 'attendance_fallback', tenures: cleanTenures };
+      }
     }
   } catch (err) {
     console.warn('[fetchBoardTenuresFromDB] Błąd odczytu kadencji zarządu:', err);
   }
 
-  return { ok: false, tenures: [] };
+  // 3. Izolowany fallback per organizacja (tylko skn_seksuologii ma domyślny zarząd, pozostałe mają [])
+  const defaultTenures = getDefaultBoardTenuresForOrg(cleanOrg);
+  return { ok: true, source: 'default_fallback', tenures: defaultTenures };
 }
 
 export async function saveBoardTenuresToDB(orgId = 'skn_seksuologii', tenures = []) {
   const cleanOrg = normalizeOrgId(orgId);
-  const listToSave = Array.isArray(tenures) ? tenures : [];
+  // Zastosuj ścisłą deduplikację listy przed jakimkolwiek zapisem i oznacz organization_id
+  const listToSave = deduplicateBoard(Array.isArray(tenures) ? tenures : [], cleanOrg);
 
-  // 1. Próba zapisu do dedykowanej tabeli board_terms
+  // 1. Zapis do organization_settings pod kluczem 'board'
   try {
-    const { error: delErr } = await supabase.from('board_terms').delete().eq('organization_id', cleanOrg);
-    if (!delErr) {
-      if (listToSave.length > 0) {
-        const rows = listToSave.map(t => ({
-          id: String(t.id || `tenure_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`),
-          organization_id: cleanOrg,
-          member_name: t.memberName || t.fullName || 'Członek Zarządu',
-          member_index: t.memberIndex || t.nrIndeksu || t.index || '',
-          member_email: t.memberEmail || t.email || '',
-          role_name: t.roleName || t.rola || 'Członek Zarządu',
-          start_date: t.startDate || new Date().toISOString().slice(0, 10),
-          end_date: t.isActive ? null : (t.endDate || null),
-          is_active: Boolean(t.isActive),
-          points: Number(t.points || t.punkty || 0),
+    const { data: existing, error: selErr } = await supabase
+      .from('organization_settings')
+      .select('id, settings')
+      .eq('organization_id', cleanOrg)
+      .maybeSingle();
+
+    if (!selErr && existing?.id) {
+      const currentSettings = (existing.settings && typeof existing.settings === 'object') ? existing.settings : {};
+      await supabase
+        .from('organization_settings')
+        .update({
+          settings: {
+            ...currentSettings,
+            board: listToSave
+          },
           updated_at: new Date().toISOString()
-        }));
-
-        const { error: insErr } = await supabase.from('board_terms').insert(rows);
-        if (!insErr) return { ok: true, target: 'board_terms' };
-      } else {
-        return { ok: true, target: 'board_terms_cleared' };
-      }
+        })
+        .eq('id', existing.id);
+    } else if (!selErr && !existing) {
+      await supabase
+        .from('organization_settings')
+        .insert({
+          organization_id: cleanOrg,
+          settings: { board: listToSave },
+          updated_at: new Date().toISOString()
+        });
     }
-  } catch (err) {}
+  } catch (err) {
+    console.warn('[saveBoardTenuresToDB] Błąd zapisu board w organization_settings:', err);
+  }
 
-  // 2. Bezpieczny fallback: zapis do tabeli attendance pod kodem [BOARD_TERM]:<orgId>:<id>
+  // 2. Zapis do tabeli attendance pod kodem [BOARD_TERM]:<orgId>:<id> (z usunięciem poprzednich wpisów)
   try {
     await supabase.from('attendance').delete().eq('organization_id', cleanOrg).like('meeting_code', `[BOARD_TERM]:${cleanOrg}%`);
 
@@ -520,13 +705,44 @@ export async function fetchLoginAccessForEmail(email) {
   try {
     const { data, error } = await supabase
       .from('organization_settings')
-      .select('organization_id, settings_key, settings_value')
-      .in('settings_key', ['access_users', 'supervisors', 'user_passwords', 'user_first_login_status']);
+      .select('*');
 
     if (!error && Array.isArray(data)) {
       result.ok = true;
       data.forEach(row => {
         const orgId = normalizeOrgId(row.organization_id);
+        const settings = row.settings && typeof row.settings === 'object' ? row.settings : {};
+        
+        // a) Z kolumny JSONB settings
+        if (Array.isArray(settings.access_users)) {
+          settings.access_users.filter(u => sameEmail(u?.email)).forEach(u => result.accessMatches.push({ ...u, orgId }));
+        }
+        if (Array.isArray(settings.supervisors)) {
+          settings.supervisors.filter(s => sameEmail(s?.email)).forEach(s => result.supervisorMatches.push({ ...s, orgId }));
+        }
+        if (Array.isArray(settings.board)) {
+          settings.board.filter(b => sameEmail(b?.memberEmail || b?.email) && b.isActive !== false).forEach(b => {
+            result.boardMatches.push({
+              orgId,
+              memberName: b.memberName || b.name || b.fullName,
+              memberEmail: b.memberEmail || b.email,
+              roleName: b.roleName || b.role || b.rola,
+              isActive: b.isActive !== false,
+            });
+          });
+        }
+        if (settings.user_passwords && typeof settings.user_passwords === 'object') {
+          const key = Object.keys(settings.user_passwords).find(k => sameEmail(k));
+          if (key && settings.user_passwords[key] && !result.password) result.password = settings.user_passwords[key];
+        }
+        if (settings.user_first_login_status && typeof settings.user_first_login_status === 'object') {
+          const key = Object.keys(settings.user_first_login_status).find(k => sameEmail(k));
+          if (key !== undefined) {
+            result.firstLogin = result.firstLogin === false ? false : Boolean(settings.user_first_login_status[key]);
+          }
+        }
+
+        // b) Z wariantów settings_key / settings_value
         const value = row.settings_value;
         if (row.settings_key === 'access_users' && Array.isArray(value)) {
           value.filter(u => sameEmail(u?.email)).forEach(u => result.accessMatches.push({ ...u, orgId }));
@@ -538,7 +754,6 @@ export async function fetchLoginAccessForEmail(email) {
         } else if (row.settings_key === 'user_first_login_status' && value && typeof value === 'object') {
           const key = Object.keys(value).find(k => sameEmail(k));
           if (key !== undefined) {
-            // Jeżeli którekolwiek koło potwierdza aktywację (false) – konto jest aktywne
             result.firstLogin = result.firstLogin === false ? false : Boolean(value[key]);
           }
         }

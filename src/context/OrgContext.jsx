@@ -21,7 +21,7 @@ import {
   getMeetingOverrides,
   saveMeetingOverride,
 } from '../utils/storage';
-import { fetchOrgSettingsFromDB } from '../services/settingsService';
+import { fetchOrgSettingsFromDB, deduplicateSupervisors } from '../services/settingsService';
 import { getTenantTheme, applyTenantThemeToDom } from '../theme/tenantTheme';
 import { useAuth } from './AuthContext';
 
@@ -226,6 +226,10 @@ export function OrgProvider({ children }) {
   // Restore legacy meeting and attendance data upon org switch
   useEffect(() => {
     if (currentOrgId) {
+      try {
+        localStorage.setItem('crm_skn_current_org_id', currentOrgId);
+        localStorage.setItem('crm_active_org_id', currentOrgId);
+      } catch {}
       restoreLegacyMeetingData(currentOrgId);
     }
   }, [currentOrgId]);
@@ -239,19 +243,32 @@ export function OrgProvider({ children }) {
         if (isCancelled || !res || !res.ok || !res.settings) return;
 
         const teamupConf = res.settings.teamup || res.settings.general;
-        if (teamupConf && (teamupConf.subcalendarId || teamupConf.calendarId)) {
+        const sups = Array.isArray(res.settings.supervisors)
+          ? deduplicateSupervisors(res.settings.supervisors, currentOrgId)
+          : null;
+
+        if (teamupConf || (sups && sups.length > 0)) {
           setOrganizations(prev => prev.map(o => {
             if (o.id !== currentOrgId) return o;
             return {
               ...o,
-              calendarKey: teamupConf.calendarId || o.calendarKey,
-              calendarId: teamupConf.calendarId || o.calendarId,
-              subcalendarId: String(teamupConf.subcalendarId || o.subcalendarId).trim(),
-              teamupApiKey: teamupConf.apiKey || teamupConf.teamupApiKey || o.teamupApiKey,
-              teamupToken: teamupConf.apiKey || teamupConf.teamupApiKey || o.teamupToken,
-              subcalendarName: teamupConf.subcalendarName || o.subcalendarName,
+              ...(teamupConf ? {
+                calendarKey: teamupConf.calendarId || o.calendarKey,
+                calendarId: teamupConf.calendarId || o.calendarId,
+                subcalendarId: String(teamupConf.subcalendarId || o.subcalendarId).trim(),
+                teamupApiKey: teamupConf.apiKey || teamupConf.teamupApiKey || o.teamupApiKey,
+                teamupToken: teamupConf.apiKey || teamupConf.teamupApiKey || o.teamupToken,
+                subcalendarName: teamupConf.subcalendarName || o.subcalendarName,
+              } : {}),
+              ...(sups && sups.length > 0 ? { supervisors: sups } : {}),
             };
           }));
+        }
+
+        if (sups && sups.length > 0) {
+          try {
+            localStorage.setItem(`crm_skn_${currentOrgId}_supervisors`, JSON.stringify(sups));
+          } catch {}
         }
       } catch (err) {
         console.warn('[OrgContext] Błąd wczytywania ustawień organizacji z Supabase:', err);
@@ -281,6 +298,7 @@ export function OrgProvider({ children }) {
     setCurrentOrgIdState(cleanId);
     try {
       localStorage.setItem('crm_skn_current_org_id', cleanId);
+      localStorage.setItem('crm_active_org_id', cleanId);
     } catch {}
   }, []);
 

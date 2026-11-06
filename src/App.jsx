@@ -45,10 +45,12 @@ import { getCanonicalMeetingsForOrg, filterLegitimateMeetings } from './utils/ca
 import { getMeetingType, calculateCategorizedFrequency, calculateMemberStats, isMeetingEligibleForDenominator, MEETING_TYPES, hasMeetingAttendanceLogs } from './utils/meetingTypes';
 import { isMemberActive, isMemberGuest, isMemberInactive, isMemberArchived, hasMailingConsent } from './utils/memberFilters';
 import { normalizeDiacritics, isFacultySupervisor } from './utils/specialRoles';
+import { uniqueTenures, deduplicateBoard, deduplicateBoardTenures, DEFAULT_BOARD_TENURES_SEKSUOLOGIA, getDefaultBoardTenuresForOrg } from './services/settingsService';
 import { buildAttendanceIndex, precompileMeetings } from './utils/attendanceIndexer';
 import { calculateMemberAttendance } from './utils/attendanceCalculator';
 import { isEwidencjaInAcademicScope, isEwidencjaMatchForMeeting } from './utils/academicScope';
 import {
+  getOrgKey,
   createOrgSnapshot,
   getBlacklistedMembers,
   addMemberToBlacklist,
@@ -173,12 +175,52 @@ export default function App() {
     } catch {}
   }, []);
 
+  const activeOrgIdRef = useRef(currentOrgCleanId);
+  activeOrgIdRef.current = currentOrgCleanId;
+  const loadedOrgIdRef = useRef(null);
+  const loadRequestIdRef = useRef(0);
+
   // ── Stale-While-Revalidate (SWR): Instant 0ms synchronous cache hydration ──
   const initialSWRState = useMemo(() => {
     try {
-      const snapshotKey = currentOrg?.id ? `${CACHE_KEYS.APP_STATE_SNAPSHOT}_${currentOrg.id}` : CACHE_KEYS.APP_STATE_SNAPSHOT;
-      const rawSnapshot = readSWRData(snapshotKey) || readSWRData(CACHE_KEYS.APP_STATE_SNAPSHOT);
+      const activeOrgId = (currentOrg?.id === 'skn-template' ? 'skn_seksuologii' : currentOrg?.id) || 'skn_seksuologii';
+      const snapshotKey = `${CACHE_KEYS.APP_STATE_SNAPSHOT}_${activeOrgId}`;
+      const rawSnapshot = readSWRData(snapshotKey);
       const snapshot = rawSnapshot?.data || rawSnapshot;
+
+      if (snapshot && snapshot.orgId && snapshot.orgId !== activeOrgId) {
+        return null;
+      }
+
+      // Zabezpieczenie przed przywracaniem zdublowanych kadencji zarządu ze snapshotu SWR
+      if (typeof window !== 'undefined' && window.localStorage) {
+        if (snapshot && Array.isArray(snapshot.boardTenures)) {
+          let cleanTenures = deduplicateBoard(snapshot.boardTenures, activeOrgId);
+          if (cleanTenures.length === 0) {
+            cleanTenures = getDefaultBoardTenuresForOrg(activeOrgId);
+          }
+          localStorage.setItem(`skn_board_tenures_${activeOrgId}`, JSON.stringify(cleanTenures));
+        } else {
+          const rawTenures = localStorage.getItem(`skn_board_tenures_${activeOrgId}`);
+          if (rawTenures) {
+            try {
+              const parsed = JSON.parse(rawTenures);
+              if (Array.isArray(parsed)) {
+                let cleanTenures = deduplicateBoard(parsed, activeOrgId);
+                if (cleanTenures.length === 0) {
+                  cleanTenures = getDefaultBoardTenuresForOrg(activeOrgId);
+                }
+                localStorage.setItem(`skn_board_tenures_${activeOrgId}`, JSON.stringify(cleanTenures));
+              }
+            } catch {}
+          } else {
+            const defaults = getDefaultBoardTenuresForOrg(activeOrgId);
+            if (defaults.length > 0) {
+              localStorage.setItem(`skn_board_tenures_${activeOrgId}`, JSON.stringify(defaults));
+            }
+          }
+        }
+      }
 
       if (snapshot && Array.isArray(snapshot.members) && (snapshot.members.length > 0 || (snapshot.quarantine && snapshot.quarantine.length > 0))) {
         const memberIdxSet = new Set((snapshot.members || []).map(m => String(m.index || m.nrIndeksu || '').replace(/\D/g, '').trim()).filter(Boolean));
@@ -195,6 +237,7 @@ export default function App() {
         });
 
         const effectiveArchived = Array.isArray(snapshot.archivedQuarantine) ? snapshot.archivedQuarantine : [];
+        loadedOrgIdRef.current = activeOrgId;
 
         return {
           members: snapshot.members,
@@ -202,7 +245,7 @@ export default function App() {
           archivedQuarantine: effectiveArchived,
           meetings: Array.isArray(snapshot.meetings) && snapshot.meetings.length > 0
             ? snapshot.meetings
-            : (getCachedTeamupEvents(DEFAULT_SUBCALENDAR_ID, '26/27') || getCanonicalMeetingsForOrg(currentOrg?.id) || initialMeetings || []),
+            : (getCanonicalMeetingsForOrg(activeOrgId) || []),
           lastSync: snapshot.timestamp ? new Date(snapshot.timestamp) : new Date(),
         };
       }
@@ -213,7 +256,7 @@ export default function App() {
   }, [currentOrg?.id]);
 
   // Master Data State (0ms hydrated from SWR cache if available)
-  const [members, setMembers]       = useState(() => initialSWRState?.members || initialMembers);
+  const [members, setMembers]       = useState(() => initialSWRState?.members || (currentOrgCleanId === 'skn_seksuologii' ? initialMembers : []));
   const [quarantine, setQuarantine] = useState(() => initialSWRState?.quarantine || []);
   const [archivedQuarantine, setArchivedQuarantine] = useState(() => initialSWRState?.archivedQuarantine || []);
   const [approvedKeys, setApprovedKeys] = useState([]);
@@ -221,7 +264,7 @@ export default function App() {
   const [resignedKeys, setResignedKeys] = useState([]);
 
   // Teamup Meetings State & Academic Year Filter (0ms hydrated from SWR cache if available)
-  const [meetings, setMeetings]     = useState(() => initialSWRState?.meetings || getCanonicalMeetingsForOrg(currentOrg?.id) || initialMeetings || []);
+  const [meetings, setMeetings]     = useState(() => initialSWRState?.meetings || getCanonicalMeetingsForOrg(currentOrg?.id) || []);
   const [subcalendars, setSubcalendars] = useState(() => {
     const cachedSubs = getCachedTeamupSubcalendars();
     return (Array.isArray(cachedSubs) && cachedSubs.length > 0)
@@ -330,23 +373,29 @@ export default function App() {
   // Keep SWR APP_STATE_SNAPSHOT updated whenever members, quarantine, archivedQuarantine, or meetings change (Shallow payload, debounced)
   useEffect(() => {
     if (members.length === 0 && quarantine.length === 0 && archivedQuarantine.length === 0) return;
+    const targetOrgId = currentOrgCleanId;
+    // Blokada zapisu snapshotu, dopóki dane dla nowego koła nie zostaną oficjalnie załadowane (ochrona przed skażeniem stanu przy przełączaniu kół)
+    if (!targetOrgId || loadedOrgIdRef.current !== targetOrgId) return;
+
     const timer = setTimeout(() => {
+      if (activeOrgIdRef.current !== targetOrgId || loadedOrgIdRef.current !== targetOrgId) return;
       try {
         const payload = {
+          orgId: targetOrgId,
           members: members.map(toShallowMember).filter(Boolean),
           quarantine: quarantine.map(toShallowMember).filter(Boolean),
           archivedQuarantine: archivedQuarantine.map(toShallowMember).filter(Boolean),
           meetings: meetings.map(toShallowMeeting).filter(Boolean),
           timestamp: Date.now(),
         };
-        const snapshotKey = currentOrg?.id ? `${CACHE_KEYS.APP_STATE_SNAPSHOT}_${currentOrg.id}` : CACHE_KEYS.APP_STATE_SNAPSHOT;
+        const snapshotKey = `${CACHE_KEYS.APP_STATE_SNAPSHOT}_${targetOrgId}`;
         writeSWRData(snapshotKey, payload);
       } catch (err) {
         console.warn('[App] Pominięto zapis snapshotu stanu:', err);
       }
     }, 600);
     return () => clearTimeout(timer);
-  }, [members, quarantine, archivedQuarantine, meetings, currentOrg?.id]);
+  }, [members, quarantine, archivedQuarantine, meetings, currentOrgCleanId]);
 
   // Data Loss Prevention: warn user before closing/reloading page if there are unsynced changes
   useEffect(() => {
@@ -478,6 +527,7 @@ export default function App() {
     silentMeetings = false,
     bypassCache = false
   ) => {
+    const targetOrgId = (currentOrg?.id === 'skn-template' ? 'skn_seksuologii' : currentOrg?.id) || 'skn_seksuologii';
     if (!silentMeetings) {
       setLoadingMeetings(true);
     }
@@ -498,6 +548,11 @@ export default function App() {
             yearPrefix,
             bypassCache,
           });
+
+      // Race condition guard: jeśli w trakcie pobierania przełączono organizację, odrzuć wynik
+      if (activeOrgIdRef.current !== targetOrgId) {
+        return;
+      }
 
       let legitimateMeetings = [];
       if (fetchedMeetings && fetchedMeetings.length > 0) {
@@ -754,6 +809,7 @@ export default function App() {
       return;
     }
     loadDataInFlightRef.current = true;
+    const requestId = ++loadRequestIdRef.current;
 
     const isBackgroundRevalidation = silent || hasCachedDataRef.current;
     if (!isBackgroundRevalidation) {
@@ -821,7 +877,7 @@ export default function App() {
           }).catch(() => undefined),
         ]);
 
-        if (!mError && !qError && !attError) {
+        if (!mError && !qError && !attError && activeOrgIdRef.current === orgId) {
           supabaseDataCacheRef.current = {
             orgId,
             dbMembers: dbMembers || [],
@@ -831,6 +887,11 @@ export default function App() {
             timestamp: Date.now(),
           };
         }
+      }
+
+      // Race condition guard: jeśli w trakcie asynchronicznego pobierania przełączono organizację lub uruchomiono nowsze żądanie, porzuć ten wynik!
+      if (requestId !== loadRequestIdRef.current || activeOrgIdRef.current !== orgId) {
+        return;
       }
 
       if (mError) console.error('[loadData] Błąd pobierania members z Supabase:', mError);
@@ -977,7 +1038,13 @@ export default function App() {
             return;
           }
 
-          if (code.startsWith('[SETTINGS]') || code.startsWith('[EMAIL_CONFIG]')) {
+          if (
+            code.startsWith('[SETTINGS]') ||
+            code.startsWith('[EMAIL_CONFIG]') ||
+            code.startsWith('[ZARZAD]') ||
+            code.startsWith('[ACCESS_USER]') ||
+            code.startsWith('[DOKUMENT]')
+          ) {
             return;
           }
 
@@ -1085,14 +1152,32 @@ export default function App() {
           localStorage.setItem(dorobekKey, JSON.stringify(supabaseDorobek));
           localStorage.setItem(resKey, JSON.stringify(supabaseDorobek));
 
-          const tenuresJson = JSON.stringify(supabaseBoardTenures);
+          let dedupedTenures = deduplicateBoard(supabaseBoardTenures, orgId);
+          if (dedupedTenures.length === 0) {
+            // Sprawdź czy dane istnieją już w localStorage, aby nie nadpisywać pustą tablicą
+            try {
+              const existingRaw = localStorage.getItem(`skn_board_tenures_${orgId}`) || localStorage.getItem(getOrgKey(orgId, 'skn_board_tenures'));
+              if (existingRaw) {
+                const parsedExisting = JSON.parse(existingRaw);
+                if (Array.isArray(parsedExisting) && parsedExisting.length > 0) {
+                  dedupedTenures = deduplicateBoard(parsedExisting, orgId);
+                }
+              }
+            } catch {}
+          }
+          if (dedupedTenures.length === 0) {
+            dedupedTenures = getDefaultBoardTenuresForOrg(orgId);
+          }
+          const tenuresJson = JSON.stringify(dedupedTenures);
           localStorage.setItem(`skn_board_tenures_${orgId}`, tenuresJson);
           localStorage.setItem(getOrgKey(orgId, 'skn_board_tenures'), tenuresJson);
 
           if (supabaseKorespondencja.length > 0) {
             setOrgStorage(orgId, 'correspondence_log', supabaseKorespondencja);
           }
-        } catch {}
+        } catch (storageErr) {
+          console.warn('[loadData] Błąd zapisu do localStorage:', storageErr);
+        }
       }
 
       if (subcals && subcals.length > 0) {
@@ -1246,6 +1331,7 @@ export default function App() {
         });
 
       hasCachedDataRef.current = true;
+      loadedOrgIdRef.current = orgId;
 
       // Aktualizacja stanów React
       startTransition(() => {
@@ -1264,6 +1350,10 @@ export default function App() {
         isBackgroundRevalidation
       );
 
+      if (requestId !== loadRequestIdRef.current || activeOrgIdRef.current !== orgId) {
+        return;
+      }
+
       const now = new Date();
       setLastSync(now);
       setCloudSyncStatus({ status: 'synced', lastSyncTime: now, errorMessage: null });
@@ -1272,19 +1362,24 @@ export default function App() {
       if (orgId && (Date.now() - lastSnapshotTimeRef.current) > 5 * 60 * 1000) {
         lastSnapshotTimeRef.current = Date.now();
         setTimeout(() => {
+          if (activeOrgIdRef.current !== orgId) return;
           try {
             createOrgSnapshot(orgId, 'Automatyczna migawka Supabase SSOT');
           } catch {}
         }, 1500);
       }
     } catch (err) {
-      if (!hasCachedDataRef.current) {
+      if (requestId === loadRequestIdRef.current && !hasCachedDataRef.current) {
         setError(err.message);
       }
-      setCloudSyncStatus(prev => ({ ...prev, status: 'error', errorMessage: err.message }));
+      if (requestId === loadRequestIdRef.current) {
+        setCloudSyncStatus(prev => ({ ...prev, status: 'error', errorMessage: err.message }));
+      }
     } finally {
-      loadDataInFlightRef.current = false;
-      setLoading(false);
+      if (requestId === loadRequestIdRef.current) {
+        loadDataInFlightRef.current = false;
+        setLoading(false);
+      }
     }
   }, [currentOrg?.id, currentOrg?.sheetId, currentOrg?.subcalendarId, getRangeForYear, loadMeetings, selectedSubcalendar, academicYear, customStartDate, customEndDate]);
 
@@ -1373,7 +1468,10 @@ export default function App() {
 
     if (prevOrgIdRef.current && prevOrgIdRef.current !== orgId) {
       console.info(`[Multi-Tenant] Przełączono organizację na: ${orgId}`);
-      // 1. Natychmiastowe wyczyszczenie pamięci podręcznej RAM (In-Memory Cache)
+      // 1. Natychmiastowe unieważnienie trwających zapytań poprzedniej organizacji i wyczyszczenie bufora RAM
+      loadedOrgIdRef.current = null;
+      loadDataInFlightRef.current = false;
+      loadRequestIdRef.current += 1;
       supabaseDataCacheRef.current = {
         orgId: null,
         dbMembers: null,
@@ -1395,6 +1493,9 @@ export default function App() {
           localStorage.removeItem('crm_czlonkowie');
           localStorage.removeItem('CACHE_TEAMUP_EVENTS');
           localStorage.removeItem('CRM_TEAMUP_MEETINGS_2026_2027');
+          localStorage.removeItem('CACHE_APP_STATE_SNAPSHOT');
+          localStorage.removeItem('skn_supervisors_config');
+          localStorage.removeItem('skn_settings_config');
           // Czyszczenie nieizolowanych kluczy obecności z poprzednich wersji
           for (let i = localStorage.length - 1; i >= 0; i--) {
             const k = localStorage.key(i);
