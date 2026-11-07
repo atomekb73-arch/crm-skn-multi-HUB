@@ -1209,7 +1209,7 @@ export default function App() {
       const pendingQuarantineList = allSupabaseQuarantine
         .filter(item => {
           const s = String(item.decision_status || 'Oczekuje').toLowerCase().trim();
-          const isPending = s === 'oczekuje' || s === 'pending';
+          const isPending = s === 'oczekuje' || s === 'oczekujący' || s === 'oczekujacy' || s === 'pending';
           if (!isPending) return false;
 
           // Bezwzględne wykluczenie rekordów, które zostały już zatwierdzone i przeniesione do tabeli members

@@ -64,12 +64,53 @@ export default function ResearchTab({ members = [] }) {
       const saved = localStorage.getItem(researchStorageKey);
       if (saved !== null) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed.filter(i => !i.organization_id || i.organization_id === currentOrgCleanId);
         }
       }
     } catch (e) {
       console.error('Błąd odczytu dorobku z storage:', e);
+    }
+
+    if (currentOrgCleanId === 'test') {
+      return [
+        {
+          id: 'test-res-01',
+          type: 'Badanie / Projekt',
+          title: 'Wpływ regulacji emocjonalnej na zachowania adaptacyjne – badanie pilotażowe',
+          author: 'Katarzyna Zielińska',
+          nrIndeksu: '98104',
+          date: '2025-11-20',
+          points: 15,
+          status: 'W toku',
+          description: 'Projekt badawczy realizowany w ramach grantu studenckiego WSKZ, próba N=120.',
+          organization_id: 'test'
+        },
+        {
+          id: 'test-res-02',
+          type: 'Publikacja',
+          title: 'Metodologiczne aspekty pomiaru dobrostanu psychicznego w badaniach ankietowych online',
+          author: 'Jan Kowalski',
+          nrIndeksu: '98101',
+          date: '2026-01-10',
+          points: 20,
+          status: 'Opublikowany',
+          description: 'Artykuł w recenzowanym czasopiśmie studenckim Instytutu Psychologii WSKZ.',
+          organization_id: 'test'
+        },
+        {
+          id: 'test-res-03',
+          type: 'Wystąpienie konferencyjne',
+          title: 'Analiza rzetelności narzędzi psychometrycznych w badaniach pilotażowych',
+          author: 'Anna Nowak',
+          nrIndeksu: '98102',
+          date: '2026-03-25',
+          points: 10,
+          status: 'Zatwierdzony',
+          description: 'Wystąpienie ustne na Ogólnopolskiej Konferencji Kół Naukowych Psychologii.',
+          organization_id: 'test'
+        }
+      ];
     }
     return [];
   });
