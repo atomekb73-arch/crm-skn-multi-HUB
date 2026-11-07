@@ -347,6 +347,8 @@ export default function DocumentsRepositoryTab() {
 
   // ── Module View Switch (Repozytorium vs Dziennik Podawczy) ────────────────
   const [activeModuleTab, setActiveModuleTab] = useState('repository'); // 'repository' | 'correspondence'
+  const [documentToDelete, setDocumentToDelete] = useState(null);
+  const [mailToDelete, setMailToDelete] = useState(null);
 
   // ── Resizable Sidebar State (clamped min/max, persistent in localStorage) ──
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -1761,7 +1763,7 @@ export default function DocumentsRepositoryTab() {
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => handleDeleteDocument(doc.id)}
+                                  onClick={() => setDocumentToDelete(doc)}
                                   className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
                                   title="Usuń dokument"
                                 >
@@ -2038,7 +2040,7 @@ export default function DocumentsRepositoryTab() {
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => handleDeleteMailEntry(item.id)}
+                                    onClick={() => setMailToDelete(item)}
                                     className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-slate-100 transition cursor-pointer"
                                     title="Usuń pismo z dziennika"
                                   >
@@ -2570,11 +2572,7 @@ export default function DocumentsRepositoryTab() {
 
                 <button
                   type="button"
-                  onClick={() => {
-                    const idToDelete = viewingMailEntry.id;
-                    setViewingMailEntry(null);
-                    handleDeleteMailEntry(idToDelete);
-                  }}
+                  onClick={() => setMailToDelete(viewingMailEntry)}
                   className="px-3.5 py-2 rounded-xl bg-white border border-slate-200 hover:border-rose-300 text-slate-700 hover:text-rose-600 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-2xs"
                   title="Usuń pismo z rejestru"
                 >
@@ -2965,6 +2963,83 @@ export default function DocumentsRepositoryTab() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: CONFIRM DELETE DOCUMENT ─────────────────────────────────── */}
+      {documentToDelete && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150 print:hidden font-sans">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden p-6 space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
+              <Trash2 size={24} />
+            </div>
+            <div className="text-center space-y-1">
+              <h3 className="text-base font-bold text-slate-900">Usunąć dokument?</h3>
+              <p className="text-xs text-slate-500">
+                Czy na pewno chcesz usunąć akt <strong className="text-slate-800">„{documentToDelete.code || documentToDelete.title}”</strong>?
+              </p>
+            </div>
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDocumentToDelete(null)}
+                className="flex-1 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold cursor-pointer"
+              >
+                Anuluj
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const id = documentToDelete.id;
+                  setDocumentToDelete(null);
+                  handleDeleteDocument(id);
+                }}
+                className="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs transition cursor-pointer"
+              >
+                Usuń dokument
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: CONFIRM DELETE MAIL ENTRY ─────────────────────────────────── */}
+      {mailToDelete && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150 print:hidden font-sans">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden p-6 space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
+              <Trash2 size={24} />
+            </div>
+            <div className="text-center space-y-1">
+              <h3 className="text-base font-bold text-slate-900">Usunąć pismo z dziennika?</h3>
+              <p className="text-xs text-slate-500">
+                Czy na pewno chcesz usunąć pismo <strong className="text-slate-800">„{mailToDelete.sygnatura || mailToDelete.id}”</strong> ({mailToDelete.dotyczy || mailToDelete.przedmiot})?
+              </p>
+            </div>
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setMailToDelete(null)}
+                className="flex-1 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold cursor-pointer"
+              >
+                Anuluj
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const id = mailToDelete.id;
+                  setMailToDelete(null);
+                  if (viewingMailEntry && viewingMailEntry.id === id) {
+                    setViewingMailEntry(null);
+                  }
+                  handleDeleteMailEntry(id);
+                }}
+                className="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs transition cursor-pointer"
+              >
+                Usuń pismo
+              </button>
+            </div>
           </div>
         </div>
       )}
