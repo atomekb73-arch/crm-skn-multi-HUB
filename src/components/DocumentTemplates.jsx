@@ -202,10 +202,10 @@ export function DocumentStandardHeader({
 /**
  * Generuje unikalny, powtarzalny hash i numer dokumentu
  */
-export function generateDocumentNumber(prefix, indexNumber, seed = getCurrentAcademicYear(), orgTag = 'SKN-SEKS') {
+export function generateDocumentNumber(prefix, indexNumber, seed = getCurrentAcademicYear(), orgTag = 'SKN') {
   const cleanIdx = String(indexNumber || '00000').replace(/\D/g, '') || '00000';
   let hash = 0;
-  const tag = String(orgTag || 'SKN-SEKS').toUpperCase().replace(/[^A-Z0-9-]/g, '');
+  const tag = String(orgTag || 'SKN').toUpperCase().replace(/[^A-Z0-9-]/g, '');
   const str = `${prefix}-${cleanIdx}-${seed}-${tag}`;
   for (let i = 0; i < str.length; i++) {
     hash = ((hash << 5) - hash) + str.charCodeAt(i);
@@ -271,7 +271,7 @@ export function formatSupervisorAffiliation(s, defaultUnit = 'Instytut Psycholog
  */
 export function DocumentSignaturesBlock({
   activeSupervisors = [],
-  orgShortName = 'SKN Seksuologii',
+  orgShortName = 'Koło Naukowe',
   orgName = '',
   orgUnit = 'Instytut Psychologii WSKZ',
   chairpersonTitle = 'Zarząd Koła Naukowego',

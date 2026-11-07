@@ -537,17 +537,21 @@ export default function App() {
       const effectiveCalId = currentOrg?.calendarKey || currentOrg?.calendarId || 'ks9aiux4jiza1ronpd';
       const effectiveToken = currentOrg?.teamupApiKey || currentOrg?.teamupToken || '20dc4242d0d74be314e5ee108dc618cf3f6fbcb7647865568775fe4d9a89c112';
 
+      // W instancji testowej korzystamy z autonomicznych spotkań lokalnych bez odpytywania Teamup
+      const isTestOrg = targetOrgId === 'test';
       const fetchedMeetings = preFetchedMeetings !== undefined
         ? preFetchedMeetings
-        : await fetchTeamupEvents({
-            startDate,
-            endDate,
-            subcalendarId: effectiveSubId,
-            calendarId: effectiveCalId,
-            token: effectiveToken,
-            yearPrefix,
-            bypassCache,
-          });
+        : isTestOrg
+          ? getCanonicalMeetingsForOrg('test')
+          : await fetchTeamupEvents({
+              startDate,
+              endDate,
+              subcalendarId: effectiveSubId,
+              calendarId: effectiveCalId,
+              token: effectiveToken,
+              yearPrefix,
+              bypassCache,
+            });
 
       // Race condition guard: jeśli w trakcie pobierania przełączono organizację, odrzuć wynik
       if (activeOrgIdRef.current !== targetOrgId) {
