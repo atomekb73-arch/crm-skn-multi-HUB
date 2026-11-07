@@ -42,7 +42,30 @@ export default function ResearchTab({ members = [] }) {
   const { currentOrg, getStorageKey } = useOrg();
   const currentOrgCleanId = (currentOrg?.id === 'skn-template' ? 'skn_seksuologii' : currentOrg?.id) || 'skn_seksuologii';
   const { academicYear } = useAcademicYear();
+  // Storage Keys for Research and Trash (Soft Delete)
   const researchStorageKey = getStorageKey('research');
+  const trashStorageKey = getStorageKey('research_trash');
+
+  // State for trash items (Soft Delete)
+  const [trashItems, setTrashItems] = useState(() => {
+    try {
+      const saved = localStorage.getItem(trashStorageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter(i => !i.organization_id || i.organization_id === currentOrgCleanId);
+        }
+      }
+    } catch {}
+    return [];
+  });
+
+  const saveTrashItems = (newTrash) => {
+    setTrashItems(newTrash);
+    try {
+      localStorage.setItem(trashStorageKey, JSON.stringify(newTrash));
+    } catch {}
+  };
 
   // Available members list (from prop or tenant-scoped localStorage fallback)
   const availableMembers = useMemo(() => {
@@ -260,7 +283,9 @@ export default function ResearchTab({ members = [] }) {
   };
 
   // UI States
-  const [activeSubTab, setActiveSubTab] = useState('All'); // 'All' | 'Publication' | 'Conference' | 'Project'
+  const [activeSubTab, setActiveSubTab] = useState('All'); // 'All' | 'Publication' | 'Conference' | 'Project' | 'Trash'
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [isClearModalOpen, setIsClearModalOpen] = useState(false);
 
   // ── Resizable Sidebar State (clamped min/max, persistent in localStorage) ──
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -566,11 +591,46 @@ export default function ResearchTab({ members = [] }) {
     }
   };
 
-  // Handle Delete
-  const handleDeleteItem = (id) => {
-    const updated = items.filter((i) => i.id !== id);
+  // Handle Soft Delete -> Move to Trash
+  const handleSoftDelete = (item) => {
+    const updated = items.filter((i) => i.id !== item.id);
+    const trashEntry = { ...item, deletedAt: new Date().toISOString() };
+    const updatedTrash = [trashEntry, ...trashItems.filter(t => t.id !== item.id)];
     saveItems(updated);
-    showToast('Pozycja dorobku naukowego została usunięta.');
+    saveTrashItems(updatedTrash);
+    setItemToDelete(null);
+    showToast(`Przeniesiono do Kosza: "${item.title}". Możesz ją w każdej chwili przywrócić.`);
+  };
+
+  // Restore item from Trash
+  const handleRestoreFromTrash = (trashId) => {
+    const found = trashItems.find(t => t.id === trashId);
+    if (!found) return;
+    const cleanItem = { ...found };
+    delete cleanItem.deletedAt;
+    const updatedTrash = trashItems.filter(t => t.id !== trashId);
+    const updatedItems = [cleanItem, ...items.filter(i => i.id !== trashId)];
+    saveTrashItems(updatedTrash);
+    saveItems(updatedItems);
+    showToast(`Przywrócono pozycję: "${cleanItem.title}"`);
+  };
+
+  // Permanent Delete from Trash
+  const handlePermanentDelete = (trashId) => {
+    const updatedTrash = trashItems.filter(t => t.id !== trashId);
+    saveTrashItems(updatedTrash);
+    showToast('Pozycja została trwale usunięta z Kosza.');
+  };
+
+  // Handle Clear All -> Moves all active items to Trash
+  const handleClearAllToTrash = () => {
+    if (items.length === 0) return;
+    const now = new Date().toISOString();
+    const newTrash = [...items.map(i => ({ ...i, deletedAt: now })), ...trashItems];
+    saveTrashItems(newTrash);
+    saveItems([]);
+    setIsClearModalOpen(false);
+    showToast(`Wszystkie pozycje (${items.length}) przeniesiono do Kosza. Możesz je przywrócić.`);
   };
 
   // Print function
@@ -602,15 +662,28 @@ export default function ResearchTab({ members = [] }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0 w-full sm:w-auto">
+          {trashItems.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('Trash')}
+              className={`h-9 px-2.5 sm:px-3 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                activeSubTab === 'Trash'
+                  ? 'bg-rose-100 text-rose-900 border-rose-300 font-bold'
+                  : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+              }`}
+              title="Zobacz pozycje w Koszu"
+            >
+              <Trash2 size={13} className="text-rose-600" />
+              <span>Kosz ({trashItems.length})</span>
+            </button>
+          )}
+
           {(items || []).length > 0 && (
             <button
               type="button"
-              onClick={() => {
-                saveItems([]);
-                showToast('Wyczyszczono listę dorobku naukowego.');
-              }}
+              onClick={() => setIsClearModalOpen(true)}
               className="h-9 px-2.5 sm:px-3 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-              title="Wyczyść wszystkie wpisy dorobku"
+              title="Przenieś wszystkie pozycje do Kosza"
             >
               <Trash2 size={13} />
               <span className="hidden sm:inline">Wyczyść listę</span>
@@ -1079,6 +1152,27 @@ export default function ResearchTab({ members = [] }) {
                     {metrics.projectsCount}
                   </span>
                 </button>
+
+                {trashItems.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveSubTab('Trash')}
+                    className={`h-9 px-3.5 rounded-lg text-xs font-medium transition-all flex items-center cursor-pointer ${
+                      activeSubTab === 'Trash'
+                        ? 'bg-rose-50/90 text-rose-950 border-2 border-rose-500 shadow-xs'
+                        : 'bg-transparent text-rose-600 hover:bg-rose-50/50 hover:text-rose-900'
+                    }`}
+                  >
+                    <span>Kosz</span>
+                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] ml-2 ${
+                      activeSubTab === 'Trash'
+                        ? 'bg-rose-200 text-rose-900 font-bold border border-rose-300'
+                        : 'bg-rose-100 text-rose-700'
+                    }`}>
+                      {trashItems.length}
+                    </span>
+                  </button>
+                )}
               </div>
 
               {/* Search & Actions */}
@@ -1198,7 +1292,73 @@ export default function ResearchTab({ members = [] }) {
 
             {/* Full Items List / Table */}
             <div className="space-y-2.5 pt-1">
-              {isLoadingResearch ? (
+              {activeSubTab === 'Trash' ? (
+                /* ── WIDOK KOSZA (SOFT DELETE) ── */
+                trashItems.length === 0 ? (
+                  <div className="py-12 text-center text-slate-400 italic bg-slate-50 rounded-xl border border-slate-200">
+                    Kosz jest pusty. Żadne pozycje dorobku nie zostały usunięte.
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-900 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Trash2 size={16} className="text-rose-600 shrink-0" />
+                        <span>Pozycje w Koszu są zabezpieczone przed trwałym skasowaniem. Możesz je przywrócić w dowolnym momencie.</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm('Czy na pewno chcesz trwale opróżnić Kosz? Tej operacji nie można cofnąć.')) {
+                            saveTrashItems([]);
+                            showToast('Kosz został opróżniony.');
+                          }
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] transition cursor-pointer shrink-0"
+                      >
+                        Opróżnij Kosz
+                      </button>
+                    </div>
+
+                    {trashItems.map((item, idx) => (
+                      <div
+                        key={item.id}
+                        className="p-3.5 sm:p-4 bg-white rounded-xl border border-rose-200 hover:border-rose-300 transition-all flex flex-col md:flex-row md:items-center justify-between gap-3 opacity-90"
+                      >
+                        <div className="space-y-1 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-mono font-bold text-rose-500">KOSZ #{idx + 1}</span>
+                            <span className="text-[11px] font-semibold text-slate-700">{item.title}</span>
+                          </div>
+                          <p className="text-[11px] text-slate-500">
+                            Autor / Kierownik: {item.author || item.authors || item.leadResearcher || '—'} • Usunięto: {item.deletedAt ? new Date(item.deletedAt).toLocaleString('pl-PL') : 'niedawno'}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleRestoreFromTrash(item.id)}
+                            className="px-3 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 font-bold text-xs transition cursor-pointer"
+                          >
+                            Przywróć
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (window.confirm(`Czy na pewno chcesz trwale usunąć "${item.title}"?`)) {
+                                handlePermanentDelete(item.id);
+                              }
+                            }}
+                            className="p-1 rounded-lg border border-slate-200 hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition cursor-pointer"
+                            title="Usuń trwale"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : isLoadingResearch ? (
                 <div className="py-12 text-center text-slate-500 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-center gap-2">
                   <RefreshCw size={16} className="animate-spin text-emerald-600" />
                   <span className="text-xs font-semibold">Pobieranie dorobku koła z bazy Supabase...</span>
@@ -1390,9 +1550,9 @@ export default function ResearchTab({ members = [] }) {
                       </button>
 
                       <button
-                        onClick={() => handleDeleteItem(item.id)}
-                        className="p-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-rose-600 transition-colors cursor-pointer"
-                        title="Usuń pozycję"
+                        onClick={() => setItemToDelete(item)}
+                        className="p-1 rounded-lg border border-slate-200 hover:bg-rose-50 text-slate-500 hover:text-rose-600 transition-colors cursor-pointer"
+                        title="Przenieś do Kosza"
                       >
                         <Trash2 size={13} />
                       </button>
@@ -1894,6 +2054,71 @@ export default function ResearchTab({ members = [] }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* ── MODAL: CONFIRM SINGLE SOFT DELETE ───────────────────────────── */}
+      {itemToDelete && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150 print:hidden font-sans">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden p-6 space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
+              <Trash2 size={24} />
+            </div>
+            <div className="text-center space-y-1">
+              <h3 className="text-base font-bold text-slate-900">Przenieść do Kosza?</h3>
+              <p className="text-xs text-slate-500">
+                Pozycja <strong className="text-slate-800">"{itemToDelete.title}"</strong> zostanie przeniesiona do Kosza. W każdej chwili możesz ją stamtąd przywrócić.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setItemToDelete(null)}
+                className="flex-1 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold cursor-pointer"
+              >
+                Anuluj
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSoftDelete(itemToDelete)}
+                className="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs transition cursor-pointer"
+              >
+                Przenieś do Kosza
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: CONFIRM CLEAR ALL TO TRASH ─────────────────────────────── */}
+      {isClearModalOpen && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150 print:hidden font-sans">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden p-6 space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+              <AlertTriangle size={24} />
+            </div>
+            <div className="text-center space-y-1">
+              <h3 className="text-base font-bold text-slate-900">Ostrzeżenie przed wyczyszczeniem</h3>
+              <p className="text-xs text-slate-500">
+                Czy na pewno chcesz przenieść wszystkie aktywne pozycje dorobku ({items.length}) do Kosza? Dane nie przepadną i będą dostępne w zakładce Kosz.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsClearModalOpen(false)}
+                className="flex-1 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold cursor-pointer"
+              >
+                Anuluj
+              </button>
+              <button
+                type="button"
+                onClick={handleClearAllToTrash}
+                className="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs transition cursor-pointer"
+              >
+                Przenieś do Kosza
+              </button>
+            </div>
           </div>
         </div>
       )}

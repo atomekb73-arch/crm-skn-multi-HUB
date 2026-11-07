@@ -1450,12 +1450,16 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
 
           <div className="flex items-center gap-2">
             <button
-              onClick={resetSupervisors}
+              onClick={() => {
+                if (window.confirm('Czy na pewno chcesz zresetować listę opiekunów naukowych do ustawień domyślnych koła?')) {
+                  resetSupervisors();
+                }
+              }}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-semibold transition cursor-pointer"
-              title="Wyczyść listę opiekunów koła"
+              title="Zresetuj listę opiekunów koła"
             >
               <RotateCcw size={13} />
-              <span>Wyczyść listę</span>
+              <span>Resetuj listę</span>
             </button>
             <span className="text-xs font-semibold px-3 py-1 bg-indigo-50 text-indigo-800 border border-indigo-200 rounded-full">
               {supervisors.filter(s => s.isActive).length} aktywnych opiekunów
