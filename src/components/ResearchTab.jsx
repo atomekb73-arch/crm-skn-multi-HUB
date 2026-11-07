@@ -117,6 +117,50 @@ export default function ResearchTab({ members = [] }) {
           summary: 'Wystąpienie ustne i prezentacja wyników analizy r-Pearsona.',
           description: 'Wystąpienie ustne i prezentacja wyników analizy r-Pearsona.',
           organization_id: 'test'
+        },
+        {
+          id: 'test-res-04',
+          type: 'Project',
+          title: 'Poziom stresu a strategie radzenia sobie u studentów pierwszego roku psychologii',
+          leadResearcher: 'Jan Kowalski',
+          author: 'Jan Kowalski',
+          nrIndeksu: '98101',
+          teamMembers: 'Piotr Wiśniewski, Aleksandra Wójcik',
+          date: '2025-12-05',
+          points: 15,
+          status: 'W toku',
+          sampleSize: 180,
+          summary: 'Ogólnouczelniane badanie ankietowe zrealizowane we współpracy z Samorządem Studenckim.',
+          description: 'Ogólnouczelniane badanie ankietowe zrealizowane we współpracy z Samorządem Studenckim.',
+          organization_id: 'test'
+        },
+        {
+          id: 'test-res-05',
+          type: 'Publication',
+          title: 'Ekspresja emocjonalna a subiektywna percepcja zdrowia somatycznego – przegląd badań',
+          author: 'Katarzyna Zielińska, Anna Nowak',
+          nrIndeksu: '98104',
+          date: '2026-02-14',
+          points: 20,
+          status: 'Opublikowany',
+          journalName: 'Przegląd Psychologii Stosowanej WSKZ',
+          summary: 'Praca przeglądowa w recenzowanym czasopiśmie naukowym (artykuł wieloautorski).',
+          description: 'Praca przeglądowa w recenzowanym czasopiśmie naukowym (artykuł wieloautorski).',
+          organization_id: 'test'
+        },
+        {
+          id: 'test-res-06',
+          type: 'Conference',
+          title: 'Style przywiązania a funkcjonowanie w relacjach rówieśniczych w okresie wczesnej dorosłości',
+          author: 'Magdalena Kaczmarek',
+          nrIndeksu: '98108',
+          date: '2026-04-08',
+          points: 8,
+          status: 'Zatwierdzony',
+          conferenceName: 'Międzynarodowa Konferencja Młodych Naukowców i Kół Naukowych w Krakowie',
+          summary: 'Prezentacja posteru naukowego w sekcji Psychologii Rozwojowej.',
+          description: 'Prezentacja posteru naukowego w sekcji Psychologii Rozwojowej.',
+          organization_id: 'test'
         }
       ];
     }
@@ -572,28 +616,6 @@ export default function ResearchTab({ members = [] }) {
               <span className="hidden sm:inline">Wyczyść listę</span>
             </button>
           )}
-
-          <button
-            type="button"
-            onClick={handleSyncToSheets}
-            disabled={isSyncing}
-            className={`h-9 flex-1 sm:flex-none justify-center px-2.5 sm:px-3.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer ${
-              syncSuccess
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
-            }`}
-            title="Zapisz i zsynchronizuj cały wykaz dorobku z arkuszem Google Rejestr_Dorobku"
-          >
-            {isSyncing ? (
-              <RefreshCw size={14} className="animate-spin text-emerald-600" />
-            ) : syncSuccess ? (
-              <CheckCircle2 size={14} className="text-emerald-600" />
-            ) : (
-              <CloudUpload size={14} className="text-indigo-600" />
-            )}
-            <span className="sm:hidden">{isSyncing ? 'Zapis...' : syncSuccess ? 'Zapisano' : 'Zapisz'}</span>
-            <span className="hidden sm:inline">{isSyncing ? 'Zapisywanie...' : syncSuccess ? 'Zapisano w Sheets' : 'Zapisz w Google Sheets'}</span>
-          </button>
 
           <button
             type="button"
