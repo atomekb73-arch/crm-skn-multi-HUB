@@ -528,17 +528,17 @@ export default function App() {
     bypassCache = false
   ) => {
     const targetOrgId = (currentOrg?.id === 'skn-template' ? 'skn_seksuologii' : currentOrg?.id) || 'skn_seksuologii';
+    const isTestOrg = targetOrgId === 'test';
     if (!silentMeetings) {
       setLoadingMeetings(true);
     }
     try {
       const { startDate, endDate, yearPrefix } = getRangeForYear(yr, cStart, cEnd);
-      const effectiveSubId = subId || currentOrg?.subcalendarId || DEFAULT_SUBCALENDAR_ID || '14518766';
+      const effectiveSubId = isTestOrg ? 'test_subcal' : (subId || currentOrg?.subcalendarId || DEFAULT_SUBCALENDAR_ID || '14518766');
       const effectiveCalId = currentOrg?.calendarKey || currentOrg?.calendarId || 'ks9aiux4jiza1ronpd';
       const effectiveToken = currentOrg?.teamupApiKey || currentOrg?.teamupToken || '20dc4242d0d74be314e5ee108dc618cf3f6fbcb7647865568775fe4d9a89c112';
 
       // W instancji testowej korzystamy z autonomicznych spotkań lokalnych bez odpytywania Teamup
-      const isTestOrg = targetOrgId === 'test';
       const fetchedMeetings = preFetchedMeetings !== undefined
         ? preFetchedMeetings
         : isTestOrg

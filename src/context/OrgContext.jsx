@@ -96,6 +96,8 @@ export const DEFAULT_ORGS = [
     faculty: 'Instytut Psychologii WSKZ',
     unit: 'Instytut Psychologii WSKZ',
     academicYear: '2025/2026',
+    subcalendarId: 'test_subcal',
+    subcalendarName: '99 🧪 SKN Koło Testowe (Demo)',
     description: 'Instancja testowa i demonstracyjna z pełnym pakietem danych (25 członków, kwarantanna, obecności, zarząd)',
     color: 'amber',
     isDefault: false,

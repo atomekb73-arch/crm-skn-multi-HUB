@@ -18,7 +18,9 @@ export default function CalendarSelector({
       ? '05 🏷️ SKN Psychologii Zachowań Ryzykownych i Uzależnień'
       : currentOrg?.id === 'psychoonkologia'
         ? '07 🎗️ SKN Psychoonkologii'
-        : DEFAULT_CALENDAR_SUB_NAME
+        : currentOrg?.id === 'test'
+          ? '99 🧪 SKN Koło Testowe (Demo)'
+          : DEFAULT_CALENDAR_SUB_NAME
   );
 
   const activeValue = String(selectedSubcalendar || orgSubId).trim();
