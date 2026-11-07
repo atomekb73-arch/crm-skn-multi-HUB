@@ -76,38 +76,46 @@ export default function ResearchTab({ members = [] }) {
       return [
         {
           id: 'test-res-01',
-          type: 'Badanie / Projekt',
+          type: 'Project',
           title: 'Wpływ regulacji emocjonalnej na zachowania adaptacyjne – badanie pilotażowe',
+          leadResearcher: 'Katarzyna Zielińska',
           author: 'Katarzyna Zielińska',
           nrIndeksu: '98104',
+          teamMembers: 'Jan Kowalski, Anna Nowak',
           date: '2025-11-20',
           points: 15,
           status: 'W toku',
-          description: 'Projekt badawczy realizowany w ramach grantu studenckiego WSKZ, próba N=120.',
+          sampleSize: 120,
+          summary: 'Projekt badawczy realizowany w ramach wewnętrznego grantu studenckiego WSKZ.',
+          description: 'Projekt badawczy realizowany w ramach wewnętrznego grantu studenckiego WSKZ.',
           organization_id: 'test'
         },
         {
           id: 'test-res-02',
-          type: 'Publikacja',
+          type: 'Publication',
           title: 'Metodologiczne aspekty pomiaru dobrostanu psychicznego w badaniach ankietowych online',
           author: 'Jan Kowalski',
           nrIndeksu: '98101',
           date: '2026-01-10',
           points: 20,
           status: 'Opublikowany',
-          description: 'Artykuł w recenzowanym czasopiśmie studenckim Instytutu Psychologii WSKZ.',
+          journalName: 'Studenckie Zeszyty Psychologiczne WSKZ',
+          summary: 'Artykuł naukowy w recenzowanym czasopiśmie studenckim Instytutu Psychologii WSKZ.',
+          description: 'Artykuł naukowy w recenzowanym czasopiśmie studenckim Instytutu Psychologii WSKZ.',
           organization_id: 'test'
         },
         {
           id: 'test-res-03',
-          type: 'Wystąpienie konferencyjne',
+          type: 'Conference',
           title: 'Analiza rzetelności narzędzi psychometrycznych w badaniach pilotażowych',
           author: 'Anna Nowak',
           nrIndeksu: '98102',
           date: '2026-03-25',
           points: 10,
           status: 'Zatwierdzony',
-          description: 'Wystąpienie ustne na Ogólnopolskiej Konferencji Kół Naukowych Psychologii.',
+          conferenceName: 'Ogólnopolski Zjazd Kół Naukowych Psychologii',
+          summary: 'Wystąpienie ustne i prezentacja wyników analizy r-Pearsona.',
+          description: 'Wystąpienie ustne i prezentacja wyników analizy r-Pearsona.',
           organization_id: 'test'
         }
       ];
