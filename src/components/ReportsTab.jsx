@@ -685,33 +685,42 @@ export default function ReportsTab({
             display: flex !important;
             flex-direction: column !important;
             justify-content: space-between !important;
-            min-height: 265mm !important;
+            min-height: auto !important;
+            max-height: 275mm !important;
+            height: 100% !important;
             max-width: 100% !important;
             width: 100% !important;
             margin: 0 auto !important;
-            padding: 14mm 12mm !important;
+            padding: 4mm 6mm !important;
             box-shadow: none !important;
             border: none !important;
-            overflow: visible !important;
+            overflow: hidden !important;
             background: #ffffff !important;
             position: relative !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            page-break-after: avoid !important;
+            break-after: avoid !important;
           }
           .doc-a4-sheet.doc-a4-multipage,
           .doc-a4-multipage {
             display: block !important;
             min-height: auto !important;
-            padding: 4mm 2mm !important;
+            max-height: none !important;
+            height: auto !important;
+            padding: 2mm 2mm !important;
+            overflow: visible !important;
             page-break-after: auto !important;
             break-after: auto !important;
           }
           .cert-frame-outer {
             position: absolute !important;
-            inset: 4mm !important;
+            inset: 3mm !important;
             pointer-events: none !important;
           }
           .cert-frame-inner {
             position: absolute !important;
-            inset: 6mm !important;
+            inset: 4.5mm !important;
             pointer-events: none !important;
           }
           .signature-block,
@@ -746,7 +755,7 @@ export default function ReportsTab({
           }
           @page {
             size: A4 portrait;
-            margin: 12mm 10mm 12mm 10mm;
+            margin: 8mm 8mm 8mm 8mm;
           }
         }
       `}</style>

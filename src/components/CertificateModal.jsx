@@ -118,10 +118,11 @@ export default function CertificateModal({
             border: none !important;
             width: 100% !important;
             max-width: 100% !important;
-            min-height: 260mm !important;
-            max-height: 272mm !important;
+            min-height: auto !important;
+            max-height: 275mm !important;
+            height: 100% !important;
             margin: 0 auto !important;
-            padding: 10mm 10mm !important;
+            padding: 4mm 6mm !important;
             background: #ffffff !important;
             color: #0f172a !important;
             position: relative !important;
@@ -129,20 +130,26 @@ export default function CertificateModal({
             break-inside: avoid !important;
             page-break-after: avoid !important;
             break-after: avoid !important;
+            overflow: hidden !important;
           }
           .doc-a4-sheet.doc-a4-multipage,
           .doc-a4-multipage {
             min-height: auto !important;
-            padding: 4mm 2mm !important;
+            max-height: none !important;
+            height: auto !important;
+            padding: 2mm 2mm !important;
+            overflow: visible !important;
+            page-break-after: auto !important;
+            break-after: auto !important;
           }
           .cert-frame-outer {
             position: absolute !important;
-            inset: 4mm !important;
+            inset: 3mm !important;
             pointer-events: none !important;
           }
           .cert-frame-inner {
             position: absolute !important;
-            inset: 6mm !important;
+            inset: 4.5mm !important;
             pointer-events: none !important;
           }
           .signature-block,
@@ -152,7 +159,7 @@ export default function CertificateModal({
           }
           @page {
             size: A4 portrait;
-            margin: 12mm 10mm 12mm 10mm;
+            margin: 8mm 8mm 8mm 8mm;
           }
         }
       `}</style>

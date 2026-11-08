@@ -144,7 +144,7 @@ select option:checked {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 12mm 10mm 12mm 10mm;
+    margin: 8mm 8mm 8mm 8mm;
   }
 
   /* Ukryj elementy interfejsu nienadające się do druku */
@@ -174,19 +174,20 @@ select option:checked {
     justify-content: space-between !important;
     width: 100% !important;
     max-width: 100% !important;
-    min-height: 260mm !important;
-    max-height: 272mm !important;
-    height: auto !important;
+    min-height: auto !important;
+    max-height: 275mm !important;
+    height: 100% !important;
     margin: 0 auto !important;
-    padding: 10mm 10mm !important;
+    padding: 4mm 6mm !important;
     border: none !important;
     box-shadow: none !important;
     background: #ffffff !important;
     position: relative !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
-    page-break-after: avoid;
-    break-after: avoid;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    overflow: hidden !important;
   }
 
   /* Kontener arkusza dla dokumentów i tabel wielostronicowych */
@@ -195,10 +196,11 @@ select option:checked {
     display: flex !important;
     flex-direction: column !important;
     justify-content: space-between !important;
-    min-height: 255mm !important;
+    min-height: auto !important;
     max-height: none !important;
     height: auto !important;
-    padding: 6mm 4mm !important;
+    padding: 2mm 2mm !important;
+    overflow: visible !important;
     page-break-after: auto !important;
     break-after: auto !important;
   }
@@ -213,13 +215,13 @@ select option:checked {
   /* Ozdobne ramki certyfikatów i dyplomów – bezpiecznie wewnątrz marginesu kartki */
   .cert-frame-outer {
     position: absolute !important;
-    inset: 4mm !important;
+    inset: 3mm !important;
     pointer-events: none !important;
   }
 
   .cert-frame-inner {
     position: absolute !important;
-    inset: 6mm !important;
+    inset: 4.5mm !important;
     pointer-events: none !important;
   }
 

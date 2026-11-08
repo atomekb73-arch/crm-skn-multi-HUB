@@ -154,38 +154,47 @@ export function DocumentStandardHeader({
   className = '',
   borderBottom = true,
   rightCustom = null,
+  showFullBanner = true,
 }) {
   const { name: orgName, tag: orgTag, unit: orgUnit } = getOrgMetadata(org);
 
   return (
-    <div className={`w-full ${borderBottom ? 'border-b-2 border-slate-900 pb-2 mb-3' : 'pb-1 mb-2'} ${className}`}>
-      <div className="flex items-start justify-between gap-4">
-        {/* Lewa strona nagłówka (Struktura 3-4 linie, dyskretna czcionka 8-9pt) */}
-        <div className="text-left space-y-0.5">
-          <p className="text-[9px] font-bold tracking-wider text-slate-900 uppercase leading-tight font-sans">
-            WYŻSZA SZKOŁA KSZTAŁCENIA ZAWODOWEGO
-          </p>
-          <p className="text-[8.5px] font-bold tracking-wide text-slate-600 uppercase leading-tight font-sans">
+    <div className={`document-standard-header w-full ${borderBottom ? 'border-b border-slate-300 pb-1.5 mb-2' : 'pb-1 mb-1'} ${className}`}>
+      {/* 1. Oficjalna belka graficzna WSKZ z logotypem, cytatem i paskiem */}
+      {showFullBanner && (
+        <div className="w-full mb-1 overflow-hidden">
+          <img
+            src="/wskz-header.png"
+            alt="Wyższa Szkoła Kształcenia Zawodowego"
+            className="w-full h-auto max-h-[17mm] sm:max-h-[20mm] object-contain object-left block"
+            loading="eager"
+          />
+        </div>
+      )}
+
+      {/* 2. Kompaktowy pasek metadanych: Jednostka / Koło oraz Sygnatura / Data */}
+      <div className="flex items-start justify-between gap-3 text-left">
+        <div className="text-left space-y-0.5 min-w-0">
+          <p className="text-[8.5px] font-bold tracking-wider text-slate-600 uppercase font-sans truncate">
             {orgUnit.toUpperCase()}
           </p>
-          <p className="text-[8.5px] font-extrabold tracking-tight text-indigo-950 uppercase leading-tight font-sans">
+          <p className="text-[9px] font-extrabold tracking-tight text-indigo-950 uppercase font-sans truncate">
             {orgName.toUpperCase()}
           </p>
           {subtitle && (
-            <p className="text-[8px] font-medium text-slate-500 italic leading-tight mt-0.5 font-sans">
+            <p className="text-[8px] font-medium text-slate-500 italic mt-0.5 font-sans truncate">
               {subtitle}
             </p>
           )}
         </div>
 
-        {/* Prawa strona nagłówka */}
         {rightCustom ? (
           rightCustom
         ) : (
-          <div className="text-right shrink-0">
+          <div className="text-right shrink-0 space-y-0.5">
             {docNumber && (
-              <div className="inline-flex items-center gap-1.5 font-mono text-[9px] font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 whitespace-nowrap">
-                {docLabel && <span className="text-slate-500 font-sans uppercase text-[8px] tracking-wider">{docLabel}:</span>}
+              <div className="inline-flex items-center gap-1 font-mono text-[8.5px] font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 whitespace-nowrap shadow-2xs">
+                {docLabel && <span className="text-slate-500 font-sans uppercase text-[7.5px] tracking-wider">{docLabel}:</span>}
                 <span>{docNumber}</span>
               </div>
             )}
@@ -195,6 +204,51 @@ export function DocumentStandardHeader({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * ─── REUŻYWALNA OFICJALNA STOPKA UCZELNIANA WSKZ ORAZ CRM ─────────────────────
+ */
+export function DocumentStandardFooter({
+  org = null,
+  docDate = new Date(),
+  showBanner = true,
+  pageNumberText = null,
+  className = '',
+}) {
+  const { name: orgName } = getOrgMetadata(org);
+  const orgGenitive = formatOrgGenitive(orgName);
+
+  return (
+    <div
+      className={`document-standard-footer w-full mt-auto pt-1.5 space-y-1 break-inside-avoid ${className}`}
+      style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+    >
+      {/* Pasek techniczny z potwierdzeniem autentyczności */}
+      <div className="flex items-center justify-between text-[8px] text-slate-400 font-mono px-0.5">
+        <div className="flex items-center gap-1">
+          <ShieldCheck size={10} className="text-indigo-600 shrink-0" />
+          <span>Autentyczność dokumentu potwierdzona w systemie CRM {orgGenitive}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {pageNumberText && <span className="font-semibold text-slate-500">{pageNumberText}</span>}
+          <span>Wrocław, dn. {formatPolishDate(docDate)}</span>
+        </div>
+      </div>
+
+      {/* Oficjalna belka adresowo-rejestrowa WSKZ */}
+      {showBanner && (
+        <div className="w-full overflow-hidden">
+          <img
+            src="/wskz-footer.png"
+            alt="Wyższa Szkoła Kształcenia Zawodowego"
+            className="w-full h-auto max-h-[13mm] sm:max-h-[15mm] object-contain block"
+            loading="eager"
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -276,6 +330,7 @@ export function DocumentSignaturesBlock({
   orgUnit = 'Instytut Psychologii WSKZ',
   chairpersonTitle = 'Zarząd Koła Naukowego',
   chairpersonSub = null,
+  className = 'pt-3 sm:pt-4',
 }) {
   const gridColsClass = activeSupervisors.length === 1
     ? 'grid-cols-2 justify-between'
@@ -303,34 +358,34 @@ export function DocumentSignaturesBlock({
 
   return (
     <div
-      className="signature-block signatures-block w-full pt-6 sm:pt-8 pb-1 border-t border-slate-200 mt-auto break-inside-avoid"
+      className={`signature-block signatures-block w-full pb-1 border-t border-slate-200 mt-auto break-inside-avoid ${className}`}
       style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}
     >
-      <div className={`grid gap-4 sm:gap-6 text-center ${gridColsClass}`}>
+      <div className={`grid gap-3 sm:gap-4 text-center ${gridColsClass}`}>
         {/* 1. Pole podpisu Przewodniczącego / Zarządu */}
         <div className="flex flex-col items-center text-center">
-          <div className="h-10 sm:h-12 w-full border-b border-dashed border-slate-300 mb-2 flex items-end justify-center pb-1">
-            <span className="text-[9px] text-slate-400 font-serif italic">[Podpis elektroniczny]</span>
+          <div className="h-8 sm:h-9 w-full border-b border-dashed border-slate-300 mb-1.5 flex items-end justify-center pb-0.5">
+            <span className="text-[8.5px] text-slate-400 font-serif italic">[Podpis elektroniczny]</span>
           </div>
-          <span className="text-[11.5px] font-bold text-slate-800 leading-tight">{chairpersonTitle}</span>
+          <span className="text-[11px] font-bold text-slate-800 leading-tight">{chairpersonTitle}</span>
           {resolvedSub && (
-            <span className="text-[10px] text-slate-500 leading-tight mt-0.5">{resolvedSub}</span>
+            <span className="text-[9.5px] text-slate-500 leading-tight mt-0.5">{resolvedSub}</span>
           )}
         </div>
 
         {/* 2. Dynamiczne pola podpisów Opiekunów Naukowych */}
         {activeSupervisors.map((sup, index) => (
           <div key={index} className="flex flex-col items-center text-center">
-            <div className="h-10 sm:h-12 w-full border-b border-dashed border-slate-300 mb-2 flex items-end justify-center pb-1">
-              <span className="text-[9px] text-slate-400 font-serif italic">[Podpis elektroniczny]</span>
+            <div className="h-8 sm:h-9 w-full border-b border-dashed border-slate-300 mb-1.5 flex items-end justify-center pb-0.5">
+              <span className="text-[8.5px] text-slate-400 font-serif italic">[Podpis elektroniczny]</span>
             </div>
-            <span className="text-[11.5px] font-bold text-slate-800 leading-tight">
+            <span className="text-[11px] font-bold text-slate-800 leading-tight">
               {formatSupervisorName(sup)}
             </span>
-            <span className="text-[10px] text-slate-600 font-medium leading-tight mt-0.5">
+            <span className="text-[9.5px] text-slate-600 font-medium leading-tight mt-0.5">
               {formatSupervisorRole(sup)}
             </span>
-            <span className="text-[9px] text-slate-400 leading-tight">
+            <span className="text-[8.5px] text-slate-400 leading-tight">
               {formatSupervisorAffiliation(sup, orgUnit)}
             </span>
           </div>
@@ -389,39 +444,39 @@ export function MembershipCertificateTemplate({
   const yearLabel = member?.year ? `rok ${member.year}` : 'jednolite studia magisterskie';
 
   return (
-    <div className="doc-a4-sheet w-full max-w-[210mm] min-h-[297mm] bg-white text-slate-900 font-sans p-10 sm:p-12 relative flex flex-col justify-between border border-slate-300 shadow-xl mx-auto my-0 select-text print:max-w-none print:w-full print:border-none print:shadow-none print:p-10 print:m-0 box-border">
+    <div className="doc-a4-sheet w-full max-w-[210mm] bg-white text-slate-900 font-sans p-6 sm:p-8 relative flex flex-col justify-between border border-slate-300 shadow-xl mx-auto my-0 select-text print:max-w-none print:w-full print:border-none print:shadow-none print:p-0 print:m-0 box-border">
       {/* Ozdobna ramka wewnętrzna */}
-      <div className="cert-frame-outer absolute inset-5 border border-slate-200 pointer-events-none rounded-lg" />
-      <div className="cert-frame-inner absolute inset-7 border-2 border-indigo-950/20 pointer-events-none rounded-md" />
+      <div className="cert-frame-outer absolute inset-3.5 border border-slate-200 pointer-events-none rounded-lg" />
+      <div className="cert-frame-inner absolute inset-5 border-2 border-indigo-950/20 pointer-events-none rounded-md" />
 
       {/* ── STREFA 1 (GÓRNA): Nagłówek Uczelni, Sygnatura, Tytuł i Formuła Wstępna ── */}
-      <div className="relative z-10 space-y-4">
-        {/* Globalny Ujednolicony Nagłówek Uczelniany i Koła */}
+      <div className="relative z-10 space-y-2.5">
+        {/* Globalny Ujednolicony Nagłówek Uczelniany WSKZ i Koła */}
         <DocumentStandardHeader
           org={org}
           docNumber={docNumber}
           docDate={docDate}
           docLabel="Nr dokumentu"
-          dateLabel="Data:"
+          dateLabel="Wrocław, dn."
           borderBottom={true}
-          className="border-indigo-900 pb-2"
+          className="border-indigo-900"
         />
 
         {/* Tytuł Zaświadczenia (Główny, dominujący element wizualny) */}
-        <div className="text-center my-3 sm:my-4">
-          <span className="inline-block text-[10px] font-bold uppercase tracking-widest text-indigo-700 bg-indigo-50 px-3.5 py-1 rounded-full border border-indigo-200">
+        <div className="text-center my-1.5 sm:my-2">
+          <span className="inline-block text-[9px] font-bold uppercase tracking-widest text-indigo-700 bg-indigo-50 px-3 py-0.5 rounded-full border border-indigo-200">
             Oficjalne Zaświadczenie Akademickie
           </span>
-          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-2 uppercase [text-wrap:balance]">
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1 uppercase [text-wrap:balance]">
             Zaświadczenie o&nbsp;Członkostwie i&nbsp;Frekwencji
           </h2>
-          <p className="text-[11px] text-slate-500 font-medium tracking-wide mt-1">
+          <p className="text-[10px] text-slate-500 font-medium tracking-wide mt-0.5">
             Rok akademicki {academicYear} &bull; Oficjalny Rejestr Działalności Studenckiej
           </p>
         </div>
 
         {/* Formuła Wstępna */}
-        <p className="text-[12px] sm:text-[12.5px] leading-relaxed text-slate-800 text-justify [text-justify:inter-word] [text-wrap:pretty] indent-6">
+        <p className="text-[11px] sm:text-[11.5px] leading-relaxed text-slate-800 text-justify [text-justify:inter-word] [text-wrap:pretty] indent-4">
           Niniejszym zaświadcza się, że Pan/Pani{' '}
           <strong className="text-slate-950 font-bold border-b border-slate-400 pb-0.5 px-1">{studentName}</strong>,{' '}
           legitymujący/a się numerem indeksu: <strong className="font-mono text-slate-950 font-bold">{indexNumber}</strong>,{' '}
@@ -432,19 +487,19 @@ export function MembershipCertificateTemplate({
       </div>
 
       {/* ── STREFA 2 (ŚRODKOWA): Kluczowe Dane, Metryki i Wyszczególnienie Aktywności ── */}
-      <div className="relative z-10 flex-grow flex flex-col justify-center my-6 sm:my-8 space-y-6">
+      <div className="relative z-10 flex-grow flex flex-col justify-center my-2 sm:my-3 space-y-3 sm:space-y-3.5">
         {!hasDataForYear ? (
-          <div className="my-6 p-8 bg-amber-50/90 border-2 border-dashed border-amber-300 rounded-2xl text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-100 text-amber-700 mb-3">
-              <AlertTriangle className="w-6 h-6" />
+          <div className="my-3 p-5 bg-amber-50/90 border-2 border-dashed border-amber-300 rounded-xl text-center">
+            <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-amber-100 text-amber-700 mb-2">
+              <AlertTriangle className="w-5 h-5" />
             </div>
-            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-tight">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-tight">
               Brak zarejestrowanej działalności w roku {academicYear}
             </h3>
-            <p className="text-xs text-slate-600 mt-1.5 max-w-md mx-auto leading-relaxed">
+            <p className="text-[10.5px] text-slate-600 mt-1 max-w-md mx-auto leading-relaxed">
               Dla roku akademickiego <strong>{academicYear}</strong> nie zarejestrowano spotkań ani obecności studenta <strong>{studentName}</strong>. Wystawienie oficjalnego zaświadczenia z zerowymi wartościami zostało wstrzymane.
             </p>
-            <div className="mt-3 inline-block bg-white px-3 py-1.5 rounded-lg border border-amber-200 text-[10px] text-slate-500 font-mono">
+            <div className="mt-2 inline-block bg-white px-2.5 py-1 rounded-md border border-amber-200 text-[9px] text-slate-500 font-mono">
               Status: {isFutureYear ? 'Okres planowany' : (isPastYear ? 'Brak wpisów archiwalnych' : 'Brak danych w roku bieżącym')}
             </div>
           </div>
@@ -452,46 +507,46 @@ export function MembershipCertificateTemplate({
           <>
             {/* ── Metryka Osiągnięć i Frekwencji ── */}
             <div
-              className="metric-box-container w-full grid gap-3 p-4 sm:p-5 bg-slate-50/90 rounded-2xl border border-slate-200/90 text-center shadow-xs box-border"
+              className="metric-box-container w-full grid gap-2 p-3 sm:p-3.5 bg-slate-50/90 rounded-xl border border-slate-200/90 text-center shadow-2xs box-border"
               style={{ gridTemplateColumns: `repeat(${visibleMetricCols}, minmax(0, 1fr))`, width: '100%' }}
             >
               {showFreqSection && (
-                <div className="p-2 border-r border-slate-200 min-w-0">
-                  <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block truncate">Łączna Frekwencja</span>
-                  <span className="text-2xl sm:text-3xl font-bold text-emerald-700 font-mono leading-none my-1.5 block">{safeFreq}%</span>
-                  <span className="text-[10px] text-slate-500 block truncate">{safePresent} / {totalMeetings} spotkań</span>
+                <div className="p-1.5 border-r border-slate-200 min-w-0">
+                  <span className="text-[9px] uppercase font-bold text-slate-500 tracking-wider block truncate">Łączna Frekwencja</span>
+                  <span className="text-xl sm:text-2xl font-bold text-emerald-700 font-mono leading-none my-1 block">{safeFreq}%</span>
+                  <span className="text-[9px] text-slate-500 block truncate">{safePresent} / {totalMeetings} spotkań</span>
                 </div>
               )}
               {showPointsSection && (
-                <div className="p-2 border-r border-slate-200 min-w-0">
-                  <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block truncate">Punkty Aktywności</span>
-                  <span className="text-2xl sm:text-3xl font-bold text-purple-700 font-mono leading-none my-1.5 block">{safePoints} pkt</span>
-                  <span className="text-[10px] text-slate-500 block truncate">Wykaz aktywności</span>
+                <div className="p-1.5 border-r border-slate-200 min-w-0">
+                  <span className="text-[9px] uppercase font-bold text-slate-500 tracking-wider block truncate">Punkty Aktywności</span>
+                  <span className="text-xl sm:text-2xl font-bold text-purple-700 font-mono leading-none my-1 block">{safePoints} pkt</span>
+                  <span className="text-[9px] text-slate-500 block truncate">Wykaz aktywności</span>
                 </div>
               )}
-              <div className="p-2 min-w-0 flex flex-col justify-center">
-                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block truncate">Ocena Aktywności</span>
-                <span className="text-sm font-bold text-indigo-950 block leading-tight mt-1 truncate">
+              <div className="p-1.5 min-w-0 flex flex-col justify-center">
+                <span className="text-[9px] uppercase font-bold text-slate-500 tracking-wider block truncate">Ocena Aktywności</span>
+                <span className="text-xs font-bold text-indigo-950 block leading-tight mt-0.5 truncate">
                   {safeFreq >= 90 ? 'Lider Koła' : safeFreq >= 75 ? 'Bardzo Aktywny' : (safeFreq >= 50 ? 'Aktywny Członek' : (isPastYear ? 'Brak zaliczenia' : 'W trakcie realizacji'))}
                 </span>
-                <span className={`text-[9.5px] font-semibold flex items-center justify-center gap-1 mt-1 ${
+                <span className={`text-[8.5px] font-semibold flex items-center justify-center gap-0.5 mt-0.5 ${
                   safeFreq >= 50 ? 'text-emerald-600' : (isPastYear ? 'text-rose-600' : 'text-slate-500')
                 }`}>
                   {safeFreq >= 50 ? (
-                    <><CheckCircle2 size={12} /> Kryteria spełnione</>
+                    <><CheckCircle2 size={10} /> Kryteria spełnione</>
                   ) : isPastYear ? (
-                    <><AlertTriangle size={12} /> Kryteria niespełnione</>
+                    <><AlertTriangle size={10} /> Kryteria niespełnione</>
                   ) : (
-                    <><Clock size={12} /> Aktywność w toku</>
+                    <><Clock size={10} /> Aktywność w toku</>
                   )}
                 </span>
               </div>
             </div>
 
             {/* ── Wyszczególnienie aktywności merytorycznej ── */}
-            <div className="text-[11px] sm:text-[11.5px] text-slate-700 space-y-3 bg-indigo-50/50 p-5 sm:p-6 rounded-2xl border border-indigo-100 shadow-xs">
-              <p className="font-bold text-indigo-950 flex items-center gap-2 text-xs uppercase tracking-wide">
-                <Sparkles size={13} className="text-indigo-600 shrink-0" />
+            <div className="text-[10.5px] sm:text-[11px] text-slate-700 space-y-2 bg-indigo-50/40 p-3.5 sm:p-4 rounded-xl border border-indigo-100/90 shadow-2xs">
+              <p className="font-bold text-indigo-950 flex items-center gap-1.5 text-[11px] uppercase tracking-wide">
+                <Sparkles size={12} className="text-indigo-600 shrink-0" />
                 Wyszczególnienie aktywności merytorycznej:
               </p>
               {isEditing ? (
@@ -499,15 +554,15 @@ export function MembershipCertificateTemplate({
                   rows={3}
                   value={customText || `• Udział w comiesięcznych spotkaniach merytorycznych, seminaryjnych oraz warsztatowych Koła.\n• Wystąpienia prelekcyjne, udział w sesjach Journal Club i dyskusjach klinicznych.\n• Praca nad materiałami edukacyjnymi, analizami piśmiennictwa i projektami badawczymi Koła.`}
                   onChange={(e) => onUpdateCustomText(e.target.value)}
-                  className="w-full p-2 bg-white border border-indigo-300 rounded-lg text-[11px] font-sans text-slate-800 focus:outline-none"
+                  className="w-full p-2 bg-white border border-indigo-300 rounded-lg text-[10.5px] font-sans text-slate-800 focus:outline-none"
                 />
               ) : (
-                <ul className="list-disc list-inside space-y-2.5 sm:space-y-3 text-[11px] sm:text-[11.5px] text-slate-700 pl-1 leading-relaxed">
+                <ul className="list-disc list-inside space-y-1 sm:space-y-1.5 text-[10px] sm:text-[10.5px] text-slate-700 pl-1 leading-snug">
                   {(customText || `Udział w comiesięcznych spotkaniach merytorycznych, seminaryjnych oraz warsztatowych Koła.\nWystąpienia prelekcyjne, udział w sesjach Journal Club i dyskusjach klinicznych.\nPraca nad materiałami edukacyjnymi, analizami piśmiennictwa i projektami badawczymi Koła.`)
                     .split('\n')
                     .filter(Boolean)
                     .map((line, idx) => (
-                      <li key={idx} className="leading-relaxed">{line.replace(/^[•\-\*]\s*/, '')}</li>
+                      <li key={idx} className="leading-snug">{line.replace(/^[•\-\*]\s*/, '')}</li>
                     ))}
                 </ul>
               )}
@@ -515,14 +570,14 @@ export function MembershipCertificateTemplate({
           </>
         )}
 
-        <p className="text-[10.5px] text-slate-500 italic leading-relaxed text-center px-4">
+        <p className="text-[9.5px] sm:text-[10px] text-slate-500 italic leading-normal text-center px-2">
           Zaświadczenie wydaje się na wniosek studenta celem przedłożenia w&nbsp;Dziekanacie Uczelni, do&nbsp;stypendium Rektora, 
           do&nbsp;suplementu do&nbsp;dyplomu lub do&nbsp;portfolio osiągnięć naukowych.
         </p>
       </div>
 
-      {/* ── STREFA 3 (DOLNA): Podpisy i Stopka Systemowa ── */}
-      <div className="relative z-10 mt-auto pt-6 sm:pt-8 space-y-3">
+      {/* ── STREFA 3 (DOLNA): Podpisy i Stopka WSKZ ── */}
+      <div className="relative z-10 mt-auto pt-2 space-y-2">
         {/* Dynamiczny Blok Podpisów */}
         <DocumentSignaturesBlock
           activeSupervisors={activeSupervisors}
@@ -533,14 +588,8 @@ export function MembershipCertificateTemplate({
           chairpersonSub={orgShortName}
         />
 
-        {/* Stopka techniczna */}
-        <div className="flex items-center justify-between text-[9px] text-slate-400 pt-2 border-t border-slate-100 font-mono">
-          <div className="flex items-center gap-1.5">
-            <ShieldCheck size={11} className="text-indigo-600 shrink-0" />
-            <span>Autentyczność certyfikatu potwierdzona w systemie CRM {orgGenitive}</span>
-          </div>
-          <div>Data wydania: {formatPolishDate(docDate)}</div>
-        </div>
+        {/* Oficjalna Stopka WSKZ i CRM */}
+        <DocumentStandardFooter org={org} docDate={docDate} />
       </div>
     </div>
   );
@@ -569,10 +618,10 @@ export function SpeakerDiplomaTemplate({
   const indexNumber = member?.index || member?.indexNumber || '—';
 
   return (
-    <div className="doc-a4-sheet w-full max-w-[210mm] min-h-[297mm] bg-white text-slate-900 font-sans p-10 sm:p-12 relative flex flex-col justify-between border border-amber-300/80 shadow-xl mx-auto my-0 select-text print:max-w-none print:w-full print:border-none print:shadow-none print:p-10 print:m-0 box-border">
+    <div className="doc-a4-sheet w-full max-w-[210mm] bg-white text-slate-900 font-sans p-6 sm:p-8 relative flex flex-col justify-between border border-amber-300/80 shadow-xl mx-auto my-0 select-text print:max-w-none print:w-full print:border-none print:shadow-none print:p-0 print:m-0 box-border">
       {/* Ozdobna złota ramka */}
-      <div className="cert-frame-outer absolute inset-5 border-2 border-amber-500/30 pointer-events-none rounded-lg" />
-      <div className="cert-frame-inner absolute inset-7 border border-amber-600/20 pointer-events-none rounded-md" />
+      <div className="cert-frame-outer absolute inset-3.5 border-2 border-amber-500/30 pointer-events-none rounded-lg" />
+      <div className="cert-frame-inner absolute inset-5 border border-amber-600/20 pointer-events-none rounded-md" />
 
       {/* ── STREFA 1 (GÓRNA): Nagłówek Uczelniany i Koła ── */}
       <div className="relative z-10 space-y-2">
@@ -583,36 +632,36 @@ export function SpeakerDiplomaTemplate({
           docLabel="Nr"
           dateLabel="Data:"
           borderBottom={true}
-          className="border-amber-300 pb-2.5"
+          className="border-amber-300"
         />
       </div>
 
       {/* ── STREFA 2 (ŚRODKOWA): Prestiżowy Środek Dyplomu ── */}
-      <div className="relative z-10 flex-grow flex flex-col justify-center my-6 sm:my-8 space-y-6 sm:space-y-8 text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-50 border border-amber-200 text-amber-700 mx-auto shadow-xs">
-          <Award size={38} />
+      <div className="relative z-10 flex-grow flex flex-col justify-center my-2 sm:my-3.5 space-y-3 sm:space-y-4 text-center">
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-50 border border-amber-200 text-amber-700 mx-auto shadow-2xs">
+          <Award size={26} />
         </div>
 
         <div>
-          <span className="text-[11px] uppercase tracking-widest font-bold text-amber-800 bg-amber-100/70 px-4 py-1 rounded-full border border-amber-300">
+          <span className="text-[9.5px] uppercase tracking-widest font-bold text-amber-800 bg-amber-100/70 px-3.5 py-0.5 rounded-full border border-amber-300">
             Certyfikat Wystąpienia Naukowego
           </span>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 uppercase mt-4">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 uppercase mt-2">
             Dyplom Prelegenta
           </h1>
-          <p className="text-xs text-slate-400 font-mono mt-1.5">Nr {docNumber}</p>
+          <p className="text-[10px] text-slate-400 font-mono mt-0.5">Nr {docNumber}</p>
         </div>
 
-        <div className="space-y-2 py-2">
-          <p className="text-xs text-slate-600 uppercase tracking-widest font-medium">Niniejszy certyfikat otrzymuje</p>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-indigo-950 font-sans tracking-tight border-b-2 border-amber-400 inline-block pb-1.5 px-6">
+        <div className="space-y-1 py-1">
+          <p className="text-[10.5px] text-slate-600 uppercase tracking-widest font-medium">Niniejszy certyfikat otrzymuje</p>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-indigo-950 font-sans tracking-tight border-b-2 border-amber-400 inline-block pb-1 px-5">
             {studentName}
           </h2>
-          <p className="text-xs text-slate-500 font-mono">Nr Indeksu: {indexNumber}</p>
+          <p className="text-[10px] text-slate-500 font-mono">Nr Indeksu: {indexNumber}</p>
         </div>
 
-        <div className="max-w-lg mx-auto bg-amber-50/60 p-5 sm:p-6 rounded-2xl border border-amber-200/90 text-center space-y-2 shadow-xs">
-          <p className="text-[11px] text-amber-900 font-bold uppercase tracking-wider">
+        <div className="max-w-lg mx-auto bg-amber-50/60 p-3.5 sm:p-4 rounded-2xl border border-amber-200/90 text-center space-y-1.5 shadow-2xs">
+          <p className="text-[10px] text-amber-900 font-bold uppercase tracking-wider">
             Za przygotowanie i wygłoszenie referatu naukowego pt.:
           </p>
           {isEditing ? (
@@ -620,21 +669,21 @@ export function SpeakerDiplomaTemplate({
               rows={2}
               value={presentationTopic}
               onChange={(e) => onUpdateTopic(e.target.value)}
-              className="w-full p-2.5 bg-white border border-amber-400 rounded-lg text-sm font-bold text-slate-900 italic text-center focus:outline-none"
+              className="w-full p-2 bg-white border border-amber-400 rounded-lg text-xs font-bold text-slate-900 italic text-center focus:outline-none"
             />
           ) : (
-            <p className="text-base sm:text-lg font-bold text-slate-900 italic px-3 leading-snug">
+            <p className="text-sm sm:text-base font-bold text-slate-900 italic px-2 leading-snug">
               „{presentationTopic}”
             </p>
           )}
-          <p className="text-[11px] text-slate-500 mt-2 font-medium">
+          <p className="text-[10px] text-slate-500 mt-1 font-medium">
             w ramach oficjalnego seminarium naukowego {orgName} ({academicYear})
           </p>
         </div>
       </div>
 
       {/* ── STREFA 3 (DOLNA): Podpisy i Stopka ── */}
-      <div className="relative z-10 mt-auto pt-6 sm:pt-8 space-y-3">
+      <div className="relative z-10 mt-auto pt-2 space-y-2">
         <DocumentSignaturesBlock
           activeSupervisors={activeSupervisors}
           orgShortName={orgShortName}
@@ -644,13 +693,7 @@ export function SpeakerDiplomaTemplate({
           chairpersonSub={orgAffiliationSub}
         />
 
-        <div className="flex items-center justify-between text-[9px] text-slate-400 pt-2 border-t border-slate-100 font-mono">
-          <div className="flex items-center gap-1.5">
-            <ShieldCheck size={11} className="text-amber-600 shrink-0" />
-            <span>Autentyczność dyplomu potwierdzona w systemie CRM {orgGenitive}</span>
-          </div>
-          <div>Warszawa, {formatPolishDate(docDate)}</div>
-        </div>
+        <DocumentStandardFooter org={org} docDate={docDate} />
       </div>
     </div>
   );
@@ -691,13 +734,13 @@ export function BoardCertificateTemplate({
   }, [boardRole, orgName]);
 
   return (
-    <div className="doc-a4-sheet w-full max-w-[210mm] min-h-[297mm] bg-white text-slate-900 font-sans p-10 sm:p-12 relative flex flex-col justify-between border border-indigo-300/80 shadow-xl mx-auto my-0 select-text print:max-w-none print:w-full print:border-none print:shadow-none print:p-10 print:m-0 box-border">
+    <div className="doc-a4-sheet w-full max-w-[210mm] bg-white text-slate-900 font-sans p-6 sm:p-8 relative flex flex-col justify-between border border-indigo-300/80 shadow-xl mx-auto my-0 select-text print:max-w-none print:w-full print:border-none print:shadow-none print:p-0 print:m-0 box-border">
       {/* Ozdobna podwójna ramka */}
-      <div className="cert-frame-outer absolute inset-5 border border-indigo-200 pointer-events-none rounded-lg" />
-      <div className="cert-frame-inner absolute inset-7 border-2 border-indigo-900/30 pointer-events-none rounded-md" />
+      <div className="cert-frame-outer absolute inset-3.5 border border-indigo-200 pointer-events-none rounded-lg" />
+      <div className="cert-frame-inner absolute inset-5 border-2 border-indigo-900/30 pointer-events-none rounded-md" />
 
       {/* ── STREFA 1 (GÓRNA): Nagłówek Uczelni, Sygnatura, Tytuł i Formuła Wstępna ── */}
-      <div className="relative z-10 space-y-4">
+      <div className="relative z-10 space-y-2.5">
         {/* Globalny Ujednolicony Nagłówek Uczelniany i Koła */}
         <DocumentStandardHeader
           org={org}
@@ -706,29 +749,29 @@ export function BoardCertificateTemplate({
           docLabel="Nr aktu"
           dateLabel="Data:"
           borderBottom={true}
-          className="border-indigo-900 pb-2"
+          className="border-indigo-900"
         />
 
         {/* Tytuł Zaświadczenia z estetycznym podziałem (Główny, dominujący element) */}
-        <div className="text-center my-3 sm:my-4">
-          <span className="inline-block text-[10px] font-bold uppercase tracking-widest text-indigo-700 bg-indigo-50 px-3.5 py-1 rounded-full border border-indigo-200">
+        <div className="text-center my-1.5 sm:my-2">
+          <span className="inline-block text-[9px] font-bold uppercase tracking-widest text-indigo-700 bg-indigo-50 px-3 py-0.5 rounded-full border border-indigo-200">
             Uchwała Walnego Zebrania Członków
           </span>
-          <div className="mt-1.5">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest block">
+          <div className="mt-1">
+            <span className="text-[10.5px] font-bold text-slate-500 uppercase tracking-widest block">
               Zaświadczenie o:
             </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase [text-wrap:balance]">
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase [text-wrap:balance]">
               Pełnieniu Funkcji w&nbsp;Zarządzie Koła
             </h2>
           </div>
-          <p className="text-[11px] text-slate-500 font-medium tracking-wide mt-1">
+          <p className="text-[10px] text-slate-500 font-medium tracking-wide mt-0.5">
             Kadencja Zarządu Koła &bull; Rok Akademicki {academicYear}
           </p>
         </div>
 
         {/* Formuła Wstępna */}
-        <p className="text-[12px] sm:text-[12.5px] leading-relaxed text-slate-800 text-justify [text-justify:inter-word] [text-wrap:pretty] indent-6">
+        <p className="text-[11px] sm:text-[11.5px] leading-relaxed text-slate-800 text-justify [text-justify:inter-word] [text-wrap:pretty] indent-4">
           Niniejszym zaświadcza się, że Pan/Pani{' '}
           <strong className="text-slate-950 font-bold border-b border-slate-400 pb-0.5 px-1">{studentName}</strong>,{' '}
           numer indeksu: <strong className="font-mono text-slate-950 font-bold">{indexNumber}</strong>,{' '}
@@ -738,23 +781,23 @@ export function BoardCertificateTemplate({
       </div>
 
       {/* ── STREFA 2 (ŚRODKOWA): Boks Funkcji w Zarządzie i Zakres Obowiązków ── */}
-      <div className="relative z-10 flex-grow flex flex-col justify-center my-6 sm:my-8 space-y-6">
+      <div className="relative z-10 flex-grow flex flex-col justify-center my-2 sm:my-3.5 space-y-3 sm:space-y-3.5">
         {/* Boks Oficjalnej Funkcji w Zarządzie */}
-        <div className="p-5 sm:py-6 sm:px-6 rounded-2xl bg-indigo-50/70 border border-indigo-200 text-center shadow-xs space-y-1.5">
-          <span className="text-[10px] font-bold uppercase text-indigo-700 tracking-widest block">
+        <div className="p-3.5 sm:p-4 rounded-xl bg-indigo-50/70 border border-indigo-200 text-center shadow-2xs space-y-1">
+          <span className="text-[9px] font-bold uppercase text-indigo-700 tracking-widest block">
             Oficjalna Funkcja w&nbsp;Zarządzie Koła Naukowego
           </span>
-          <span className="text-xl sm:text-2xl font-extrabold text-indigo-950 block tracking-tight">
+          <span className="text-lg sm:text-xl font-extrabold text-indigo-950 block tracking-tight">
             {formattedRole}
           </span>
-          <span className="text-xs text-slate-600 font-medium block">
+          <span className="text-[10.5px] text-slate-600 font-medium block">
             {orgName} &bull; w&nbsp;okresie kadencji: {termDates}
           </span>
         </div>
 
         {/* Zakres Obowiązków Statutowych */}
-        <div className="p-5 sm:p-6 rounded-2xl bg-slate-50/90 border border-slate-200 text-[11px] sm:text-[11.5px] space-y-3 shadow-xs">
-          <p className="font-bold text-slate-900 text-xs uppercase tracking-wide">
+        <div className="p-3.5 sm:p-4 rounded-xl bg-slate-50/90 border border-slate-200 text-[10.5px] sm:text-[11px] space-y-2 shadow-2xs">
+          <p className="font-bold text-slate-900 text-[11px] uppercase tracking-wide">
             Zakres zrealizowanych obowiązków statutowych:
           </p>
           {isEditing ? (
@@ -762,15 +805,15 @@ export function BoardCertificateTemplate({
               rows={4}
               value={customDuties || `• Kierowanie bieżącą działalnością naukową i organizacyjną ${orgName}.\n• Koordynacja ogólnopolskich spotkań naukowych, warsztatów merytorycznych i sesji dyskusyjnych.\n• Nadzór nad realizacją projektów badawczych i przygotowaniem publikacji naukowych.\n• Reprezentowanie Koła przed Władzami Uczelni, Dziekanatem oraz jednostkami zewnętrznymi.`}
               onChange={(e) => onUpdateDuties(e.target.value)}
-              className="w-full p-2 bg-white border border-indigo-300 rounded-lg text-[11px] font-sans text-slate-800 focus:outline-none"
+              className="w-full p-2 bg-white border border-indigo-300 rounded-lg text-[10.5px] font-sans text-slate-800 focus:outline-none"
             />
           ) : (
-            <ul className="list-disc list-inside text-slate-700 space-y-2.5 sm:space-y-3 pl-1 leading-relaxed">
+            <ul className="list-disc list-inside text-slate-700 space-y-1 sm:space-y-1.5 pl-1 leading-snug">
               {(customDuties || `Kierowanie bieżącą działalnością naukową i organizacyjną ${orgName}.\nKoordynacja ogólnopolskich spotkań naukowych, warsztatów merytorycznych i sesji dyskusyjnych.\nNadzór nad realizacją projektów badawczych i przygotowaniem publikacji naukowych.\nReprezentowanie Koła przed Władzami Uczelni, Dziekanatem oraz jednostkami zewnętrznymi.`)
                 .split('\n')
                 .filter(Boolean)
                 .map((line, idx) => (
-                  <li key={idx} className="leading-relaxed">{line.replace(/^[•\-\*]\s*/, '')}</li>
+                  <li key={idx} className="leading-snug">{line.replace(/^[•\-\*]\s*/, '')}</li>
                 ))}
             </ul>
           )}
@@ -778,7 +821,7 @@ export function BoardCertificateTemplate({
       </div>
 
       {/* ── STREFA 3 (DOLNA): Podpisy i Stopka ── */}
-      <div className="relative z-10 mt-auto pt-6 sm:pt-8 space-y-3">
+      <div className="relative z-10 mt-auto pt-2 space-y-2">
         <DocumentSignaturesBlock
           activeSupervisors={activeSupervisors}
           orgShortName={orgShortName}
@@ -788,13 +831,7 @@ export function BoardCertificateTemplate({
           chairpersonSub={orgUnit}
         />
 
-        <div className="flex items-center justify-between text-[9px] text-slate-400 pt-2 border-t border-slate-100 font-mono">
-          <div className="flex items-center gap-1.5">
-            <ShieldCheck size={11} className="text-indigo-600 shrink-0" />
-            <span>Autentyczność zaświadczenia potwierdzona w systemie CRM {orgGenitive}</span>
-          </div>
-          <div>Data wydania: {formatPolishDate(docDate)}</div>
-        </div>
+        <DocumentStandardFooter org={org} docDate={docDate} />
       </div>
     </div>
   );
@@ -976,6 +1013,19 @@ export function MeetingsSummaryTableTemplate({
       <div className="border border-slate-200 rounded-lg overflow-hidden text-[9.5px] flex-1 min-h-[300px] flex flex-col mb-4 print:overflow-visible">
         <table className="w-full text-left border-collapse" style={{ tableLayout: 'fixed', width: '100%' }}>
           <thead className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200" style={{ display: 'table-header-group' }}>
+            <tr className="hidden print:table-row bg-white border-b border-slate-300">
+              <th colSpan={10} className="p-0 pb-1 text-left font-normal">
+                <div className="flex items-center justify-between text-[8px] text-slate-600 font-sans pb-1 mb-1 border-b border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <img src="/wskz-header.png" alt="" className="h-[7mm] object-contain" />
+                    <span className="font-bold text-slate-800 uppercase tracking-tight">{orgName}</span>
+                  </div>
+                  <div className="font-mono text-slate-500">
+                    Tabela Spotkań &bull; {docNumber}
+                  </div>
+                </div>
+              </th>
+            </tr>
             <tr>
               {showLp && <th className="py-2 px-1 text-center whitespace-nowrap" style={{ width: '4%' }}>LP.</th>}
               {showDate && <th className="py-2 px-2 whitespace-nowrap" style={{ width: '12%' }}>Data</th>}
@@ -1135,13 +1185,7 @@ export function MeetingsSummaryTableTemplate({
           chairpersonSub={orgShortName}
         />
 
-        <div className="flex items-center justify-between text-[9px] text-slate-400 pt-2 border-t border-slate-100 font-mono">
-          <div className="flex items-center gap-1">
-            <ShieldCheck size={10} className="text-indigo-600 shrink-0" />
-            <span>Autentyczność rejestru potwierdzona w systemie CRM {formatOrgGenitive(orgName)}</span>
-          </div>
-          <div>Warszawa, {formatPolishDate(docDate)}</div>
-        </div>
+        <DocumentStandardFooter org={org} docDate={docDate} />
       </div>
     </div>
   );
@@ -1391,6 +1435,19 @@ export function MembersRegistryTemplate({
         <div className="w-full max-w-full border border-slate-200 rounded-lg overflow-hidden text-[10px] flex-1 min-h-[300px] flex flex-col mb-4 print:border-slate-300 print:rounded-none print:overflow-visible box-border">
           <table className="w-full text-left border-collapse print:text-[9.5px]" style={{ tableLayout: 'fixed', width: '100%', pageBreakInside: 'auto', breakInside: 'auto' }}>
             <thead className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200" style={{ display: 'table-header-group' }}>
+              <tr className="hidden print:table-row bg-white border-b border-slate-300">
+                <th colSpan={10} className="p-0 pb-1 text-left font-normal">
+                  <div className="flex items-center justify-between text-[8px] text-slate-600 font-sans pb-1 mb-1 border-b border-slate-200">
+                    <div className="flex items-center gap-2">
+                      <img src="/wskz-header.png" alt="" className="h-[7mm] object-contain" />
+                      <span className="font-bold text-slate-800 uppercase tracking-tight">{orgName}</span>
+                    </div>
+                    <div className="font-mono text-slate-500">
+                      Ewidencja Członków &bull; {docNumber}
+                    </div>
+                  </div>
+                </th>
+              </tr>
               <tr>
                 {showLp && <th className="py-2 px-1 text-center text-[10px] whitespace-nowrap" style={{ width: colWidths.lp }}>LP.</th>}
                 {showName && <th className="py-2 px-2 text-[10px]" style={{ width: colWidths.name }}>Imię i Nazwisko</th>}
@@ -1465,13 +1522,7 @@ export function MembersRegistryTemplate({
           chairpersonSub={orgShortName}
         />
 
-        <div className="flex items-center justify-between text-[9px] text-slate-400 pt-2 border-t border-slate-100 font-mono">
-          <div className="flex items-center gap-1">
-            <ShieldCheck size={10} className="text-indigo-600 shrink-0" />
-            <span>Autentyczność ewidencji potwierdzona w systemie CRM {formatOrgGenitive(orgName)}</span>
-          </div>
-          <div>Warszawa, {formatPolishDate(docDate)}</div>
-        </div>
+        <DocumentStandardFooter org={org} docDate={docDate} />
       </div>
     </div>
   );
@@ -1597,6 +1648,19 @@ export function ResearchConferencesRegistryTemplate({
       <div className="border border-slate-200 rounded-lg overflow-hidden text-[9.5px] flex-1 min-h-[340px] flex flex-col mb-4 print:overflow-visible">
         <table className="w-full text-left border-collapse" style={{ tableLayout: 'fixed', width: '100%' }}>
           <thead className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200" style={{ display: 'table-header-group' }}>
+            <tr className="hidden print:table-row bg-white border-b border-slate-300">
+              <th colSpan={10} className="p-0 pb-1 text-left font-normal">
+                <div className="flex items-center justify-between text-[8px] text-slate-600 font-sans pb-1 mb-1 border-b border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <img src="/wskz-header.png" alt="" className="h-[7mm] object-contain" />
+                    <span className="font-bold text-slate-800 uppercase tracking-tight">{orgName}</span>
+                  </div>
+                  <div className="font-mono text-slate-500">
+                    Ewidencja Badań i Konferencji &bull; {docNumber}
+                  </div>
+                </div>
+              </th>
+            </tr>
             <tr>
               {showLp && <th className="py-2 px-2 text-center" style={{ width: '5%' }}>LP.</th>}
               {showCategory && <th className="py-2 px-2" style={{ width: '17%' }}>Kategoria</th>}
@@ -1744,13 +1808,7 @@ export function ResearchConferencesRegistryTemplate({
           chairpersonSub={`Koordynator ds. Badań i Nauki – ${orgShortName}`}
         />
 
-        <div className="flex items-center justify-between text-[9px] text-slate-400 pt-2 border-t border-slate-100 font-mono">
-          <div className="flex items-center gap-1">
-            <ShieldCheck size={10} className="text-indigo-600 shrink-0" />
-            <span>Autentyczność rejestru potwierdzona w systemie CRM {formatOrgGenitive(orgName)}</span>
-          </div>
-          <div>Warszawa, {formatPolishDate(docDate)}</div>
-        </div>
+        <DocumentStandardFooter org={org} docDate={docDate} />
       </div>
     </div>
   );
@@ -1929,13 +1987,7 @@ export function AnnualReportProtocolTemplate({
           chairpersonSub={orgShortName}
         />
 
-        <div className="flex items-center justify-between text-[9px] text-slate-400 pt-2 border-t border-slate-100 font-mono">
-          <div className="flex items-center gap-1">
-            <ShieldCheck size={10} className="text-indigo-600 shrink-0" />
-            <span>Autentyczność protokołu potwierdzona w systemie CRM {formatOrgGenitive(orgName)}</span>
-          </div>
-          <div>Warszawa, {formatPolishDate(docDate)}</div>
-        </div>
+        <DocumentStandardFooter org={org} docDate={docDate} />
       </div>
     </div>
   );
@@ -2079,13 +2131,7 @@ export function OfficialRegistryProtocolTemplate({
           chairpersonSub={orgShortName}
         />
 
-        <div className="flex items-center justify-between text-[9px] text-slate-400 pt-2 border-t border-slate-100 font-mono">
-          <div className="flex items-center gap-1">
-            <ShieldCheck size={10} className="text-indigo-600 shrink-0" />
-            <span>Autentyczność protokołu potwierdzona w systemie CRM {formatOrgGenitive(orgName)}</span>
-          </div>
-          <div>Warszawa, {formatPolishDate(new Date())}</div>
-        </div>
+        <DocumentStandardFooter org={org} docDate={new Date()} />
       </div>
     </div>
   );
@@ -2223,13 +2269,7 @@ export function OfficialCorrespondenceProtocolTemplate({
           chairpersonSub={`Kancelaria ${orgShortName}`}
         />
 
-        <div className="flex items-center justify-between text-[9px] text-slate-400 pt-2 border-t border-slate-100 font-mono">
-          <div className="flex items-center gap-1">
-            <ShieldCheck size={10} className="text-indigo-600 shrink-0" />
-            <span>Autentyczność rejestru potwierdzona w systemie CRM {formatOrgGenitive(orgName)}</span>
-          </div>
-          <div>Warszawa, {formatPolishDate(new Date())}</div>
-        </div>
+        <DocumentStandardFooter org={org} docDate={new Date()} />
       </div>
     </div>
   );
@@ -2396,6 +2436,8 @@ export function OfficialMeetingMinutesTemplate({
 
           </div>
         </div>
+
+        <DocumentStandardFooter org={org} docDate={protocolData.date || meeting?.formattedDate || meeting?.date || new Date()} />
       </section>
 
       {/* SEKCJA 2: ZAŁĄCZNIK - LISTA OBECNOŚCI (Startuje na czystej stronie) */}
