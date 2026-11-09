@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { useOrg } from '../context/OrgContext';
+import { useOrg, DEFAULT_ORGS } from '../context/OrgContext';
 import {
   Send,
   CheckCircle2,
@@ -61,17 +61,17 @@ const DOMAIN_TYPOS = {
 export default function SknApplicationForm({ orgId: propOrgId = null }) {
   const orgCtx = typeof useOrg === 'function' ? useOrg() : null;
 
-  // Rozpoznawanie organizacji: prop -> query params -> currentOrg w kontekście -> localStorage -> default 'uzaleznienia'
-  const targetOrgId = useMemo(() => {
-    if (propOrgId) return propOrgId;
+  // Rozpoznawanie organizacji: query params z URL -> prop -> currentOrg w kontekście -> localStorage -> default 'skn_seksuologii'
+  const initialOrgId = useMemo(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const urlOrg = params.get('org') || params.get('organization_id') || params.get('kolo') || params.get('tenant');
       if (urlOrg) {
-        const clean = urlOrg.toLowerCase();
+        const clean = urlOrg.toLowerCase().trim();
         if (clean.includes('psycho')) return 'psychoonkologia';
         if (clean.includes('uzalez') || clean === 'sknu') return 'uzaleznienia';
         if (clean.includes('seks')) return 'skn_seksuologii';
+        if (clean.includes('test')) return 'test';
         return clean;
       }
       if (window.location.hash) {
@@ -79,7 +79,16 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
         if (hash.includes('psycho')) return 'psychoonkologia';
         if (hash.includes('uzalez') || hash.includes('sknu')) return 'uzaleznienia';
         if (hash.includes('seks')) return 'skn_seksuologii';
+        if (hash.includes('test')) return 'test';
       }
+    }
+    if (propOrgId) {
+      const clean = String(propOrgId).toLowerCase().trim();
+      if (clean.includes('psycho')) return 'psychoonkologia';
+      if (clean.includes('uzalez') || clean === 'sknu') return 'uzaleznienia';
+      if (clean.includes('seks')) return 'skn_seksuologii';
+      if (clean.includes('test')) return 'test';
+      return clean;
     }
     if (orgCtx?.currentOrg?.id) {
       return orgCtx.currentOrg.id;
@@ -87,12 +96,45 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
     const saved = typeof window !== 'undefined' ? localStorage.getItem('crm_active_org_id') : null;
     if (saved) return saved;
 
-    // Domyślna organizacja dla formularza rekrutacyjnego
-    return 'uzaleznienia';
+    return 'skn_seksuologii';
   }, [propOrgId, orgCtx?.currentOrg?.id]);
+
+  const [selectedOrgId, setSelectedOrgId] = useState(initialOrgId);
+
+  useEffect(() => {
+    if (initialOrgId) {
+      setSelectedOrgId(initialOrgId);
+    }
+  }, [initialOrgId]);
+
+  const targetOrgId = selectedOrgId || initialOrgId;
+
+  const handleSelectOrg = (newOrgId) => {
+    setSelectedOrgId(newOrgId);
+    if (typeof window !== 'undefined' && window.history?.replaceState) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('form', 'rekrutacja');
+      url.searchParams.set('org', newOrgId);
+      window.history.replaceState({}, '', url.toString());
+    }
+  };
+
+  const availableOrgs = useMemo(() => {
+    const list = orgCtx?.organizations || DEFAULT_ORGS;
+    // Pokaż główne koła (seksuologia, uzależnienia, psychoonkologia, oraz test jeśli włączone)
+    return list;
+  }, [orgCtx?.organizations]);
+
+  const currentOrgMeta = useMemo(() => {
+    return availableOrgs.find(o => o.id === targetOrgId) ||
+      DEFAULT_ORGS.find(o => o.id === targetOrgId) ||
+      DEFAULT_ORGS[0];
+  }, [targetOrgId, availableOrgs]);
 
   const isUzaleznienia = targetOrgId === 'uzaleznienia' || targetOrgId === 'sknu';
   const isPsychoonkologia = targetOrgId === 'psychoonkologia' || targetOrgId?.includes('psycho');
+  const isTest = targetOrgId === 'test';
+  const isSeksuologia = !isUzaleznienia && !isPsychoonkologia && !isTest;
 
   // Nazwy i etykiety formalne organizacji
   const orgLine1 = 'Studenckie Koło Naukowe';
@@ -100,18 +142,24 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
     ? 'Zachowań Ryzykowych i Uzależnień'
     : isPsychoonkologia
       ? 'Psychoonkologii WSKZ'
-      : 'Seksuologii WSKZ';
-  const orgFullName = `${orgLine1} ${orgLine2}`;
+      : isTest
+        ? 'Testowe (Instancja Demonstracyjna)'
+        : 'Seksuologii WSKZ';
+  const orgFullName = currentOrgMeta?.name || `${orgLine1} ${orgLine2}`;
   const orgGenitive = isUzaleznienia
     ? 'Studenckiego Koła Naukowego Zachowań Ryzykowych i Uzależnień'
     : isPsychoonkologia
       ? 'Studenckiego Koła Naukowego Psychoonkologii WSKZ'
-      : 'Studenckiego Koła Naukowego Seksuologii WSKZ';
+      : isTest
+        ? 'Studenckiego Koła Naukowego Testowego'
+        : 'Studenckiego Koła Naukowego Seksuologii WSKZ';
   const orgBoardName = isUzaleznienia
     ? 'Zarząd Koła Naukowego Zachowań Ryzykowych i Uzależnień'
     : isPsychoonkologia
-      ? 'Zarząd Koła Naukowego Psychoonkologii'
-      : 'Zarząd SKN Seksuologii';
+      ? 'Zarząd Koła Naukowego Psychoonkologii WSKZ'
+      : isTest
+        ? 'Zarząd Koła Testowego'
+        : 'Zarząd SKN Seksuologii';
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -484,27 +532,72 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
     }
   };
 
+  const themeClasses = useMemo(() => {
+    if (isUzaleznienia) {
+      return {
+        bg: 'bg-[#f0f6f4] bg-gradient-to-b from-[#f4f8f6] via-[#edf5f2] to-[#e4efeb] selection:bg-teal-600 selection:text-white',
+        card: 'shadow-teal-950/10 border border-teal-100/90 ring-1 ring-teal-900/5',
+        badge: 'bg-teal-50 text-teal-800 border border-teal-200/90',
+        title: 'text-teal-950',
+        accentBtn: 'bg-teal-600 hover:bg-teal-700 shadow-teal-200',
+        submitBtn: 'bg-gradient-to-r from-teal-600 via-teal-700 to-emerald-700 hover:from-teal-700 hover:to-emerald-800 shadow-xl shadow-teal-600/25 hover:shadow-teal-600/35',
+        successBox: 'bg-gradient-to-br from-teal-50/80 via-white to-emerald-50/50 border-teal-200 text-teal-950 shadow-teal-500/10',
+        successIcon: 'bg-gradient-to-tr from-teal-500 to-emerald-600 shadow-teal-500/30',
+        successBadge: 'bg-teal-100 text-teal-800 border-teal-300',
+      };
+    }
+    if (isPsychoonkologia) {
+      return {
+        bg: 'bg-[#faf5ff] bg-gradient-to-b from-[#fdfaff] via-[#f7f0fc] to-[#efe5f7] selection:bg-purple-600 selection:text-white',
+        card: 'shadow-purple-950/10 border border-purple-100/90 ring-1 ring-purple-900/5',
+        badge: 'bg-purple-50 text-purple-800 border border-purple-200/90',
+        title: 'text-purple-950',
+        accentBtn: 'bg-purple-600 hover:bg-purple-700 shadow-purple-200',
+        submitBtn: 'bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-700 hover:from-purple-700 hover:to-indigo-800 shadow-xl shadow-purple-600/25 hover:shadow-purple-600/35',
+        successBox: 'bg-gradient-to-br from-purple-50/80 via-white to-indigo-50/50 border-purple-200 text-purple-950 shadow-purple-500/10',
+        successIcon: 'bg-gradient-to-tr from-purple-500 to-indigo-600 shadow-purple-500/30',
+        successBadge: 'bg-purple-100 text-purple-800 border-purple-300',
+      };
+    }
+    if (isTest) {
+      return {
+        bg: 'bg-[#fffdf5] bg-gradient-to-b from-[#fffef7] via-[#fffbf0] to-[#fef3c7]/30 selection:bg-amber-600 selection:text-white',
+        card: 'shadow-amber-950/10 border border-amber-200/90 ring-1 ring-amber-900/5',
+        badge: 'bg-amber-50 text-amber-800 border border-amber-200/90',
+        title: 'text-amber-950',
+        accentBtn: 'bg-amber-600 hover:bg-amber-700 shadow-amber-200',
+        submitBtn: 'bg-gradient-to-r from-amber-600 via-amber-700 to-yellow-700 hover:from-amber-700 hover:to-yellow-800 shadow-xl shadow-amber-600/25 hover:shadow-amber-600/35',
+        successBox: 'bg-gradient-to-br from-amber-50/80 via-white to-yellow-50/50 border-amber-200 text-amber-950 shadow-amber-500/10',
+        successIcon: 'bg-gradient-to-tr from-amber-500 to-yellow-600 shadow-amber-500/30',
+        successBadge: 'bg-amber-100 text-amber-800 border-amber-300',
+      };
+    }
+    // Domyślny: SKN Seksuologii
+    return {
+      bg: 'bg-[#eef4f8] bg-gradient-to-b from-[#f1f6fa] via-[#eef4f8] to-[#e4eef6] selection:bg-indigo-600 selection:text-white',
+      card: 'shadow-sky-950/10 border border-sky-100/90 ring-1 ring-slate-900/5',
+      badge: 'bg-indigo-50 text-indigo-700 border border-indigo-200/80',
+      title: 'text-slate-950',
+      accentBtn: 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200',
+      submitBtn: 'bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 hover:from-indigo-700 hover:to-purple-800 shadow-xl shadow-indigo-500/25 hover:shadow-indigo-500/35',
+      successBox: 'bg-gradient-to-br from-emerald-50/80 via-white to-emerald-50/50 border-emerald-200 text-emerald-900 shadow-emerald-500/10',
+      successIcon: 'bg-gradient-to-tr from-emerald-500 to-teal-500 shadow-emerald-500/30',
+      successBadge: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+    };
+  }, [isUzaleznienia, isPsychoonkologia, isTest]);
+
   return (
-    <div className={`min-h-screen w-full max-w-full overflow-x-hidden py-6 sm:py-12 md:py-16 px-3 sm:px-6 lg:px-8 flex items-center justify-center font-sans relative ${
-      isUzaleznienia
-        ? 'bg-[#f0f6f4] bg-gradient-to-b from-[#f4f8f6] via-[#edf5f2] to-[#e4efeb] selection:bg-teal-600 selection:text-white'
-        : 'bg-[#eef4f8] bg-gradient-to-b from-[#f1f6fa] via-[#eef4f8] to-[#e4eef6] selection:bg-indigo-600 selection:text-white'
-    }`}>
-      <div className={`max-w-3xl w-full bg-white rounded-[24px] sm:rounded-[32px] shadow-2xl overflow-hidden p-4 sm:p-8 md:p-12 transition-all relative ${
-        isUzaleznienia
-          ? 'shadow-teal-950/10 border border-teal-100/90 ring-1 ring-teal-900/5'
-          : 'shadow-sky-950/10 border border-sky-100/90 ring-1 ring-slate-900/5'
-      }`}>
+    <div className={`min-h-screen w-full max-w-full overflow-x-hidden py-6 sm:py-12 md:py-16 px-3 sm:px-6 lg:px-8 flex items-center justify-center font-sans relative ${themeClasses.bg}`}>
+      <div className={`max-w-3xl w-full bg-white rounded-[24px] sm:rounded-[32px] shadow-2xl overflow-hidden p-4 sm:p-8 md:p-12 transition-all relative ${themeClasses.card}`}>
 
         {/* Nagłówek */}
         <div className="text-center mb-10 sm:mb-12">
-          <div className="mb-3.5">
-            <span className={`inline-block px-4 py-1.5 rounded-full text-[11px] sm:text-xs font-bold tracking-wider uppercase shadow-2xs whitespace-nowrap ${
-              isUzaleznienia
-                ? 'bg-teal-50 text-teal-800 border border-teal-200/90'
-                : 'bg-indigo-50 text-indigo-700 border border-indigo-200/80'
-            }`}>
+          <div className="mb-3.5 flex items-center justify-center gap-2 flex-wrap">
+            <span className={`inline-block px-4 py-1.5 rounded-full text-[11px] sm:text-xs font-bold tracking-wider uppercase shadow-2xs whitespace-nowrap ${themeClasses.badge}`}>
               Oficjalna rekrutacja • Rok akademicki 2026/2027
+            </span>
+            <span className="inline-block px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wide bg-slate-100 text-slate-800 border border-slate-300/80 shadow-2xs">
+              {currentOrgMeta.shortName || currentOrgMeta.tag || 'SKN'}
             </span>
           </div>
 
@@ -512,9 +605,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
             <h1 className="text-base sm:text-xl md:text-2xl font-extrabold text-slate-800 tracking-tight leading-tight">
               {orgLine1}
             </h1>
-            <h2 className={`text-xl sm:text-3xl md:text-4xl lg:text-[34px] font-black tracking-tight leading-tight ${
-              isUzaleznienia ? 'text-teal-950' : 'text-slate-950'
-            }`}>
+            <h2 className={`text-xl sm:text-3xl md:text-4xl lg:text-[34px] font-black tracking-tight leading-tight ${themeClasses.title}`}>
               {orgLine2}
             </h2>
           </div>
@@ -522,27 +613,40 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
           <p className="mt-4 text-slate-700 font-semibold text-xs sm:text-sm md:text-base tracking-tight">
             Oficjalna Deklaracja Członkowska oraz Oświadczenia Formalne dla Studentów Psychologii WSKZ
           </p>
+
+          {/* Dedykowany selektor kół: umożliwia kandydatowi weryfikację lub natychmiastowe przełączenie koła */}
+          <div className="mt-5 inline-flex items-center gap-1.5 p-1 rounded-2xl bg-slate-100/90 border border-slate-200/90 shadow-inner max-w-full flex-wrap justify-center">
+            <span className="text-[10px] font-bold text-slate-500 uppercase px-2 tracking-wider">
+              Aplikujesz do:
+            </span>
+            {availableOrgs.map((o) => {
+              const isSelected = o.id === targetOrgId;
+              return (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => handleSelectOrg(o.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-white text-slate-900 shadow-sm border border-slate-300 scale-[1.02]'
+                      : 'text-slate-500 hover:text-slate-800 hover:bg-white/60'
+                  }`}
+                  title={`Przełącz formularz na ${o.name}`}
+                >
+                  {o.shortName || o.tag || o.name}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {status.success ? (
-          <div className={`border rounded-3xl p-10 sm:p-12 text-center animate-in zoom-in-95 duration-200 shadow-xl space-y-5 ${
-            isUzaleznienia
-              ? 'bg-gradient-to-br from-teal-50/80 via-white to-emerald-50/50 border-teal-200 text-teal-950 shadow-teal-500/10'
-              : 'bg-gradient-to-br from-emerald-50/80 via-white to-emerald-50/50 border-emerald-200 text-emerald-900 shadow-emerald-500/10'
-          }`}>
-            <div className={`w-20 h-20 text-white rounded-3xl flex items-center justify-center mx-auto shadow-lg ${
-              isUzaleznienia
-                ? 'bg-gradient-to-tr from-teal-500 to-emerald-600 shadow-teal-500/30'
-                : 'bg-gradient-to-tr from-emerald-500 to-teal-500 shadow-emerald-500/30'
-            }`}>
+          <div className={`border rounded-3xl p-10 sm:p-12 text-center animate-in zoom-in-95 duration-200 shadow-xl space-y-5 ${themeClasses.successBox}`}>
+            <div className={`w-20 h-20 text-white rounded-3xl flex items-center justify-center mx-auto shadow-lg ${themeClasses.successIcon}`}>
               <CheckCircle2 size={44} strokeWidth={2.3} />
             </div>
             <div className="space-y-2">
-              <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border ${
-                isUzaleznienia
-                  ? 'bg-teal-100 text-teal-800 border-teal-300'
-                  : 'bg-emerald-100 text-emerald-800 border-emerald-300'
-              }`}>
+              <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border ${themeClasses.successBadge}`}>
                 Zgłoszenie zarejestrowane
               </span>
               <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
@@ -550,17 +654,13 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
               </h3>
             </div>
             <p className="text-slate-600 max-w-md mx-auto text-sm leading-relaxed">
-              Twoje zgłoszenie trafiło do systemu kwarantanny i oczekuje na weryfikację przez {orgBoardName}. Oficjalne potwierdzenie otrzymasz drogą mailową.
+              Twoje zgłoszenie trafiło do systemu kwarantanny koła <strong>{orgFullName}</strong> i oczekuje na weryfikację przez {orgBoardName}. Oficjalne potwierdzenie otrzymasz drogą mailową.
             </p>
             <div className="pt-3 flex items-center justify-center">
               <button
                 type="button"
                 onClick={() => setStatus({ loading: false, success: false, error: null })}
-                className={`px-6 py-3 text-white font-bold text-xs rounded-xl transition shadow-md cursor-pointer inline-flex items-center gap-2 ${
-                  isUzaleznienia
-                    ? 'bg-teal-600 hover:bg-teal-700 shadow-teal-200'
-                    : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200'
-                }`}
+                className={`px-6 py-3 text-white font-bold text-xs rounded-xl transition shadow-md cursor-pointer inline-flex items-center gap-2 ${themeClasses.accentBtn}`}
               >
                 <span>Złóż kolejną deklarację</span>
               </button>
@@ -951,11 +1051,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
               <button
                 type="submit"
                 disabled={status.loading || (touched.index_number && Boolean(indexError)) || (touched.email && Boolean(emailError))}
-                className={`w-full py-4 px-8 text-white font-bold rounded-2xl transition-all flex items-center justify-center gap-2.5 text-base tracking-wide cursor-pointer active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed ${
-                  isUzaleznienia
-                    ? 'bg-gradient-to-r from-teal-600 via-teal-700 to-emerald-700 hover:from-teal-700 hover:to-emerald-800 shadow-xl shadow-teal-600/25 hover:shadow-teal-600/35'
-                    : 'bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 hover:from-indigo-700 hover:to-purple-800 shadow-xl shadow-indigo-500/25 hover:shadow-indigo-500/35'
-                }`}
+                className={`w-full py-4 px-8 text-white font-bold rounded-2xl transition-all flex items-center justify-center gap-2.5 text-base tracking-wide cursor-pointer active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed ${themeClasses.submitBtn}`}
               >
                 {status.loading ? (
                   <>

@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect, startTransition } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useOrg } from '../context/OrgContext';
+import { showToast } from '../utils/toast';
 import {
   CheckCircle2,
   AlertTriangle,
@@ -160,15 +162,17 @@ export default function QuarantineTab({
   pendingSyncCount = 0,
   onBatchSyncMembers,
 }) {
+  const { currentOrg } = useOrg() || {};
   const [viewMode, setViewMode] = useState('pending'); // 'pending' | 'archive'
   const [dupeFilter, setDupeFilter] = useState('all'); // 'all' | 'unique' | 'dupes'
   const [selectedIds, setSelectedIds] = useState([]);
   const [selectedArchiveIds, setSelectedArchiveIds] = useState([]);
   const [copiedLink, setCopiedLink] = useState(false);
 
-  // Kopiowanie publicznego linku do formularza bez natywnego alertu
+  // Kopiowanie publicznego linku do formularza dedykowanego dla bieżącego koła
   const handleCopyFormLink = async () => {
-    const url = `${window.location.origin}${window.location.pathname}?form=rekrutacja`;
+    const orgId = currentOrg?.id || 'skn_seksuologii';
+    const url = `${window.location.origin}${window.location.pathname}?form=rekrutacja&org=${encodeURIComponent(orgId)}`;
     try {
       if (navigator?.clipboard?.writeText) {
         await navigator.clipboard.writeText(url);
@@ -184,6 +188,7 @@ export default function QuarantineTab({
         document.body.removeChild(textArea);
       }
       setCopiedLink(true);
+      showToast(`Skopiowano link rekrutacyjny dla: ${currentOrg?.shortName || currentOrg?.name || orgId}`);
       setTimeout(() => setCopiedLink(false), 2200);
     } catch (err) {
       console.error('Błąd kopiowania linku do schowka:', err);
@@ -1151,17 +1156,17 @@ export default function QuarantineTab({
                 ? 'bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-xs'
                 : 'bg-white hover:bg-purple-50/50 text-purple-800 border border-purple-200 shadow-2xs'
             }`}
-            title="Skopiuj link do publicznego formularza zgłoszeniowego dla kandydatów"
+            title={`Skopiuj dedykowany link do formularza rekrutacyjnego dla: ${currentOrg?.name || currentOrg?.id || 'SKN'}`}
           >
             {copiedLink ? (
               <>
                 <Check size={15} strokeWidth={2.5} className="shrink-0 text-emerald-600 animate-in zoom-in-75 duration-150" />
-                <span className="font-bold text-emerald-800">Skopiowano link!</span>
+                <span className="font-bold text-emerald-800">Skopiowano link ({currentOrg?.shortName || currentOrg?.tag || 'SKN'})!</span>
               </>
             ) : (
               <>
                 <FileSpreadsheet size={15} strokeWidth={2.2} className="shrink-0 text-purple-600" />
-                <span>Kopiuj link do deklaracji</span>
+                <span>Kopiuj link rekrutacji ({currentOrg?.shortName || currentOrg?.tag || 'SKN'})</span>
               </>
             )}
           </button>

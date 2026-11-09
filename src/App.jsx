@@ -2989,8 +2989,16 @@ export default function App() {
 
   const [showPublicForm, setShowPublicForm] = useState(isPublicFormRequested);
 
+  const urlOrgParam = typeof window !== 'undefined' ? (
+    new URLSearchParams(window.location.search).get('org') ||
+    new URLSearchParams(window.location.search).get('organization_id') ||
+    new URLSearchParams(window.location.search).get('kolo') ||
+    new URLSearchParams(window.location.search).get('tenant')
+  ) : null;
+  const effectiveFormOrgId = urlOrgParam || currentOrg?.id;
+
   if (showPublicForm) {
-    return <SknApplicationForm orgId={currentOrg?.id} />;
+    return <SknApplicationForm orgId={effectiveFormOrgId} />;
   }
 
   if (!isAuthenticated || !user) {
