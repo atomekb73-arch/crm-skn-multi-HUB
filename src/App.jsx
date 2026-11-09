@@ -3002,7 +3002,7 @@ export default function App() {
   }
 
   if (!isAuthenticated || !user) {
-    return <LoginScreen onOpenPublicForm={() => setShowPublicForm(true)} />;
+    return <LoginScreen onOpenPublicForm={() => setShowPublicForm(true)} currentOrgId={currentOrgCleanId} />;
   }
 
   return (

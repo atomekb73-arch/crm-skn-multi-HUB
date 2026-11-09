@@ -16,6 +16,7 @@ import {
   Check,
   RotateCcw,
   X,
+  ArrowRight,
 } from 'lucide-react';
 
 // Wyrażenie regularne dla numeru indeksu: dokładnie 4 lub 5 cyfr, bez wiodącego zera
@@ -180,10 +181,34 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
   });
 
   const [status, setStatus] = useState({ loading: false, success: false, error: null });
+  const [submittedSummary, setSubmittedSummary] = useState(null);
   const [archivalModal, setArchivalModal] = useState({
     isOpen: false,
     matchedRecord: null,
   });
+
+  const handleSwitchOrgAfterSubmission = (newOrgId) => {
+    handleSelectOrg(newOrgId);
+    if (submittedSummary) {
+      setFormData({
+        full_name: submittedSummary.fullName,
+        email: submittedSummary.email,
+        index_number: submittedSummary.indexNumber,
+        field_of_study: submittedSummary.fieldOfStudy || 'Psychologia',
+        study_year: submittedSummary.studyYear || 'Rok 1, Semestr 1',
+        consent_secret: true,
+        consent_discussion: true,
+        consent_no_recording: true,
+        consent_materials: true,
+      });
+      setTouched({
+        full_name: true,
+        email: true,
+        index_number: true,
+      });
+    }
+    setStatus({ loading: false, success: false, error: null });
+  };
 
   // 1. Walidacja numeru indeksu (4-5 cyfr, bez wiodącego 0)
   const indexError = useMemo(() => {
@@ -312,6 +337,18 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
       }
 
       console.log('[SknApplicationForm] Rekord pomyślnie zapisany w bazie Supabase:', { resStatus, statusText, data });
+
+      setSubmittedSummary({
+        fullName: formData.full_name.trim(),
+        email: formData.email.trim().toLowerCase(),
+        indexNumber: formData.index_number.trim(),
+        fieldOfStudy: formData.field_of_study || 'Psychologia',
+        studyYear: formData.study_year || 'Rok 1, Semestr 1',
+        orgId: targetOrgId,
+        orgName: orgFullName,
+        orgShortName: currentOrgMeta.shortName || currentOrgMeta.tag || 'SKN',
+        boardName: orgBoardName,
+      });
 
       setArchivalModal({ isOpen: false, matchedRecord: null });
       setStatus({ loading: false, success: true, error: null });
@@ -641,28 +678,99 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
         </div>
 
         {status.success ? (
-          <div className={`border rounded-3xl p-10 sm:p-12 text-center animate-in zoom-in-95 duration-200 shadow-xl space-y-5 ${themeClasses.successBox}`}>
+          <div className={`border rounded-3xl p-6 sm:p-10 md:p-12 text-center animate-in zoom-in-95 duration-200 shadow-xl space-y-6 ${themeClasses.successBox}`}>
             <div className={`w-20 h-20 text-white rounded-3xl flex items-center justify-center mx-auto shadow-lg ${themeClasses.successIcon}`}>
               <CheckCircle2 size={44} strokeWidth={2.3} />
             </div>
+
             <div className="space-y-2">
-              <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border ${themeClasses.successBadge}`}>
+              <span className={`inline-block px-3.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border ${themeClasses.successBadge}`}>
                 Zgłoszenie zarejestrowane
               </span>
               <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
                 Deklaracja została pomyślnie przyjęta!
               </h3>
             </div>
-            <p className="text-slate-600 max-w-md mx-auto text-sm leading-relaxed">
-              Twoje zgłoszenie trafiło do systemu kwarantanny koła <strong>{orgFullName}</strong> i oczekuje na weryfikację przez {orgBoardName}. Oficjalne potwierdzenie otrzymasz drogą mailową.
+
+            {/* Karta potwierdzenia organizacji docelowej */}
+            <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-sm max-w-lg mx-auto text-left space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  Zarejestrowano dla koła naukowego:
+                </span>
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${themeClasses.badge}`}>
+                  {submittedSummary?.orgShortName || currentOrgMeta.shortName || 'SKN'}
+                </span>
+              </div>
+
+              <div className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+                <span className="text-xl">
+                  {isPsychoonkologia ? '🎗️' : isUzaleznienia ? '🏷️' : isTest ? '🧪' : '💚'}
+                </span>
+                <span>{submittedSummary?.orgName || orgFullName}</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-100">
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Kandydat:</span>
+                  <span className="font-bold text-slate-800">{submittedSummary?.fullName || 'Student'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Nr indeksu:</span>
+                  <span className="font-mono font-bold text-slate-800">{submittedSummary?.indexNumber || '—'}</span>
+                </div>
+                <div className="sm:col-span-2">
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">E-mail:</span>
+                  <span className="font-semibold text-slate-700">{submittedSummary?.email || '—'}</span>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-slate-600 max-w-md mx-auto text-xs sm:text-sm leading-relaxed">
+              Twoje zgłoszenie trafiło do systemu kwarantanny koła <strong>{submittedSummary?.orgName || orgFullName}</strong> i oczekuje na weryfikację przez {submittedSummary?.boardName || orgBoardName}.
             </p>
-            <div className="pt-3 flex items-center justify-center">
+
+            {/* Sekcja szybkiej korekty koła, jeśli kandydat wybrał inne koło przez pomyłkę */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/90 border border-slate-200/90 max-w-lg mx-auto text-left space-y-3">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
+                <AlertCircle size={15} className="text-amber-500 shrink-0" />
+                <span>Chciałeś/-aś aplikować do innego Koła Naukowego?</span>
+              </div>
+              <p className="text-[11px] text-slate-600 leading-normal">
+                Jeśli przez pomyłkę wybrano niewłaściwe koło, kliknij poniżej, aby natychmiast złożyć deklarację do właściwego koła (Twoje dane i zgody zostaną zachowane):
+              </p>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {availableOrgs
+                  .filter(o => o.id !== targetOrgId)
+                  .map(otherOrg => {
+                    const isOtherPsycho = otherOrg.id === 'psychoonkologia';
+                    const isOtherUzal = otherOrg.id === 'uzaleznienia';
+                    const isOtherTest = otherOrg.id === 'test';
+                    const icon = isOtherPsycho ? '🎗️' : isOtherUzal ? '🏷️' : isOtherTest ? '🧪' : '💚';
+                    return (
+                      <button
+                        key={otherOrg.id}
+                        type="button"
+                        onClick={() => handleSwitchOrgAfterSubmission(otherOrg.id)}
+                        className="px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 shadow-2xs transition-all cursor-pointer flex items-center gap-1.5"
+                      >
+                        <span>{icon}</span>
+                        <span>Złóż do {otherOrg.shortName || otherOrg.name}</span>
+                        <ArrowRight size={13} className="text-slate-400" />
+                      </button>
+                    );
+                  })}
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-center gap-3 flex-wrap">
               <button
                 type="button"
                 onClick={() => setStatus({ loading: false, success: false, error: null })}
                 className={`px-6 py-3 text-white font-bold text-xs rounded-xl transition shadow-md cursor-pointer inline-flex items-center gap-2 ${themeClasses.accentBtn}`}
               >
-                <span>Złóż kolejną deklarację</span>
+                <RotateCcw size={14} />
+                <span>Złóż nową deklarację</span>
               </button>
             </div>
           </div>
@@ -677,14 +785,104 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
               </div>
             )}
 
+            {/* 1. Wybór Koła Naukowego */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-black flex items-center gap-2">
+                  <ShieldCheck size={16} className={isPsychoonkologia ? 'text-purple-600' : isUzaleznienia ? 'text-teal-600' : isTest ? 'text-amber-600' : 'text-indigo-600'} />
+                  <span>1. Wybierz Koło Naukowe, do którego aplikujesz *</span>
+                </h2>
+                <span className="text-[11px] text-slate-500 font-medium">Kliknij wybrane koło</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {availableOrgs.map((org) => {
+                  const isSelected = org.id === targetOrgId;
+                  const isPsycho = org.id === 'psychoonkologia';
+                  const isUzal = org.id === 'uzaleznienia';
+                  const isTestOrg = org.id === 'test';
+
+                  const icon = isPsycho ? '🎗️' : isUzal ? '🏷️' : isTestOrg ? '🧪' : '💚';
+                  const activeCardClass = isPsycho
+                    ? 'border-purple-500 bg-purple-50/70 ring-2 ring-purple-400/40 shadow-md shadow-purple-500/10'
+                    : isUzal
+                      ? 'border-teal-500 bg-teal-50/70 ring-2 ring-teal-400/40 shadow-md shadow-teal-500/10'
+                      : isTestOrg
+                        ? 'border-amber-500 bg-amber-50/70 ring-2 ring-amber-400/40 shadow-md shadow-amber-500/10'
+                        : 'border-indigo-500 bg-indigo-50/70 ring-2 ring-indigo-400/40 shadow-md shadow-indigo-500/10';
+
+                  return (
+                    <button
+                      key={org.id}
+                      type="button"
+                      onClick={() => handleSelectOrg(org.id)}
+                      className={`relative p-3.5 rounded-2xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between ${
+                        isSelected
+                          ? activeCardClass
+                          : 'border-slate-200 bg-white hover:bg-slate-50/80 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <span className="text-xl leading-none">{icon}</span>
+                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
+                          isSelected
+                            ? isPsycho
+                              ? 'bg-purple-600 border-purple-600 text-white'
+                              : isUzal
+                                ? 'bg-teal-600 border-teal-600 text-white'
+                                : isTestOrg
+                                  ? 'bg-amber-600 border-amber-600 text-white'
+                                  : 'bg-indigo-600 border-indigo-600 text-white'
+                            : 'border-slate-300 bg-white'
+                        }`}>
+                          {isSelected && <Check size={12} strokeWidth={3} />}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="text-xs font-bold text-slate-900 leading-tight">
+                          {org.shortName || org.tag || org.name}
+                        </div>
+                        <div className="text-[11px] text-slate-600 mt-1 line-clamp-2 leading-snug">
+                          {org.name}
+                        </div>
+                      </div>
+
+                      {isSelected && (
+                        <div className="mt-2.5 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
+                          <span className={isPsycho ? 'text-purple-700' : isUzal ? 'text-teal-700' : isTestOrg ? 'text-amber-700' : 'text-indigo-700'}>
+                            Wybrane koło
+                          </span>
+                          <span className="text-slate-400">Aktywne</span>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Dane Osobowe */}
             <div className="space-y-6">
               <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-black flex items-center gap-2">
                   <GraduationCap size={16} className="text-indigo-600" />
-                  <span>1. Dane kandydata / studenta</span>
+                  <span>2. Dane kandydata / studenta</span>
                 </h2>
                 <span className="text-[11px] text-slate-500 font-medium">* Pola wymagane</span>
+              </div>
+
+              {/* Informacyjny boks z wybraną organizacją */}
+              <div className="p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 flex items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">{isPsychoonkologia ? '🎗️' : isUzaleznienia ? '🏷️' : isTest ? '🧪' : '💚'}</span>
+                  <span className="text-slate-600">
+                    Aplikujesz do: <strong className="text-slate-900">{orgFullName}</strong>
+                  </span>
+                </div>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${themeClasses.badge}`}>
+                  {currentOrgMeta.shortName || 'SKN'}
+                </span>
               </div>
 
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -861,8 +1059,8 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
             <div className="space-y-4 pt-2">
               <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-black flex items-center gap-2">
-                  <ShieldCheck size={16} className={isUzaleznienia ? 'text-teal-600' : 'text-indigo-600'} />
-                  <span>2. Oświadczenia formalne i regulaminowe (Wszystkie wymagane)</span>
+                  <ShieldCheck size={16} className={isPsychoonkologia ? 'text-purple-600' : isUzaleznienia ? 'text-teal-600' : isTest ? 'text-amber-600' : 'text-indigo-600'} />
+                  <span>3. Oświadczenia formalne i regulaminowe (Wszystkie wymagane)</span>
                 </h2>
                 <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${
                   isUzaleznienia

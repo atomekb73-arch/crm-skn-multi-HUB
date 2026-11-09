@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { useAuth, DEFAULT_STARTER_PASSWORD } from '../context/AuthContext';
 
-export default function LoginScreen({ onOpenPublicForm }) {
+export default function LoginScreen({ onOpenPublicForm, currentOrgId }) {
   const { checkEmailStatus, refreshRemoteAccess, activateAccount, loginWithPassword } = useAuth();
 
   // Step state: 'email' | 'password' | 'activate'
@@ -517,7 +517,14 @@ export default function LoginScreen({ onOpenPublicForm }) {
         <div className="text-center">
           <button
             type="button"
-            onClick={onOpenPublicForm || (() => { window.location.search = '?form=rekrutacja'; })}
+            onClick={() => {
+              if (typeof onOpenPublicForm === 'function') {
+                onOpenPublicForm();
+              } else {
+                const orgParam = currentOrgId ? `&org=${encodeURIComponent(currentOrgId)}` : '';
+                window.location.search = `?form=rekrutacja${orgParam}`;
+              }
+            }}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 text-purple-100 hover:text-white text-xs font-semibold backdrop-blur-md transition-all shadow-md hover:shadow-lg border border-white/20 cursor-pointer"
           >
             <span>Kandydat do Koła? Złóż Deklarację Członkowską online</span>
