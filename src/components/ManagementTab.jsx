@@ -33,7 +33,7 @@ import {
   EyeOff,
   Copy,
 } from 'lucide-react';
-import { formatPhone, formatEmail } from '../utils/rodoMasking';
+import { formatPhone, formatEmail, splitEmails, maskSingleEmail } from '../utils/rodoMasking';
 import { VectorRingIndicator } from './VectorIcons';
 import { calcFrequency, getFrequencyBadge, getCertificateStatus, getRecordKey } from '../utils/helpers';
 import { calculateCurrentStudyYear } from '../utils/academicYear';
@@ -1637,15 +1637,20 @@ export default function ManagementTab({
                     {(m.email || m.phone || m.telefon) && (
                       <div className="print-subtext hidden sm:flex items-center gap-2 mt-0.5 flex-wrap print:whitespace-normal print:overflow-visible">
                         {m.email && (
-                          <div className="inline-flex items-center gap-1 text-[11px] text-slate-500 font-normal">
-                            <a
-                              href={`mailto:${m.email}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="hover:text-purple-700 hover:underline transition-colors"
-                              title={isRowProtected ? "Adres e-mail zamaskowany (RODO). Kliknij oko, aby podejrzeć." : m.email}
-                            >
-                              {formatEmail(m.email, isRowProtected)}
-                            </a>
+                          <div className="inline-flex items-center gap-1 text-[11px] text-slate-500 font-normal flex-wrap">
+                            {splitEmails(m.email).map((singleEmail, eIdx, arr) => (
+                              <span key={eIdx} className="inline-flex items-center">
+                                <a
+                                  href={`mailto:${singleEmail}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="hover:text-purple-700 hover:underline transition-colors"
+                                  title={isRowProtected ? "Adres e-mail zamaskowany (RODO). Kliknij oko, aby podejrzeć." : singleEmail}
+                                >
+                                  {maskSingleEmail(singleEmail, isRowProtected)}
+                                </a>
+                                {eIdx < arr.length - 1 && <span className="mr-1 text-slate-400">,</span>}
+                              </span>
+                            ))}
                             {rodoProtected && (
                               <button
                                 type="button"

@@ -9,37 +9,106 @@
  */
 
 /**
- * Dynamiczne maskowanie numeru telefonu w locie.
- * @param {string|null|undefined} phone - Pełny numer telefonu (np. "+48 501 273 366" lub "501273366")
- * @param {boolean} isProtected - Czy maskowanie ma być aktywne
- * @returns {string} Zamaskowany numer lub pełna wartość (albo "—" w razie braku)
+ * Rozdziela ciąg zawierający potencjalnie wiele adresów e-mail (np. po przecinku, średniku, ukośniku, spacjach).
+ * @param {string|null|undefined} emailStr
+ * @returns {string[]} Tablica pojedynczych adresów e-mail
  */
-export function formatPhone(phone, isProtected) {
-  if (!phone || phone === '—' || String(phone).trim() === '') return '—';
-  if (!isProtected) return String(phone);
-  
-  const cleaned = String(phone).trim();
-  // Pokazuje np. "+48 501 ••• •••" lub pierwsze 6-7 cyfr, a resztę kropkuje
-  const matched = cleaned.match(/^(\+?\d{2,3}\s?\d{3})/);
-  if (matched) {
-    return `${matched[1]} ••• •••`;
+export function splitEmails(emailStr) {
+  if (!emailStr || emailStr === '—') return [];
+  const str = String(emailStr).trim();
+  const rawParts = str.split(/[,;/\n|]+/);
+  const emails = [];
+
+  for (const part of rawParts) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    // Przypadek rozdzielenia spacją dwóch adresów z @
+    if (trimmed.includes(' ') && trimmed.includes('@')) {
+      const sub = trimmed.split(/\s+/).filter(Boolean);
+      emails.push(...sub);
+    } else {
+      emails.push(trimmed);
+    }
   }
-  return cleaned.length > 4 ? `${cleaned.slice(0, 4)} ••• •••` : '••••••';
+
+  return emails.length > 0 ? emails : [str];
 }
 
 /**
- * Dynamiczne maskowanie adresu e-mail w locie.
- * @param {string|null|undefined} email - Pełny adres e-mail (np. "jan.kowalski@wskz.pl")
+ * Maskuje pojedynczy adres e-mail (pokazuje pierwsze 2 znaki nazwy użytkownika i domenę).
+ * @param {string} singleEmail
+ * @param {boolean} isProtected
+ * @returns {string}
+ */
+export function maskSingleEmail(singleEmail, isProtected) {
+  const str = String(singleEmail || '').trim();
+  if (!str || str === '—') return '—';
+  if (!isProtected) return str;
+
+  const atIndex = str.indexOf('@');
+  if (atIndex === -1) {
+    const prefix = str.length > 2 ? str.slice(0, 2) : str.slice(0, 1);
+    return `${prefix}•••••`;
+  }
+
+  const user = str.slice(0, atIndex).trim();
+  const domain = str.slice(atIndex + 1).trim();
+  if (!domain) return `${user.slice(0, 2)}•••••@••••`;
+
+  const visiblePrefix = user.length > 2 ? user.slice(0, 2) : (user.length > 0 ? user.slice(0, 1) : '');
+  return `${visiblePrefix}•••••@${domain}`;
+}
+
+/**
+ * Dynamiczne maskowanie adresu lub adresów e-mail w locie.
+ * Prawidłowo obsługuje pojedyncze i wielokrotne adresy e-mail dla jednej osoby.
+ * @param {string|null|undefined} email - Pojedynczy lub wielokrotny e-mail (np. "jan@wskz.pl, jan@gmail.com")
  * @param {boolean} isProtected - Czy maskowanie ma być aktywne
  * @returns {string} Zamaskowany e-mail lub pełna wartość (albo "—" w razie braku)
  */
 export function formatEmail(email, isProtected) {
   if (!email || email === '—' || String(email).trim() === '') return '—';
-  if (!isProtected) return String(email);
-  
-  const str = String(email).trim();
-  const [user, domain] = str.split('@');
-  if (!domain) return '•••••@••••';
-  const visiblePrefix = user.length > 2 ? user.slice(0, 2) : user.slice(0, 1);
-  return `${visiblePrefix}•••••@${domain}`;
+  if (!isProtected) return String(email).trim();
+
+  const list = splitEmails(email);
+  if (list.length <= 1) {
+    return maskSingleEmail(list[0] || email, isProtected);
+  }
+
+  return list.map((e) => maskSingleEmail(e, isProtected)).join(', ');
+}
+
+/**
+ * Maskuje pojedynczy numer telefonu (pokazuje dokładnie pierwsze 3 znaki).
+ * @param {string} singlePhone
+ * @param {boolean} isProtected
+ * @returns {string}
+ */
+export function maskSinglePhone(singlePhone, isProtected) {
+  const cleaned = String(singlePhone || '').trim();
+  if (!cleaned || cleaned === '—') return '—';
+  if (!isProtected) return cleaned;
+
+  // Pokazuje dokładnie pierwsze 3 znaki numeru (np. "501 ••• •••" lub "+48 ••• •••")
+  const prefix = cleaned.slice(0, 3);
+  return `${prefix} ••• •••`;
+}
+
+/**
+ * Dynamiczne maskowanie numeru telefonu w locie.
+ * Skrócone zgodnie z wytyczną RODO do pierwszych 3 znaków.
+ * @param {string|null|undefined} phone - Pełny numer telefonu (np. "501 273 366" lub "+48 501 273 366")
+ * @param {boolean} isProtected - Czy maskowanie ma być aktywne
+ * @returns {string} Zamaskowany numer lub pełna wartość (albo "—" w razie braku)
+ */
+export function formatPhone(phone, isProtected) {
+  if (!phone || phone === '—' || String(phone).trim() === '') return '—';
+  if (!isProtected) return String(phone).trim();
+
+  const parts = String(phone).split(/[,;/]+/);
+  if (parts.length <= 1) {
+    return maskSinglePhone(parts[0] || phone, isProtected);
+  }
+
+  return parts.map((p) => maskSinglePhone(p, isProtected)).join(', ');
 }

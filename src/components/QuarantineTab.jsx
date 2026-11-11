@@ -34,7 +34,7 @@ import {
   EyeOff,
   Copy,
 } from 'lucide-react';
-import { formatPhone, formatEmail } from '../utils/rodoMasking';
+import { formatPhone, formatEmail, splitEmails, maskSingleEmail } from '../utils/rodoMasking';
 import EditMemberModal from './EditMemberModal';
 import WelcomeMailModal from './WelcomeMailModal';
 import { getAliasesFromStorage, saveAliasesToStorage } from '../utils/storage';
@@ -1598,15 +1598,20 @@ export default function QuarantineTab({
                           {(q.email || q.phone || q.telefon) && (
                             <div className="print-subtext hidden sm:flex items-center gap-2 mt-0.5 flex-wrap print:whitespace-normal print:overflow-visible">
                               {q.email && (
-                                <div className="inline-flex items-center gap-1 text-[11px] text-slate-500 font-normal">
-                                  <a
-                                    href={`mailto:${q.email}`}
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="hover:text-purple-700 hover:underline transition-colors"
-                                    title={isContactProtected(q.id) ? "Adres e-mail zamaskowany (RODO). Kliknij oko, aby podejrzeć." : q.email}
-                                  >
-                                    {formatEmail(q.email, isContactProtected(q.id))}
-                                  </a>
+                                <div className="inline-flex items-center gap-1 text-[11px] text-slate-500 font-normal flex-wrap">
+                                  {splitEmails(q.email).map((singleEmail, eIdx, arr) => (
+                                    <span key={eIdx} className="inline-flex items-center">
+                                      <a
+                                        href={`mailto:${singleEmail}`}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="hover:text-purple-700 hover:underline transition-colors"
+                                        title={isContactProtected(q.id) ? "Adres e-mail zamaskowany (RODO). Kliknij oko, aby podejrzeć." : singleEmail}
+                                      >
+                                        {maskSingleEmail(singleEmail, isContactProtected(q.id))}
+                                      </a>
+                                      {eIdx < arr.length - 1 && <span className="mr-1 text-slate-400">,</span>}
+                                    </span>
+                                  ))}
                                   {rodoProtected && (
                                     <button
                                       type="button"
