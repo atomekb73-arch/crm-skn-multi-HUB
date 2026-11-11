@@ -5,7 +5,8 @@
  * na żądanie przy otwarciu dedykowanego modala lub panelu bocznego.
  */
 
-const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbyemfBSsfNQwurJkaO-IU3RgSxFM9rh2K6bVwQiCwWv1NIb2EsktHHihDpgfzT9kV4l/exec';
+// Endpoint migracyjny - wycofany na rzecz Supabase SSOT.
+// W przypadku braku skonfigurowanej zmiennej środowiskowej GAS_URL endpoint zwraca HTTP 410 (Gone).
 
 export default async function handler(req, res) {
   // Bezpieczna obsługa CORS: zezwalaj tylko na wywołania z tej samej domeny, Vercel lub localhost
@@ -48,7 +49,13 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
   }
 
-  const GAS_URL = process.env.VITE_GAS_URL || process.env.GAS_URL || process.env.VITE_APPS_SCRIPT_URL || DEFAULT_GAS_URL;
+  const GAS_URL = process.env.VITE_GAS_URL || process.env.GAS_URL || process.env.VITE_APPS_SCRIPT_URL;
+
+  if (!GAS_URL) {
+    return res.status(410).json({
+      error: 'Endpoint wycofany (HTTP 410 Gone). Dane członków są pobierane bezpośrednio z Supabase SSOT.',
+    });
+  }
 
   try {
     const params = new URLSearchParams();

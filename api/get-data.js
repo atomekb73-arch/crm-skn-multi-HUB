@@ -7,7 +7,8 @@
  * płytkiego pobierania (Shallow Fetching) dla głównego widoku tabeli.
  */
 
-const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbyemfBSsfNQwurJkaO-IU3RgSxFM9rh2K6bVwQiCwWv1NIb2EsktHHihDpgfzT9kV4l/exec';
+// Endpoint migracyjny - wycofany na rzecz Supabase SSOT.
+// W przypadku braku skonfigurowanej zmiennej środowiskowej GAS_URL endpoint zwraca HTTP 410 (Gone).
 
 /**
  * Filtruje i odchudza obiekt członka pod widok tabeli:
@@ -95,7 +96,13 @@ export default async function handler(req, res) {
     );
   }
 
-  const GAS_URL = process.env.VITE_GAS_URL || process.env.GAS_URL || process.env.VITE_APPS_SCRIPT_URL || DEFAULT_GAS_URL;
+  const GAS_URL = process.env.VITE_GAS_URL || process.env.GAS_URL || process.env.VITE_APPS_SCRIPT_URL;
+
+  if (!GAS_URL) {
+    return res.status(410).json({
+      error: 'Endpoint wycofany (HTTP 410 Gone). Baza danych CRM została w pełni zmigrowana do Supabase SSOT.',
+    });
+  }
 
   // Obsługa opcjonalnych zapytań POST (proxy do Apps Script)
   if (req.method === 'POST') {
