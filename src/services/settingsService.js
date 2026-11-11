@@ -665,11 +665,12 @@ export async function fetchLoginAccessForEmail(email) {
     const { data: effData, error: effErr } = await supabase
       .from('v_effective_access')
       .select('club_id, email, member_name, role, role_label, source, active')
-      .eq('active', true);
+      .eq('active', true)
+      .eq('email', cleanEmail);
 
     if (!effErr && Array.isArray(effData) && effData.length > 0) {
       result.ok = true;
-      effData.filter(m => sameEmail(m.email)).forEach(m => {
+      effData.forEach(m => {
         result.accessMatches.push({
           orgId: normalizeOrgId(m.club_id),
           name: m.member_name,
@@ -683,11 +684,12 @@ export async function fetchLoginAccessForEmail(email) {
       const { data: relMemberships, error: relErr } = await supabase
         .from('club_memberships')
         .select('club_id, email, member_name, role, role_label, source, active')
-        .eq('active', true);
+        .eq('active', true)
+        .eq('email', cleanEmail);
 
       if (!relErr && Array.isArray(relMemberships) && relMemberships.length > 0) {
         result.ok = true;
-        relMemberships.filter(m => sameEmail(m.email)).forEach(m => {
+        relMemberships.forEach(m => {
           result.accessMatches.push({
             orgId: normalizeOrgId(m.club_id),
             name: m.member_name,
