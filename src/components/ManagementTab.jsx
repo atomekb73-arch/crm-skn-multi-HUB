@@ -28,7 +28,12 @@ import {
   Archive,
   Zap,
   Clock,
+  ShieldCheck,
+  Eye,
+  EyeOff,
+  Copy,
 } from 'lucide-react';
+import { formatPhone, formatEmail } from '../utils/rodoMasking';
 import { VectorRingIndicator } from './VectorIcons';
 import { calcFrequency, getFrequencyBadge, getCertificateStatus, getRecordKey } from '../utils/helpers';
 import { calculateCurrentStudyYear } from '../utils/academicYear';
@@ -116,6 +121,41 @@ export default function ManagementTab({
     points: 0,
   });
   const { weights, calculateMemberPoints, attendanceConfig } = useSettings();
+
+  // ── Ochrona RODO (Privacy by Default & Dynamic Masking - Art. 25 RODO) ─────
+  const [rodoProtected, setRodoProtected] = useState(true);
+  const [unmaskedContactIds, setUnmaskedContactIds] = useState(() => new Set());
+  const [copiedFieldId, setCopiedFieldId] = useState(null);
+
+  const isContactProtected = useCallback((contactId) => {
+    if (!rodoProtected) return false;
+    return !unmaskedContactIds.has(contactId);
+  }, [rodoProtected, unmaskedContactIds]);
+
+  const toggleUnmaskContact = useCallback((contactId) => {
+    setUnmaskedContactIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(contactId)) {
+        next.delete(contactId);
+      } else {
+        next.add(contactId);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleCopyText = useCallback((text, id) => {
+    if (!text) return;
+    try {
+      navigator.clipboard.writeText(String(text));
+      setCopiedFieldId(id);
+      setTimeout(() => {
+        setCopiedFieldId(prev => (prev === id ? null : prev));
+      }, 2000);
+    } catch (err) {
+      console.warn('Nie udało się skopiować tekstu do schowka:', err);
+    }
+  }, []);
 
   // Persistent custom meeting categories (localStorage)
   const customMeetingTypes = useMemo(() => {
@@ -1297,6 +1337,35 @@ export default function ManagementTab({
             )}
           </div>
 
+          {/* Główny przełącznik Ochrony RODO (Privacy by Default) */}
+          <button
+            type="button"
+            onClick={() => {
+              setRodoProtected(!rodoProtected);
+              setUnmaskedContactIds(new Set()); // reset indywidualnych odkryć
+            }}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer shrink-0 ${
+              rodoProtected
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs hover:bg-emerald-100'
+                : 'bg-amber-50 text-amber-800 border-amber-300 shadow-2xs hover:bg-amber-100'
+            }`}
+            title={rodoProtected ? "Kliknij, aby tymczasowo odkryć pełne dane kontaktowe" : "Kliknij, aby ponownie zamaskować dane"}
+          >
+            {rodoProtected ? (
+              <>
+                <ShieldCheck size={14} className="text-emerald-600 shrink-0" />
+                <span className="hidden sm:inline">🔒 Ochrona RODO: Aktywna</span>
+                <span className="sm:hidden">🔒 RODO</span>
+              </>
+            ) : (
+              <>
+                <Eye size={14} className="text-amber-600 shrink-0" />
+                <span className="hidden sm:inline">👁 Odkryj dane (RODO wyłączone)</span>
+                <span className="sm:hidden">👁 Odkryte</span>
+              </>
+            )}
+          </button>
+
           {/* Export XLSX Button (Hidden on Mobile < md, Full on Desktop >= md) */}
           <button
             type="button"
@@ -1521,6 +1590,7 @@ export default function ManagementTab({
               const studyInfo = studyInfoMap.get(m.id || m.nrIndeksu || m.index) || calculateCurrentStudyYear(m?.rawTimestamp || m?.timestamp, m?.year, m?.field, m);
               const isFinalSem = isMemberFinalSemester(m) || studyInfo.isFinalSemester;
               const isGrad = isMemberGraduate(m) || studyInfo.isGraduate;
+              const isRowProtected = isContactProtected(m.id || m.memberKey || m.nrIndeksu);
 
               return (
                 <tr
@@ -1563,8 +1633,84 @@ export default function ManagementTab({
                         </button>
                       )}
                     </div>
-                    {m.email && (
-                      <div className="print-subtext hidden sm:block text-[11px] text-slate-400 font-normal truncate mt-0.5 print:whitespace-normal print:overflow-visible" title={m.email}>{m.email}</div>
+                    {/* Dane kontaktowe (E-mail i Telefon) z dynamicznym maskowaniem RODO */}
+                    {(m.email || m.phone || m.telefon) && (
+                      <div className="print-subtext hidden sm:flex items-center gap-2 mt-0.5 flex-wrap print:whitespace-normal print:overflow-visible">
+                        {m.email && (
+                          <div className="inline-flex items-center gap-1 text-[11px] text-slate-500 font-normal">
+                            <a
+                              href={`mailto:${m.email}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="hover:text-purple-700 hover:underline transition-colors"
+                              title={isRowProtected ? "Adres e-mail zamaskowany (RODO). Kliknij oko, aby podejrzeć." : m.email}
+                            >
+                              {formatEmail(m.email, isRowProtected)}
+                            </a>
+                            {rodoProtected && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleUnmaskContact(m.id || m.memberKey || m.nrIndeksu);
+                                }}
+                                title={isRowProtected ? "Odkryj dane tego członka" : "Zamaskuj dane tego członka"}
+                                className="p-0.5 text-slate-400 hover:text-purple-700 transition cursor-pointer print:hidden no-print"
+                              >
+                                {isRowProtected ? <Eye size={12} /> : <EyeOff size={12} className="text-amber-600" />}
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCopyText(m.email, `email_${m.id || m.memberKey || m.nrIndeksu}`);
+                              }}
+                              title="Kopiuj pełny e-mail do schowka"
+                              className="p-0.5 text-slate-400 hover:text-slate-700 transition cursor-pointer print:hidden no-print"
+                            >
+                              {copiedFieldId === `email_${m.id || m.memberKey || m.nrIndeksu}` ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                            </button>
+                          </div>
+                        )}
+
+                        {(m.phone || m.telefon) && (
+                          <div className="inline-flex items-center gap-1 text-[11px] text-slate-500 font-mono">
+                            {m.email && <span className="text-slate-300 print:hidden">·</span>}
+                            <a
+                              href={`tel:${String(m.phone || m.telefon).replace(/\s+/g, '')}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="hover:text-purple-700 hover:underline transition-colors"
+                              title={isRowProtected ? "Numer telefonu zamaskowany (RODO). Kliknij oko, aby podejrzeć." : (m.phone || m.telefon)}
+                            >
+                              {formatPhone(m.phone || m.telefon, isRowProtected)}
+                            </a>
+                            {rodoProtected && !m.email && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleUnmaskContact(m.id || m.memberKey || m.nrIndeksu);
+                                }}
+                                title={isRowProtected ? "Odkryj dane tego członka" : "Zamaskuj dane tego członka"}
+                                className="p-0.5 text-slate-400 hover:text-purple-700 transition cursor-pointer print:hidden no-print"
+                              >
+                                {isRowProtected ? <Eye size={12} /> : <EyeOff size={12} className="text-amber-600" />}
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCopyText(m.phone || m.telefon, `phone_${m.id || m.memberKey || m.nrIndeksu}`);
+                              }}
+                              title="Kopiuj pełny numer telefonu do schowka"
+                              className="p-0.5 text-slate-400 hover:text-slate-700 transition cursor-pointer print:hidden no-print"
+                            >
+                              {copiedFieldId === `phone_${m.id || m.memberKey || m.nrIndeksu}` ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </td>
 

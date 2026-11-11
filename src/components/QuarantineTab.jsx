@@ -29,7 +29,12 @@ import {
   FileSpreadsheet,
   Printer,
   Check,
+  ShieldCheck,
+  Eye,
+  EyeOff,
+  Copy,
 } from 'lucide-react';
+import { formatPhone, formatEmail } from '../utils/rodoMasking';
 import EditMemberModal from './EditMemberModal';
 import WelcomeMailModal from './WelcomeMailModal';
 import { getAliasesFromStorage, saveAliasesToStorage } from '../utils/storage';
@@ -221,6 +226,41 @@ export default function QuarantineTab({
   const [isBulkApproving, setIsBulkApproving] = useState(false);
 
   const [sortConfig, setSortConfig] = useState({ key: 'timestamp', direction: 'desc' });
+
+  // ── Ochrona RODO (Privacy by Default & Dynamic Masking - Art. 25 RODO) ─────
+  const [rodoProtected, setRodoProtected] = useState(true);
+  const [unmaskedContactIds, setUnmaskedContactIds] = useState(() => new Set());
+  const [copiedFieldId, setCopiedFieldId] = useState(null);
+
+  const isContactProtected = (contactId) => {
+    if (!rodoProtected) return false;
+    return !unmaskedContactIds.has(contactId);
+  };
+
+  const toggleUnmaskContact = (contactId) => {
+    setUnmaskedContactIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(contactId)) {
+        next.delete(contactId);
+      } else {
+        next.add(contactId);
+      }
+      return next;
+    });
+  };
+
+  const handleCopyText = (text, id) => {
+    if (!text) return;
+    try {
+      navigator.clipboard.writeText(String(text));
+      setCopiedFieldId(id);
+      setTimeout(() => {
+        setCopiedFieldId(prev => (prev === id ? null : prev));
+      }, 2000);
+    } catch (err) {
+      console.warn('Nie udało się skopiować tekstu do schowka:', err);
+    }
+  };
 
   // Walidacja w czasie rzeczywistym duplikatów dla formularza ręcznego dodawania członka
   const duplicateIndexFound = useMemo(() => {
@@ -1310,7 +1350,36 @@ export default function QuarantineTab({
         )}
 
         {/* Export XLSX & Print Quarantine Buttons (Hidden on Mobile < md, Full on Desktop >= md) */}
-        <div className="hidden md:flex items-center gap-1.5 sm:gap-2 shrink-0 ml-auto w-auto">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-auto w-auto">
+          {/* Przycisk Ochrony RODO (Privacy by Default) */}
+          <button
+            type="button"
+            onClick={() => {
+              setRodoProtected(!rodoProtected);
+              setUnmaskedContactIds(new Set());
+            }}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer shrink-0 ${
+              rodoProtected
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs hover:bg-emerald-100'
+                : 'bg-amber-50 text-amber-800 border-amber-300 shadow-2xs hover:bg-amber-100'
+            }`}
+            title={rodoProtected ? "Kliknij, aby tymczasowo odkryć pełne dane kontaktowe" : "Kliknij, aby ponownie zamaskować dane"}
+          >
+            {rodoProtected ? (
+              <>
+                <ShieldCheck size={14} className="text-emerald-600 shrink-0" />
+                <span className="hidden sm:inline">🔒 Ochrona RODO: Aktywna</span>
+                <span className="sm:hidden">🔒 RODO</span>
+              </>
+            ) : (
+              <>
+                <Eye size={14} className="text-amber-600 shrink-0" />
+                <span className="hidden sm:inline">👁 Odkryj dane (RODO wyłączone)</span>
+                <span className="sm:hidden">👁 Odkryte</span>
+              </>
+            )}
+          </button>
+
           <button
             type="button"
             onClick={handleExportQuarantineXlsx}
@@ -1525,9 +1594,85 @@ export default function QuarantineTab({
                               <Pencil size={13} strokeWidth={2.2} />
                             </button>
                           </div>
-                          <div className="print-subtext hidden sm:block text-[11px] text-slate-500 font-normal truncate mt-0.5 print:whitespace-normal print:overflow-visible" title={q.email}>
-                            {q.email || '—'}
-                          </div>
+                          {/* Dane kontaktowe (E-mail i Telefon) z dynamicznym maskowaniem RODO */}
+                          {(q.email || q.phone || q.telefon) && (
+                            <div className="print-subtext hidden sm:flex items-center gap-2 mt-0.5 flex-wrap print:whitespace-normal print:overflow-visible">
+                              {q.email && (
+                                <div className="inline-flex items-center gap-1 text-[11px] text-slate-500 font-normal">
+                                  <a
+                                    href={`mailto:${q.email}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="hover:text-purple-700 hover:underline transition-colors"
+                                    title={isContactProtected(q.id) ? "Adres e-mail zamaskowany (RODO). Kliknij oko, aby podejrzeć." : q.email}
+                                  >
+                                    {formatEmail(q.email, isContactProtected(q.id))}
+                                  </a>
+                                  {rodoProtected && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleUnmaskContact(q.id);
+                                      }}
+                                      title={isContactProtected(q.id) ? "Odkryj dane tego kandydata" : "Zamaskuj dane tego kandydata"}
+                                      className="p-0.5 text-slate-400 hover:text-purple-700 transition cursor-pointer print:hidden no-print"
+                                    >
+                                      {isContactProtected(q.id) ? <Eye size={12} /> : <EyeOff size={12} className="text-amber-600" />}
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleCopyText(q.email, `q_email_${q.id}`);
+                                    }}
+                                    title="Kopiuj pełny e-mail do schowka"
+                                    className="p-0.5 text-slate-400 hover:text-slate-700 transition cursor-pointer print:hidden no-print"
+                                  >
+                                    {copiedFieldId === `q_email_${q.id}` ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                                  </button>
+                                </div>
+                              )}
+
+                              {(q.phone || q.telefon) && (
+                                <div className="inline-flex items-center gap-1 text-[11px] text-slate-500 font-mono">
+                                  {q.email && <span className="text-slate-300 print:hidden">·</span>}
+                                  <a
+                                    href={`tel:${String(q.phone || q.telefon).replace(/\s+/g, '')}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="hover:text-purple-700 hover:underline transition-colors"
+                                    title={isContactProtected(q.id) ? "Numer telefonu zamaskowany (RODO). Kliknij oko, aby podejrzeć." : (q.phone || q.telefon)}
+                                  >
+                                    {formatPhone(q.phone || q.telefon, isContactProtected(q.id))}
+                                  </a>
+                                  {rodoProtected && !q.email && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleUnmaskContact(q.id);
+                                      }}
+                                      title={isContactProtected(q.id) ? "Odkryj dane tego kandydata" : "Zamaskuj dane tego kandydata"}
+                                      className="p-0.5 text-slate-400 hover:text-purple-700 transition cursor-pointer print:hidden no-print"
+                                    >
+                                      {isContactProtected(q.id) ? <Eye size={12} /> : <EyeOff size={12} className="text-amber-600" />}
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleCopyText(q.phone || q.telefon, `q_phone_${q.id}`);
+                                    }}
+                                    title="Kopiuj pełny numer telefonu do schowka"
+                                    className="p-0.5 text-slate-400 hover:text-slate-700 transition cursor-pointer print:hidden no-print"
+                                  >
+                                    {copiedFieldId === `q_phone_${q.id}` ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </td>
 
                         {/* 4. Nr Indeksu (Print: 15%) */}
@@ -1707,7 +1852,33 @@ export default function QuarantineTab({
                       </td>
                       <td className="w-auto min-w-0 px-2 sm:px-3 py-2.5 align-middle text-left print:w-[40%] print:min-w-0 print:whitespace-normal">
                         <div className="font-semibold text-slate-800 text-xs truncate print:whitespace-normal print:overflow-visible print:text-[8pt]">{a.fullName}</div>
-                        <div className="print-subtext hidden sm:block text-[11px] text-slate-400 truncate print:whitespace-normal print:overflow-visible">{a.email || '—'}</div>
+                        {(a.email || a.phone || a.telefon) && (
+                          <div className="print-subtext hidden sm:flex items-center gap-2 mt-0.5 flex-wrap print:whitespace-normal print:overflow-visible">
+                            {a.email && (
+                              <div className="inline-flex items-center gap-1 text-[11px] text-slate-500 font-normal">
+                                <span>{formatEmail(a.email, isContactProtected(a.id))}</span>
+                                {rodoProtected && (
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleUnmaskContact(a.id)}
+                                    title={isContactProtected(a.id) ? "Odkryj dane tego zgłoszenia" : "Zamaskuj dane tego zgłoszenia"}
+                                    className="p-0.5 text-slate-400 hover:text-amber-700 transition cursor-pointer print:hidden no-print"
+                                  >
+                                    {isContactProtected(a.id) ? <Eye size={12} /> : <EyeOff size={12} className="text-amber-600" />}
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyText(a.email, `arch_email_${a.id}`)}
+                                  title="Kopiuj pełny e-mail"
+                                  className="p-0.5 text-slate-400 hover:text-slate-700 transition cursor-pointer print:hidden no-print"
+                                >
+                                  {copiedFieldId === `arch_email_${a.id}` ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td className="w-16 sm:w-28 px-1 sm:px-3 py-2.5 font-mono text-xs text-slate-600 align-middle text-center print:w-[15%] print:min-w-0 print:text-center">{a.index || '—'}</td>
                       <td className="hidden lg:table-cell px-3 py-2.5 text-xs text-slate-600 align-middle print:table-cell print:w-[25%] print:min-w-0 print:whitespace-normal">{a.kierunekRok || formatYear(a.field || a.kierunek, a.year || a.rokStudiow)}</td>
