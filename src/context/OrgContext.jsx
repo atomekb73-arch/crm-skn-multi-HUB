@@ -25,6 +25,8 @@ import { fetchOrgSettingsFromDB, deduplicateSupervisors } from '../services/sett
 import { getTenantTheme, applyTenantThemeToDom } from '../theme/tenantTheme';
 import { useAuth } from './AuthContext';
 
+const envTeamupToken = (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env.VITE_TEAMUP_API_KEY || import.meta.env.VITE_TEAMUP_TOKEN)) || '';
+
 export const DEFAULT_ORGS = [
   {
     id: 'skn_seksuologii',
@@ -37,8 +39,8 @@ export const DEFAULT_ORGS = [
     sheetId: '1hNCTDi08_ttX8wI04FVh7MCgs2T4w92KdRgfK7pCiq0k',
     calendarKey: 'ks9aiux4jiza1ronpd',
     calendarId: 'ks9aiux4jiza1ronpd',
-    teamupApiKey: '20dc4242d0d74be314e5ee108dc618cf3f6fbcb7647865568775fe4d9a89c112',
-    teamupToken: '20dc4242d0d74be314e5ee108dc618cf3f6fbcb7647865568775fe4d9a89c112',
+    teamupApiKey: envTeamupToken,
+    teamupToken: envTeamupToken,
     subcalendarId: '14518766',
     subcalendarName: '10 💚 SKN Seksuologii',
     description: 'Studenckie Koło Naukowe Seksuologii WSKZ - Oficjalna ewidencja i harmonogram',
@@ -57,8 +59,8 @@ export const DEFAULT_ORGS = [
     sheetId: '1xIJDJP2PpIJY8EfaY2gf6Qcq3YBcSCKX3BW-oO92u6Y',
     calendarKey: 'ks9aiux4jiza1ronpd',
     calendarId: 'ks9aiux4jiza1ronpd',
-    teamupApiKey: '20dc4242d0d74be314e5ee108dc618cf3f6fbcb7647865568775fe4d9a89c112',
-    teamupToken: '20dc4242d0d74be314e5ee108dc618cf3f6fbcb7647865568775fe4d9a89c112',
+    teamupApiKey: envTeamupToken,
+    teamupToken: envTeamupToken,
     subcalendarId: '15520561',
     subcalendarName: '05 🏷️ SKN Psychologii Zachowań Ryzykownych i Uzależnień',
     description: 'Studenckie Koło Naukowe Zachowań Ryzykowych i Uzależnień WSKZ',
@@ -78,8 +80,8 @@ export const DEFAULT_ORGS = [
     sheetId: '1Omb7RbsMeiUs8IlXuKDAteXyd8lnkAXehX1nhofOTAY',
     calendarKey: 'ks9aiux4jiza1ronpd',
     calendarId: 'ks9aiux4jiza1ronpd',
-    teamupApiKey: '20dc4242d0d74be314e5ee108dc618cf3f6fbcb7647865568775fe4d9a89c112',
-    teamupToken: '20dc4242d0d74be314e5ee108dc618cf3f6fbcb7647865568775fe4d9a89c112',
+    teamupApiKey: envTeamupToken,
+    teamupToken: envTeamupToken,
     subcalendarId: '15520558',
     subcalendarName: '07 🎗️ SKN Psychoonkologii',
     description: 'Studenckie Koło Naukowe Psychoonkologii WSKZ - Oficjalna ewidencja i harmonogram',
@@ -150,8 +152,8 @@ export function OrgProvider({ children }) {
               calendarKey: 'ks9aiux4jiza1ronpd',
               calendarId: 'ks9aiux4jiza1ronpd',
               subcalendarId: '15520561',
-              teamupApiKey: '20dc4242d0d74be314e5ee108dc618cf3f6fbcb7647865568775fe4d9a89c112',
-              teamupToken: '20dc4242d0d74be314e5ee108dc618cf3f6fbcb7647865568775fe4d9a89c112',
+              teamupApiKey: o.teamupApiKey || envTeamupToken,
+              teamupToken: o.teamupToken || envTeamupToken,
               subcalendarName: '05 🏷️ SKN Psychologii Zachowań Ryzykownych i Uzależnień',
             };
           }
@@ -166,8 +168,8 @@ export function OrgProvider({ children }) {
               calendarKey: 'ks9aiux4jiza1ronpd',
               calendarId: 'ks9aiux4jiza1ronpd',
               subcalendarId: '15520558',
-              teamupApiKey: '20dc4242d0d74be314e5ee108dc618cf3f6fbcb7647865568775fe4d9a89c112',
-              teamupToken: '20dc4242d0d74be314e5ee108dc618cf3f6fbcb7647865568775fe4d9a89c112',
+              teamupApiKey: o.teamupApiKey || envTeamupToken,
+              teamupToken: o.teamupToken || envTeamupToken,
               subcalendarName: '07 🎗️ SKN Psychoonkologii',
             };
           }

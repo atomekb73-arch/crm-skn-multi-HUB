@@ -4,6 +4,7 @@ import {
   saveAccessUsersToDB,
   fetchLoginAccessForEmail,
 } from '../services/settingsService';
+import { hashPassword, verifyPassword } from '../utils/crypto';
 
 export const ROLES = {
   SUPER_ADMIN: {
@@ -113,17 +114,7 @@ export const DEFAULT_AUTHORIZED_ACCOUNTS = [
   },
 ];
 
-export const STARTER_PASSWORDS = {
-  'admin@wskz.pl': ADMIN_PASSWORD,
-  'admin': ADMIN_PASSWORD,
-  'zarzad@wskz.pl': ADMIN_PASSWORD,
-  'opiekun@wskz.pl': DEFAULT_STARTER_PASSWORD,
-  'w.czepirska@gmail.com': DEFAULT_STARTER_PASSWORD,
-  'm.czepirek@gmail.com': DEFAULT_STARTER_PASSWORD,
-  '15998@student.wskz.pl': DEFAULT_STARTER_PASSWORD,
-  'gabriel.creart@gmail.com': DEFAULT_STARTER_PASSWORD,
-  'lajlasienkiewicz@gmail.com': DEFAULT_STARTER_PASSWORD,
-};
+export const STARTER_PASSWORDS = {};
 
 export const ACCESS_PASSWORDS = [
   ADMIN_PASSWORD,
@@ -266,7 +257,7 @@ function clearTempPasswordInAccessLists(cleanEmail) {
   });
 }
 
-/** Pobierz zapisane hasło użytkownika */
+/** Pobierz zapisane hasło (lub hash) użytkownika */
 export function getUserStoredPassword(email) {
   if (!email) return null;
   const clean = email.toLowerCase().trim();
@@ -282,10 +273,7 @@ export function getUserStoredPassword(email) {
       }
     }
   } catch {}
-  if (STARTER_PASSWORDS[clean]) {
-    return STARTER_PASSWORDS[clean];
-  }
-  return DEFAULT_STARTER_PASSWORD;
+  return null;
 }
 
 /** Sprawdź czy użytkownik loguje się po raz pierwszy */
@@ -561,7 +549,6 @@ export function AuthProvider({ children }) {
       organizations: accessibleOrgs,
       organization_id: accessibleOrgs[0] !== '*' ? accessibleOrgs[0] : undefined,
       inheritedRole,
-      tempPassword: tempPass,
       loggedAt: new Date().toISOString(),
     };
 
@@ -575,12 +562,13 @@ export function AuthProvider({ children }) {
       isFirstLogin,
       activated,
       remotePassword,
+      tempPassword: tempPass,
       user: authUser,
     };
   }, []);
 
-  /** Aktywacja nowego konta na pierwszym logowaniu i nadanie własnego hasła */
-  const activateAccount = useCallback((email, newPassword, confirmPassword, userData = null) => {
+  /** Aktywacja nowego konta na pierwszym logowaniu i nadanie własnego hasła (SHA-256 z solą) */
+  const activateAccount = useCallback(async (email, newPassword, confirmPassword, userData = null) => {
     if (!email || !newPassword || !confirmPassword) {
       return { success: false, error: 'Wypełnij wszystkie pola formularza.' };
     }
@@ -611,7 +599,6 @@ export function AuthProvider({ children }) {
       'Psychoonkologia2026!',
       'wskz2026',
       'skn2026',
-      STARTER_PASSWORDS[cleanEmail],
     ].filter(Boolean).includes(p1);
 
     if (isStarter) {
@@ -619,17 +606,18 @@ export function AuthProvider({ children }) {
     }
 
     try {
-      // 1. Zapisz nowe hasło w rejestrze haseł użytkowników (lokalnie i w Supabase)
+      // 1. Zapisz nowe hasło jako bezpieczny skrót SHA-256 z solą (nigdy jawnym tekstem!)
       let passwords = {};
       try {
         const rawPass = localStorage.getItem('skn_user_passwords');
         if (rawPass) passwords = JSON.parse(rawPass);
       } catch {}
-      passwords[cleanEmail] = p1;
+      const hashed = await hashPassword(p1, cleanEmail);
+      passwords[cleanEmail] = hashed;
       localStorage.setItem('skn_user_passwords', JSON.stringify(passwords));
 
-      // Zapis do Supabase SSOT w tle – dla wszystkich kół użytkownika (logowanie z dowolnego urządzenia)
-      persistPasswordToSupabase(cleanEmail, p1, userData);
+      // Zapis statusu aktywacji w tle (do Supabase przekazujemy wyłącznie skrót, nigdy hasło jawne)
+      persistPasswordToSupabase(cleanEmail, hashed, userData);
 
       // 2. Oznacz isFirstLogin jako false
       let statusMap = {};
@@ -658,7 +646,7 @@ export function AuthProvider({ children }) {
         }
       } catch {}
 
-      // 4. Utwórz profil i zaloguj bezpośrednio do CRM
+      // 4. Utwórz profil i zaloguj bezpośrednio do CRM (bez haseł w obiekcie sesyjnym)
       const authUser = userData || {
         email: cleanEmail,
         name: cleanEmail.split('@')[0],
@@ -685,8 +673,8 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  /** Logowanie z hasłem */
-  const loginWithPassword = useCallback((inputEmail, inputPassword) => {
+  /** Logowanie z hasłem z bezpieczną weryfikacją skrótu SHA-256 */
+  const loginWithPassword = useCallback(async (inputEmail, inputPassword) => {
     if (!inputEmail || !inputPassword) {
       return { success: false, error: 'Wypełnij wszystkie pola formularza.' };
     }
@@ -708,33 +696,55 @@ export function AuthProvider({ children }) {
       };
     }
 
-    const storedPassword = getUserStoredPassword(cleanEmail);
-    const tempPassword = status.user?.tempPassword || null;
+    const storedPasswordOrHash = getUserStoredPassword(cleanEmail);
+    const tempPassword = status.tempPassword || null;
     const isMasterOrBoard = MASTER_ADMIN_EMAILS.some(e => e.toLowerCase() === cleanEmail) || cleanEmail === 'zarzad@wskz.pl';
 
     const isStarterPassword = STARTER_PASSWORD_SET.has(cleanPassword);
-    // Po aktywacji konta (własne hasło zapisane w Supabase lub lokalnie) hasło startowe przestaje działać
+    // Po aktywacji konta hasło startowe przestaje działać
     if (status.activated && isStarterPassword && !isMasterOrBoard) {
       return { success: false, error: 'Konto zostało już aktywowane. Zaloguj się swoim hasłem stałym.' };
     }
 
-    const isStarterMatch = isStarterPassword;
-    const isTempPasswordMatch = (tempPassword && cleanPassword === tempPassword) || isStarterMatch;
-    const isRemotePasswordMatch = Boolean(status.remotePassword && status.remotePassword === cleanPassword);
-    const isPasswordValid = (storedPassword && storedPassword === cleanPassword) ||
-                            isRemotePasswordMatch ||
-                            isTempPasswordMatch ||
-                            (isMasterOrBoard && cleanPassword === ADMIN_PASSWORD);
+    // Bezpieczna weryfikacja hasła (skrót SHA-256 lub migracja ze starych haseł jawnych)
+    let isPasswordValid = false;
+    if (storedPasswordOrHash) {
+      isPasswordValid = await verifyPassword(cleanPassword, storedPasswordOrHash, cleanEmail);
+      // Płynna migracja: jeśli hasło było w starym formacie jawnym i pasuje, zmigruj do SHA-256
+      if (isPasswordValid && !storedPasswordOrHash.startsWith('sha256$')) {
+        try {
+          const passwords = readStorageJson('skn_user_passwords') || {};
+          passwords[cleanEmail] = await hashPassword(cleanPassword, cleanEmail);
+          localStorage.setItem('skn_user_passwords', JSON.stringify(passwords));
+        } catch {}
+      }
+    }
+
+    if (!isPasswordValid && status.remotePassword) {
+      isPasswordValid = await verifyPassword(cleanPassword, status.remotePassword, cleanEmail);
+    }
+
+    if (!isPasswordValid && tempPassword) {
+      isPasswordValid = await verifyPassword(cleanPassword, tempPassword, cleanEmail);
+    }
+
+    if (!isPasswordValid && isStarterPassword && !status.activated) {
+      isPasswordValid = true;
+    }
+
+    if (!isPasswordValid && isMasterOrBoard && ADMIN_PASSWORD && cleanPassword === ADMIN_PASSWORD) {
+      isPasswordValid = true;
+    }
 
     if (!isPasswordValid) {
       return { success: false, error: 'Nieprawidłowe hasło dostępowe.' };
     }
 
-    // Hasło potwierdzone przez Supabase – zapamiętaj je lokalnie na tym urządzeniu
-    if (isRemotePasswordMatch && !isStarterPassword) {
+    // Jeśli hasło zostało potwierdzone zdalnie, utrwal lokalnie bezpieczny hash (nie jawne hasło!)
+    if (status.remotePassword && isPasswordValid && !isStarterPassword) {
       try {
         const passwords = readStorageJson('skn_user_passwords') || {};
-        passwords[cleanEmail] = cleanPassword;
+        passwords[cleanEmail] = await hashPassword(cleanPassword, cleanEmail);
         localStorage.setItem('skn_user_passwords', JSON.stringify(passwords));
         const statusMap = readStorageJson('skn_user_first_login_status') || {};
         statusMap[cleanEmail] = false;
@@ -743,6 +753,7 @@ export function AuthProvider({ children }) {
     }
 
     // Wymuszenie zmiany hasła przy pierwszym logowaniu lub gdy podano hasło startowe StartCRM2026!
+    const isStarterMatch = isStarterPassword;
     const mustChangePassword = isStarterMatch || (tempPassword && cleanPassword === tempPassword) || status.isFirstLogin;
     if (!isMasterOrBoard && mustChangePassword) {
       return {

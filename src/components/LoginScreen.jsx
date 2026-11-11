@@ -86,13 +86,13 @@ export default function LoginScreen({ onOpenPublicForm, currentOrgId }) {
   };
 
   // STEP 2A: Submit Existing Password
-  const handlePasswordSubmit = (e) => {
+  const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
     try {
-      const res = loginWithPassword(email.trim(), password);
+      const res = await loginWithPassword(email.trim(), password);
       if (!res.success) {
         if (res.requiresActivation) {
           setStep('activate');
@@ -109,7 +109,7 @@ export default function LoginScreen({ onOpenPublicForm, currentOrgId }) {
   };
 
   // STEP 2B: First-Time Account Activation & Set Password
-  const handleActivationSubmit = (e) => {
+  const handleActivationSubmit = async (e) => {
     e.preventDefault();
     setError(null);
 
@@ -124,7 +124,7 @@ export default function LoginScreen({ onOpenPublicForm, currentOrgId }) {
 
     setLoading(true);
     try {
-      const res = activateAccount(email.trim(), newPassword, confirmPassword, verifiedUser);
+      const res = await activateAccount(email.trim(), newPassword, confirmPassword, verifiedUser);
       if (!res.success) {
         setError(res.error || 'Nie udało się zapisać hasła.');
       }
