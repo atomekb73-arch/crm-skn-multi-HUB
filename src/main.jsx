@@ -98,3 +98,14 @@ createRoot(document.getElementById('root')).render(
     </RootErrorBoundary>
   </StrictMode>
 );
+
+// Rejestracja Service Workera dla instalacji PWA na telefonie
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/sw.js')
+      .catch((err) => {
+        console.warn('[PWA] Service Worker registration:', err);
+      });
+  });
+}

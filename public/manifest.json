@@ -1,0 +1,31 @@
+{
+  "short_name": "SKN CRM",
+  "name": "Studenckie Koła Naukowe WSKZ – CRM",
+  "description": "Oficjalny system ewidencji spotkań, certyfikatów i zarządzania członkostwem Studenckich Kół Naukowych WSKZ.",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/app-icon.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "scope": "/",
+  "background_color": "#2e1065",
+  "theme_color": "#4a154b",
+  "display": "standalone",
+  "orientation": "portrait",
+  "categories": ["education", "productivity", "utilities"]
+}

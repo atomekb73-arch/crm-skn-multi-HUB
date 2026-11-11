@@ -27,6 +27,7 @@ import Navbar        from './components/Navbar';
 import SettingsModal from './components/SettingsModal';
 import ProfileMenu   from './components/ProfileMenu';
 import SyncIndicator from './components/SyncIndicator';
+import PwaInstallPrompt from './components/PwaInstallPrompt';
 import ErrorBoundary from './components/ErrorBoundary';
 import LoginScreen from './components/LoginScreen';
 import SknApplicationForm from './components/SknApplicationForm';
@@ -3144,6 +3145,9 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 ml-auto xl:ml-0">
+              {/* Przycisk instalacji PWA na telefonie */}
+              <PwaInstallPrompt variant="button" />
+
               {/* Refresh button with Smart Sync & Reconciliation */}
               <button
                 onClick={() => handleRefreshData({ silent: false })}
@@ -3417,6 +3421,9 @@ export default function App() {
           handleRefreshData();
         }}
       />
+
+      {/* ── PWA Mobile Install Banner (Floating on mobile browsers) ─────────── */}
+      <PwaInstallPrompt variant="banner" />
     </div>
   );
 }
