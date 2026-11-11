@@ -54,13 +54,29 @@ function sanitizeShallowMember(m, index) {
 }
 
 export default async function handler(req, res) {
-  // Obsługa CORS dla wywołań wewnątrz i z zewnątrz
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // Bezpieczna obsługa CORS: zezwalaj tylko na wywołania z tej samej domeny, Vercel lub localhost
+  const origin = req.headers.origin;
+  const host = req.headers.host;
+  const isAllowedOrigin = !origin ||
+    (host && origin.includes(host)) ||
+    origin.includes('localhost') ||
+    origin.includes('127.0.0.1') ||
+    origin.endsWith('.vercel.app') ||
+    origin.endsWith('.wskz.pl');
+
+  if (origin && isAllowedOrigin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Vary', 'Origin');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
+  }
+
+  if (origin && !isAllowedOrigin) {
+    return res.status(403).json({ error: 'Niedozwolone źródło żądania (CORS policy)' });
   }
 
   const query = req.query || {};

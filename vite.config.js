@@ -47,7 +47,7 @@ function vercelApiDevPlugin() {
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
         const rawUrl = req.url || '';
-        const GAS_URL = process.env.VITE_GAS_API_URL || process.env.VITE_GAS_URL || process.env.GAS_URL || process.env.VITE_APPS_SCRIPT_URL || 'https://script.google.com/macros/s/AKfycbyemfBSsfNQwurJkaO-IU3RgSxFM9rh2K6bVwQiCwWv1NIb2EsktHHihDpgfzT9kV4l/exec';
+        const GAS_URL = process.env.VITE_GAS_API_URL || process.env.VITE_GAS_URL || process.env.GAS_URL || process.env.VITE_APPS_SCRIPT_URL || '';
 
         // 1. Endpoint /api/member-details?id=...
         if (rawUrl.startsWith('/api/member-details')) {
@@ -201,16 +201,16 @@ export default defineConfig(({ mode }) => {
     ],
 
     build: {
-      // 1. Source maps wyłączone na produkcji (brak podglądu struktury kodu w F12)
+      // 1. Source maps definitywnie wyłączone na produkcji (brak podglądu struktury kodu w F12)
       sourcemap: false,
       emptyOutDir: true,
-      // 2. Zaawansowana obfuskacja i minifikacja kodu produkcyjnego przez Terser
-      minify: isProd ? 'terser' : 'esbuild',
-      terserOptions: isProd ? {
+      // 2. Zaawansowana obfuskacja i minifikacja kodu przez Terser
+      minify: 'terser',
+      terserOptions: {
         compress: {
           drop_console: true,        // usuwa wszelkie console.log z produkcji
           drop_debugger: true,       // usuwa instrukcje debugger
-          pure_funcs: ['console.info', 'console.debug', 'console.warn'],
+          pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn'],
           passes: 2,                 // dwuetapowa kompresja dla maksymalnej optymalizacji
         },
         mangle: {
@@ -220,7 +220,7 @@ export default defineConfig(({ mode }) => {
         format: {
           comments: false,           // całkowite usunięcie komentarzy i licencji z kodu
         },
-      } : undefined,
+      },
       rollupOptions: {
         output: {
           manualChunks(id) {
@@ -247,7 +247,7 @@ export default defineConfig(({ mode }) => {
           secure: false,
           rewrite: (path) => path.replace(/^\/api-teamup/, ''),
           headers: {
-            'Teamup-Token': process.env.VITE_TEAMUP_API_KEY || process.env.VITE_TEAMUP_TOKEN || '20dc4242d0d74be314e5ee108dc618cf3f6fbcb7647865568775fe4d9a89c112'
+            'Teamup-Token': process.env.VITE_TEAMUP_API_KEY || process.env.VITE_TEAMUP_TOKEN || ''
           }
         }
       }
