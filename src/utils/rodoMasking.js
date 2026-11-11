@@ -52,11 +52,9 @@ export function maskSingleEmail(singleEmail, isProtected) {
   }
 
   const user = str.slice(0, atIndex).trim();
-  const domain = str.slice(atIndex + 1).trim();
-  if (!domain) return `${user.slice(0, 2)}•••••@••••`;
-
   const visiblePrefix = user.length > 2 ? user.slice(0, 2) : (user.length > 0 ? user.slice(0, 1) : '');
-  return `${visiblePrefix}•••••@${domain}`;
+  // Zgodnie z wytyczną RODO: ukrywamy również domenę po znaku @
+  return `${visiblePrefix}•••••@•••••`;
 }
 
 /**
