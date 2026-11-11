@@ -452,25 +452,89 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
     const cleanEmail = formData.email.trim().toLowerCase();
 
     try {
-      // 1. Sprawdzanie istnienia danych w tabeli kwarantanny oraz w tabeli członków Supabase dla TEJ organizacji
-      const [quarantineRes, membersRes] = await Promise.all([
-        supabase
-          .from('quarantine_submissions')
-          .select('id, index_number, email, decision_status, submission_date, full_name, organization_id')
-          .eq('organization_id', targetOrgId)
-          .or(`index_number.eq.${cleanIndex},email.ilike.${cleanEmail}`),
-        supabase
-          .from('members')
-          .select('id, index_number, email, activity_status, full_name, organization_id')
-          .eq('organization_id', targetOrgId)
-          .or(`index_number.eq.${cleanIndex},email.ilike.${cleanEmail}`)
-      ]);
+      // 1. Sprawdzanie duplikatów: najpierw dedykowana, bezpieczna funkcja RPC check_recruitment_candidate
+      let rpcHandled = false;
+      try {
+        const { data: rpcData, error: rpcError } = await supabase.rpc('check_recruitment_candidate', {
+          p_org_id: targetOrgId,
+          p_index: cleanIndex,
+          p_email: cleanEmail,
+        });
 
-      if (quarantineRes.error) {
-        console.warn('Uwaga przy zapytaniu kwarantanny Supabase:', quarantineRes.error);
+        if (!rpcError && rpcData && typeof rpcData === 'object') {
+          rpcHandled = true;
+          if (rpcData.exists) {
+            const statusStr = rpcData.status || 'Aktywny';
+            if (isActiveOrPending(statusStr)) {
+              setStatus({
+                loading: false,
+                success: false,
+                error: 'Konto z tym numerem indeksu lub adresem e-mail już istnieje w systemie.'
+              });
+              return;
+            }
+            if (isArchivalOrResigned(statusStr)) {
+              setStatus({ loading: false, success: false, error: null });
+              setArchivalModal({
+                isOpen: true,
+                matchedRecord: {
+                  source: rpcData.source === 'members' ? 'Baza członków Koła' : 'Kwarantanna zgłoszeń',
+                  status: statusStr,
+                  index_number: cleanIndex,
+                  email: cleanEmail,
+                  full_name: rpcData.full_name || formData.full_name,
+                }
+              });
+              return;
+            }
+          }
+        }
+      } catch (errRpc) {
+        console.warn('Weryfikacja RPC niedostępna, przejście do zapytania bezpośredniego:', errRpc);
       }
-      if (membersRes.error) {
-        console.warn('Uwaga przy zapytaniu bazy members Supabase:', membersRes.error);
+
+      // 1b. Fallback (gdy RPC nie jest jeszcze wdrożone w Supabase)
+      let allMatches = [];
+      if (!rpcHandled) {
+        const [quarantineRes, membersRes] = await Promise.all([
+          supabase
+            .from('quarantine_submissions')
+            .select('id, index_number, email, decision_status, submission_date, full_name, organization_id')
+            .eq('organization_id', targetOrgId)
+            .or(`index_number.eq.${cleanIndex},email.ilike.${cleanEmail}`),
+          supabase
+            .from('members')
+            .select('id, index_number, email, activity_status, full_name, organization_id')
+            .eq('organization_id', targetOrgId)
+            .or(`index_number.eq.${cleanIndex},email.ilike.${cleanEmail}`)
+        ]);
+
+        if (quarantineRes.error) {
+          console.warn('Uwaga przy zapytaniu kwarantanny Supabase:', quarantineRes.error);
+        }
+        if (membersRes.error) {
+          console.warn('Uwaga przy zapytaniu bazy members Supabase:', membersRes.error);
+        }
+
+        const qRecords = (quarantineRes.data || []).map(r => ({
+          source: 'Kwarantanna zgłoszeń',
+          status: r.decision_status || 'Oczekuje',
+          index_number: r.index_number,
+          email: r.email,
+          full_name: r.full_name,
+          raw: r
+        }));
+
+        const mRecords = (membersRes.data || []).map(r => ({
+          source: 'Baza członków Koła',
+          status: r.activity_status || 'Aktywny',
+          index_number: r.index_number,
+          email: r.email,
+          full_name: r.full_name,
+          raw: r
+        }));
+
+        allMatches = [...qRecords, ...mRecords];
       }
 
       // Sprawdzenie lokalnej pamięci podręcznej członków (cache CRM offline / sesja)
@@ -509,25 +573,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
         console.warn('Błąd odczytu lokalnej bazy członków:', errLocal);
       }
 
-      const qRecords = (quarantineRes.data || []).map(r => ({
-        source: 'Kwarantanna zgłoszeń',
-        status: r.decision_status || 'Oczekuje',
-        index_number: r.index_number,
-        email: r.email,
-        full_name: r.full_name,
-        raw: r
-      }));
-
-      const mRecords = (membersRes.data || []).map(r => ({
-        source: 'Baza członków Koła',
-        status: r.activity_status || 'Aktywny',
-        index_number: r.index_number,
-        email: r.email,
-        full_name: r.full_name,
-        raw: r
-      }));
-
-      const allMatches = [...qRecords, ...mRecords, ...localMatching];
+      allMatches = [...allMatches, ...localMatching];
 
       // 2. Obsługa aktywnego duplikatu:
       // Jeśli dany indeks/e-mail już istnieje i jest aktywny (lub oczekuje), zablokować wysyłkę
