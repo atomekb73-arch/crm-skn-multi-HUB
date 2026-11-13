@@ -60,6 +60,58 @@ const DOMAIN_TYPOS = {
   'outlook.con': 'outlook.com',
 };
 
+// Reguły formatowania i walidacji numerów telefonów (Polska, Europa, USA, Kanada i międzynarodowe)
+const PHONE_COUNTRY_RULES = [
+  // Ameryka Północna (NANP - USA, Kanada): kod +1, 10 cyfr
+  { dial: '+1', name: 'USA / Kanada', prefixDigits: '1', nationalDigits: 10, format: d => `+1 (${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` },
+  // Polska: kod +48, 9 cyfr
+  { dial: '+48', name: 'Polska', prefixDigits: '48', nationalDigits: 9, format: d => `+48 ${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}` },
+  // Wielka Brytania: kod +44, 9-10 cyfr
+  { dial: '+44', name: 'Wielka Brytania', prefixDigits: '44', minNational: 9, maxNational: 10, format: d => `+44 ${d.slice(0, 4)} ${d.slice(4)}` },
+  // Niemcy: kod +49, 8-11 cyfr
+  { dial: '+49', name: 'Niemcy', prefixDigits: '49', minNational: 8, maxNational: 11, format: d => `+49 ${d.slice(0, 3)} ${d.slice(3)}` },
+  // Ukraina: kod +380, 9 cyfr
+  { dial: '+380', name: 'Ukraina', prefixDigits: '380', nationalDigits: 9, format: d => `+380 ${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5)}` },
+  // Czechy: kod +420, 9 cyfr
+  { dial: '+420', name: 'Czechy', prefixDigits: '420', nationalDigits: 9, format: d => `+420 ${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}` },
+  // Słowacja: kod +421, 9 cyfr
+  { dial: '+421', name: 'Słowacja', prefixDigits: '421', nationalDigits: 9, format: d => `+421 ${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}` },
+  // Francja: kod +33, 9 cyfr
+  { dial: '+33', name: 'Francja', prefixDigits: '33', nationalDigits: 9, format: d => `+33 ${d.slice(0, 1)} ${d.slice(1, 3)} ${d.slice(3, 5)} ${d.slice(5, 7)} ${d.slice(7)}` },
+  // Włochy: kod +39, 9-11 cyfr
+  { dial: '+39', name: 'Włochy', prefixDigits: '39', minNational: 9, maxNational: 11, format: d => `+39 ${d.slice(0, 3)} ${d.slice(3)}` },
+  // Hiszpania: kod +34, 9 cyfr
+  { dial: '+34', name: 'Hiszpania', prefixDigits: '34', nationalDigits: 9, format: d => `+34 ${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}` },
+  // Holandia: kod +31, 9 cyfr
+  { dial: '+31', name: 'Holandia', prefixDigits: '31', nationalDigits: 9, format: d => `+31 ${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5)}` },
+  // Belgia: kod +32, 8-9 cyfr
+  { dial: '+32', name: 'Belgia', prefixDigits: '32', minNational: 8, maxNational: 9, format: d => `+32 ${d.slice(0, 3)} ${d.slice(3)}` },
+  // Austria: kod +43, 7-13 cyfr
+  { dial: '+43', name: 'Austria', prefixDigits: '43', minNational: 7, maxNational: 13, format: d => `+43 ${d.slice(0, 3)} ${d.slice(3)}` },
+  // Szwajcaria: kod +41, 9 cyfr
+  { dial: '+41', name: 'Szwajcaria', prefixDigits: '41', nationalDigits: 9, format: d => `+41 ${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5)}` },
+  // Szwecja: kod +46, 7-10 cyfr
+  { dial: '+46', name: 'Szwecja', prefixDigits: '46', minNational: 7, maxNational: 10, format: d => `+46 ${d.slice(0, 3)} ${d.slice(3)}` },
+  // Norwegia: kod +47, 8 cyfr
+  { dial: '+47', name: 'Norwegia', prefixDigits: '47', nationalDigits: 8, format: d => `+47 ${d.slice(0, 3)} ${d.slice(3, 5)} ${d.slice(5)}` },
+  // Dania: kod +45, 8 cyfr
+  { dial: '+45', name: 'Dania', prefixDigits: '45', nationalDigits: 8, format: d => `+45 ${d.slice(0, 2)} ${d.slice(2, 4)} ${d.slice(4, 6)} ${d.slice(6)}` },
+  // Irlandia: kod +353, 9 cyfr
+  { dial: '+353', name: 'Irlandia', prefixDigits: '353', nationalDigits: 9, format: d => `+353 ${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5)}` },
+  // Portugalia: kod +351, 9 cyfr
+  { dial: '+351', name: 'Portugalia', prefixDigits: '351', nationalDigits: 9, format: d => `+351 ${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}` },
+  // Grecja: kod +30, 10 cyfr
+  { dial: '+30', name: 'Grecja', prefixDigits: '30', nationalDigits: 10, format: d => `+30 ${d.slice(0, 4)} ${d.slice(4)}` },
+  // Litwa: kod +370, 8 cyfr
+  { dial: '+370', name: 'Litwa', prefixDigits: '370', nationalDigits: 8, format: d => `+370 ${d.slice(0, 3)} ${d.slice(3)}` },
+  // Łotwa: kod +371, 8 cyfr
+  { dial: '+371', name: 'Łotwa', prefixDigits: '371', nationalDigits: 8, format: d => `+371 ${d.slice(0, 4)} ${d.slice(4)}` },
+  // Estonia: kod +372, 7-8 cyfr
+  { dial: '+372', name: 'Estonia', prefixDigits: '372', minNational: 7, maxNational: 8, format: d => `+372 ${d.slice(0, 4)} ${d.slice(4)}` },
+  // Finlandia: kod +358, 7-10 cyfr
+  { dial: '+358', name: 'Finlandia', prefixDigits: '358', minNational: 7, maxNational: 10, format: d => `+358 ${d.slice(0, 3)} ${d.slice(3)}` },
+];
+
 export default function SknApplicationForm({ orgId: propOrgId = null }) {
   const orgCtx = typeof useOrg === 'function' ? useOrg() : null;
 
@@ -244,90 +296,129 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
     return null;
   }, [formData.email]);
 
-  // 2b. Walidacja numeru telefonu - wyłącznie dla SKN Uzależnienia
+  // 2b. Walidacja numeru telefonu - wyłącznie dla SKN Uzależnienia (Polska, Europa, USA, Kanada i międzynarodowe)
   const phoneValidation = useMemo(() => {
     if (!isUzaleznienia) {
-      return { isValid: true, error: null, formatted: '' };
+      return { isValid: true, error: null, formatted: '', country: null };
     }
     const raw = String(formData.phone || '').trim();
     if (!raw) {
-      return { isValid: false, error: 'Numer telefonu jest wymagany dla Koła Naukowego Uzależnień.', formatted: '' };
+      return { isValid: false, error: 'Numer telefonu jest wymagany dla Koła Naukowego Uzależnień.', formatted: '', country: null };
+    }
+
+    // Zamiana 00 na + jeśli występuje na początku (np. 0048, 001)
+    let str = raw;
+    if (str.startsWith('00')) {
+      str = '+' + str.slice(2);
     }
 
     // Usunięcie znaków formatowania (spacje, myślniki, nawiasy, kropki)
-    const cleaned = raw.replace(/[\s\-\(\)\.]/g, '');
+    const cleaned = str.replace(/[\s\-\(\)\.]/g, '');
 
-    // Sprawdzenie, czy nie ma niedozwolonych znaków
-    if (!/^(\+?[0-9]{8,15})$/.test(cleaned)) {
+    // Wstępna weryfikacja ogólnego standardu cyfr telefonicznych (od 7 do 15 cyfr, opcjonalny +)
+    if (!/^[+]?[0-9]{7,15}$/.test(cleaned)) {
       return {
         isValid: false,
-        error: 'Numer telefonu może zawierać wyłącznie cyfry oraz opcjonalny prefiks kraju (+).',
-        formatted: ''
+        error: 'Wprowadź poprawny numer telefonu (od 7 do 15 cyfr, dozwolony prefiks kraju ze znakiem +).',
+        formatted: '',
+        country: null
       };
     }
 
-    // Obsługa numerów z polskim prefiksem lub standardowych polskich 9 cyfr
-    if (cleaned.startsWith('+48')) {
-      const national = cleaned.slice(3);
-      if (national.length !== 9) {
-        return {
-          isValid: false,
-          error: `Numer z prefiksem +48 musi mieć dokładnie 9 cyfr po prefiksie (wprowadzono: ${national.length}).`,
-          formatted: ''
-        };
-      }
-      if (national.startsWith('0')) {
-        return { isValid: false, error: 'Polska część numeru komórkowego/stacjonarnego nie może zaczynać się od cyfry 0.', formatted: '' };
-      }
-      const formatted = `+48 ${national.slice(0, 3)} ${national.slice(3, 6)} ${national.slice(6, 9)}`;
-      return { isValid: true, error: null, formatted };
-    } else if (cleaned.startsWith('0048')) {
-      const national = cleaned.slice(4);
-      if (national.length !== 9) {
-        return {
-          isValid: false,
-          error: `Numer z prefiksem 0048 musi mieć dokładnie 9 cyfr po prefiksie (wprowadzono: ${national.length}).`,
-          formatted: ''
-        };
-      }
-      if (national.startsWith('0')) {
-        return { isValid: false, error: 'Polska część numeru nie może zaczynać się od cyfry 0.', formatted: '' };
-      }
-      const formatted = `+48 ${national.slice(0, 3)} ${national.slice(3, 6)} ${national.slice(6, 9)}`;
-      return { isValid: true, error: null, formatted };
-    } else if (cleaned.startsWith('48') && cleaned.length === 11) {
-      const national = cleaned.slice(2);
-      if (national.startsWith('0')) {
-        return { isValid: false, error: 'Polska część numeru nie może zaczynać się od cyfry 0.', formatted: '' };
-      }
-      const formatted = `+48 ${national.slice(0, 3)} ${national.slice(3, 6)} ${national.slice(6, 9)}`;
-      return { isValid: true, error: null, formatted };
-    } else if (!cleaned.startsWith('+')) {
-      // Przypadek 9 cyfr bez prefiksu (standardowy numer w Polsce)
-      if (cleaned.length === 9) {
-        if (cleaned.startsWith('0')) {
-          return { isValid: false, error: 'Polski 9-cyfrowy numer nie może zaczynać się od cyfry 0.', formatted: '' };
+    // 1. Numer z międzynarodowym prefiksem (+)
+    if (cleaned.startsWith('+')) {
+      const digitsOnly = cleaned.slice(1);
+      // Sortowanie reguł po długości prefiksu malejąco (np. +380 przed +38)
+      const sortedRules = [...PHONE_COUNTRY_RULES].sort((a, b) => b.prefixDigits.length - a.prefixDigits.length);
+      for (const rule of sortedRules) {
+        if (digitsOnly.startsWith(rule.prefixDigits)) {
+          let national = digitsOnly.slice(rule.prefixDigits.length);
+          // Usunięcie wiodącego 0 w numerach krajowych po prefiksie międzynarodowym (np. +44 079... -> +44 79...), z wyjątkiem Włoch (+39)
+          if (rule.prefixDigits !== '39' && national.startsWith('0')) {
+            national = national.slice(1);
+          }
+          const minN = rule.minNational || rule.nationalDigits;
+          const maxN = rule.maxNational || rule.nationalDigits;
+          if (national.length < minN || national.length > maxN) {
+            return {
+              isValid: false,
+              error: minN === maxN
+                ? `Numer dla ${rule.name} (${rule.dial}) musi mieć dokładnie ${minN} cyfr po prefiksie (wprowadzono: ${national.length}).`
+                : `Numer dla ${rule.name} (${rule.dial}) musi mieć od ${minN} do ${maxN} cyfr po prefiksie (wprowadzono: ${national.length}).`,
+              formatted: '',
+              country: rule.name
+            };
+          }
+          return {
+            isValid: true,
+            error: null,
+            formatted: rule.format ? rule.format(national) : `${rule.dial} ${national}`,
+            country: rule.name
+          };
         }
-        const formatted = `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6, 9)}`;
-        return { isValid: true, error: null, formatted };
-      } else {
-        return {
-          isValid: false,
-          error: `Polski numer telefonu musi mieć dokładnie 9 cyfr (wprowadzono: ${cleaned.length}).`,
-          formatted: ''
-        };
       }
-    } else {
-      // Inny międzynarodowy numer (zaczyna się od +)
-      if (cleaned.length < 9 || cleaned.length > 16) {
-        return {
-          isValid: false,
-          error: 'Międzynarodowy numer telefonu powinien zawierać od 8 do 15 cyfr po znaku +.',
-          formatted: ''
-        };
-      }
-      return { isValid: true, error: null, formatted: cleaned };
+
+      // Inny międzynarodowy numer zgodny ze standardem ITU E.164 (od 7 do 15 cyfr)
+      return {
+        isValid: true,
+        error: null,
+        formatted: '+' + digitsOnly,
+        country: 'Międzynarodowy'
+      };
     }
+
+    // 2. Numer bez prefiksu "+" wprowadzony lokalnie:
+    // a) Standardowy polski numer 9 cyfr
+    if (cleaned.length === 9) {
+      if (cleaned.startsWith('0')) {
+        return { isValid: false, error: 'Polski 9-cyfrowy numer nie może zaczynać się od cyfry 0.', formatted: '', country: 'Polska' };
+      }
+      return {
+        isValid: true,
+        error: null,
+        formatted: `+48 ${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6)}`,
+        country: 'Polska'
+      };
+    }
+
+    // b) 10 cyfr bez prefiksu (np. standardowy numer USA / Kanada NANP)
+    if (cleaned.length === 10) {
+      return {
+        isValid: true,
+        error: null,
+        formatted: `+1 (${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`,
+        country: 'USA / Kanada'
+      };
+    }
+
+    // c) 11 cyfr zaczynające się od 1 (np. 1-212-555-1234 -> USA / Kanada)
+    if (cleaned.length === 11 && cleaned.startsWith('1')) {
+      const nat = cleaned.slice(1);
+      return {
+        isValid: true,
+        error: null,
+        formatted: `+1 (${nat.slice(0, 3)}) ${nat.slice(3, 6)}-${nat.slice(6)}`,
+        country: 'USA / Kanada'
+      };
+    }
+
+    // d) 11 cyfr zaczynające się od 48 (np. 48501234567 -> Polska z kodem kraju)
+    if (cleaned.length === 11 && cleaned.startsWith('48')) {
+      const nat = cleaned.slice(2);
+      return {
+        isValid: true,
+        error: null,
+        formatted: `+48 ${nat.slice(0, 3)} ${nat.slice(3, 6)} ${nat.slice(6)}`,
+        country: 'Polska'
+      };
+    }
+
+    return {
+      isValid: false,
+      error: 'Wprowadź numer z prefiksem międzynarodowym (np. +1 dla USA/Kanady, +48 dla Polski, +44 dla UK, +49 dla Niemiec) lub 9 cyfr numeru krajowego.',
+      formatted: '',
+      country: null
+    };
   }, [formData.phone, isUzaleznienia]);
 
   const phoneError = phoneValidation.error;
@@ -1181,7 +1272,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
                         </span>
                       </label>
                       <span className="text-[11px] text-teal-700 font-mono">
-                        9 cyfr (np. 501 234 567)
+                        Polska, Europa, USA / Kanada
                       </span>
                     </div>
                     <div className="relative">
@@ -1192,7 +1283,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
                         value={formData.phone}
                         onChange={handleChange}
                         onBlur={() => handleBlur('phone')}
-                        placeholder="np. 501 234 567 lub +48 501 234 567"
+                        placeholder="np. 501 234 567 lub +1 202 555 0125"
                         className={`w-full px-4 py-3.5 rounded-2xl border text-slate-900 text-sm font-medium transition-all duration-200 shadow-2xs outline-none ${
                           touched.phone && phoneError
                             ? 'border-rose-400 bg-rose-50/40 focus:border-rose-500 focus:bg-white focus:ring-4 focus:ring-rose-400/25 focus:shadow-lg focus:shadow-rose-500/10'
@@ -1204,7 +1295,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
                       {formData.phone && phoneValidation.isValid && (
                         <div className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center gap-1 text-teal-700 bg-teal-100/90 border border-teal-300 px-2 py-0.5 rounded-lg text-xs font-bold">
                           <Check size={12} strokeWidth={3} />
-                          <span>Poprawny</span>
+                          <span>{phoneValidation.country ? `${phoneValidation.country}` : 'Poprawny'}</span>
                         </div>
                       )}
                     </div>
@@ -1216,15 +1307,20 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
                         <span>{phoneError}</span>
                       </div>
                     ) : phoneValidation.formatted ? (
-                      <p className="text-[11px] text-teal-700 mt-1 flex items-center gap-1 font-medium">
+                      <p className="text-[11px] text-teal-700 mt-1 flex items-center gap-1 font-medium flex-wrap">
                         <span>Format zapisu:</span>
                         <strong className="font-mono text-teal-900 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200">
                           {phoneValidation.formatted}
                         </strong>
+                        {phoneValidation.country && (
+                          <span className="text-[10px] text-teal-800 bg-teal-100/60 px-1.5 py-0.5 rounded">
+                            ({phoneValidation.country})
+                          </span>
+                        )}
                       </p>
                     ) : (
                       <p className="text-[11px] text-slate-500 mt-1">
-                        Podaj 9-cyfrowy numer kontaktowy (komórkowy lub stacjonarny).
+                        Podaj numer krajowy (9 cyfr) lub międzynarodowy z prefiksem (np. +1 dla USA/Kanady, +44, +49 itp.).
                       </p>
                     )}
                   </div>
