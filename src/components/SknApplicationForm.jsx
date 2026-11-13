@@ -17,6 +17,7 @@ import {
   RotateCcw,
   X,
   ArrowRight,
+  Phone,
 } from 'lucide-react';
 
 // Wyrażenie regularne dla numeru indeksu: dokładnie 4 lub 5 cyfr, bez wiodącego zera
@@ -165,6 +166,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
+    phone: '',
     index_number: '',
     field_of_study: 'Psychologia',
     study_year: 'Rok 1, Semestr 1',
@@ -177,6 +179,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
   const [touched, setTouched] = useState({
     full_name: false,
     email: false,
+    phone: false,
     index_number: false,
   });
 
@@ -193,6 +196,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
       setFormData({
         full_name: submittedSummary.fullName,
         email: submittedSummary.email,
+        phone: submittedSummary.phone || '',
         index_number: submittedSummary.indexNumber,
         field_of_study: submittedSummary.fieldOfStudy || 'Psychologia',
         study_year: submittedSummary.studyYear || 'Rok 1, Semestr 1',
@@ -204,6 +208,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
       setTouched({
         full_name: true,
         email: true,
+        phone: true,
         index_number: true,
       });
     }
@@ -238,6 +243,94 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
     }
     return null;
   }, [formData.email]);
+
+  // 2b. Walidacja numeru telefonu - wyłącznie dla SKN Uzależnienia
+  const phoneValidation = useMemo(() => {
+    if (!isUzaleznienia) {
+      return { isValid: true, error: null, formatted: '' };
+    }
+    const raw = String(formData.phone || '').trim();
+    if (!raw) {
+      return { isValid: false, error: 'Numer telefonu jest wymagany dla Koła Naukowego Uzależnień.', formatted: '' };
+    }
+
+    // Usunięcie znaków formatowania (spacje, myślniki, nawiasy, kropki)
+    const cleaned = raw.replace(/[\s\-\(\)\.]/g, '');
+
+    // Sprawdzenie, czy nie ma niedozwolonych znaków
+    if (!/^(\+?[0-9]{8,15})$/.test(cleaned)) {
+      return {
+        isValid: false,
+        error: 'Numer telefonu może zawierać wyłącznie cyfry oraz opcjonalny prefiks kraju (+).',
+        formatted: ''
+      };
+    }
+
+    // Obsługa numerów z polskim prefiksem lub standardowych polskich 9 cyfr
+    if (cleaned.startsWith('+48')) {
+      const national = cleaned.slice(3);
+      if (national.length !== 9) {
+        return {
+          isValid: false,
+          error: `Numer z prefiksem +48 musi mieć dokładnie 9 cyfr po prefiksie (wprowadzono: ${national.length}).`,
+          formatted: ''
+        };
+      }
+      if (national.startsWith('0')) {
+        return { isValid: false, error: 'Polska część numeru komórkowego/stacjonarnego nie może zaczynać się od cyfry 0.', formatted: '' };
+      }
+      const formatted = `+48 ${national.slice(0, 3)} ${national.slice(3, 6)} ${national.slice(6, 9)}`;
+      return { isValid: true, error: null, formatted };
+    } else if (cleaned.startsWith('0048')) {
+      const national = cleaned.slice(4);
+      if (national.length !== 9) {
+        return {
+          isValid: false,
+          error: `Numer z prefiksem 0048 musi mieć dokładnie 9 cyfr po prefiksie (wprowadzono: ${national.length}).`,
+          formatted: ''
+        };
+      }
+      if (national.startsWith('0')) {
+        return { isValid: false, error: 'Polska część numeru nie może zaczynać się od cyfry 0.', formatted: '' };
+      }
+      const formatted = `+48 ${national.slice(0, 3)} ${national.slice(3, 6)} ${national.slice(6, 9)}`;
+      return { isValid: true, error: null, formatted };
+    } else if (cleaned.startsWith('48') && cleaned.length === 11) {
+      const national = cleaned.slice(2);
+      if (national.startsWith('0')) {
+        return { isValid: false, error: 'Polska część numeru nie może zaczynać się od cyfry 0.', formatted: '' };
+      }
+      const formatted = `+48 ${national.slice(0, 3)} ${national.slice(3, 6)} ${national.slice(6, 9)}`;
+      return { isValid: true, error: null, formatted };
+    } else if (!cleaned.startsWith('+')) {
+      // Przypadek 9 cyfr bez prefiksu (standardowy numer w Polsce)
+      if (cleaned.length === 9) {
+        if (cleaned.startsWith('0')) {
+          return { isValid: false, error: 'Polski 9-cyfrowy numer nie może zaczynać się od cyfry 0.', formatted: '' };
+        }
+        const formatted = `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6, 9)}`;
+        return { isValid: true, error: null, formatted };
+      } else {
+        return {
+          isValid: false,
+          error: `Polski numer telefonu musi mieć dokładnie 9 cyfr (wprowadzono: ${cleaned.length}).`,
+          formatted: ''
+        };
+      }
+    } else {
+      // Inny międzynarodowy numer (zaczyna się od +)
+      if (cleaned.length < 9 || cleaned.length > 16) {
+        return {
+          isValid: false,
+          error: 'Międzynarodowy numer telefonu powinien zawierać od 8 do 15 cyfr po znaku +.',
+          formatted: ''
+        };
+      }
+      return { isValid: true, error: null, formatted: cleaned };
+    }
+  }, [formData.phone, isUzaleznienia]);
+
+  const phoneError = phoneValidation.error;
 
   // 3. Sprawdzanie literówek w domenie i generowanie sugestii
   const emailTypoSuggestion = useMemo(() => {
@@ -303,6 +396,22 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
     setStatus({ loading: true, success: false, error: null });
 
     try {
+      const cleanPhone = isUzaleznienia ? (phoneValidation.formatted || formData.phone.trim()) : null;
+
+      const baseCustomFields = isReactivation
+        ? {
+            reactivation: true,
+            reactivation_date: new Date().toISOString(),
+            previous_status: previousStatus || archivalModal.matchedRecord?.status || 'Rezygnacja / Archiwum',
+            notes: 'Zgłoszenie powrotne po rezygnacji/archiwum (potwierdzone przez kandydata)',
+          }
+        : {};
+
+      if (isUzaleznienia && cleanPhone) {
+        baseCustomFields.phone = cleanPhone;
+        baseCustomFields.telefon = cleanPhone;
+      }
+
       const payload = {
         organization_id: targetOrgId,
         submission_date: new Date().toISOString(),
@@ -314,14 +423,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
         consents_ok: true,
         decision_status: 'Oczekuje',
         academic_year: '2026/2027',
-        custom_fields: isReactivation
-          ? {
-              reactivation: true,
-              reactivation_date: new Date().toISOString(),
-              previous_status: previousStatus || archivalModal.matchedRecord?.status || 'Rezygnacja / Archiwum',
-              notes: 'Zgłoszenie powrotne po rezygnacji/archiwum (potwierdzone przez kandydata)',
-            }
-          : {},
+        custom_fields: baseCustomFields,
       };
 
       console.log('[SknApplicationForm] Wysyłanie rekordu do Supabase quarantine_submissions:', payload);
@@ -341,6 +443,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
       setSubmittedSummary({
         fullName: formData.full_name.trim(),
         email: formData.email.trim().toLowerCase(),
+        phone: cleanPhone,
         indexNumber: formData.index_number.trim(),
         fieldOfStudy: formData.field_of_study || 'Psychologia',
         studyYear: formData.study_year || 'Rok 1, Semestr 1',
@@ -355,6 +458,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
       setFormData({
         full_name: '',
         email: '',
+        phone: '',
         index_number: '',
         field_of_study: 'Psychologia',
         study_year: 'Rok 1, Semestr 1',
@@ -366,6 +470,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
       setTouched({
         full_name: false,
         email: false,
+        phone: false,
         index_number: false,
       });
     } catch (err) {
@@ -403,8 +508,19 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
     setTouched({
       full_name: true,
       email: true,
+      phone: true,
       index_number: true,
     });
+
+    // Weryfikacja poprawności numeru telefonu (jeśli dotyczy Koła Uzależnień)
+    if (isUzaleznienia && phoneError) {
+      setStatus({
+        loading: false,
+        success: false,
+        error: phoneError
+      });
+      return;
+    }
 
     // Weryfikacja poprawności numeru indeksu
     if (indexError) {
@@ -765,10 +881,16 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
                   <span className="text-slate-400 block text-[10px] uppercase font-bold">Nr indeksu:</span>
                   <span className="font-mono font-bold text-slate-800">{submittedSummary?.indexNumber || '—'}</span>
                 </div>
-                <div className="sm:col-span-2">
+                <div className={submittedSummary?.phone ? "sm:col-span-1" : "sm:col-span-2"}>
                   <span className="text-slate-400 block text-[10px] uppercase font-bold">E-mail:</span>
                   <span className="font-semibold text-slate-700">{submittedSummary?.email || '—'}</span>
                 </div>
+                {submittedSummary?.phone && (
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Nr telefonu:</span>
+                    <span className="font-mono font-bold text-teal-800">{submittedSummary.phone}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1046,6 +1168,67 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
                     </p>
                   )}
                 </div>
+
+                {/* Numer Telefonu - WIDOCZNY WYŁĄCZNIE DLA KOŁA NAUKOWEGO UZALEŻNIEŃ */}
+                {isUzaleznienia && (
+                  <div className="animate-in fade-in duration-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-semibold text-teal-950 uppercase tracking-wider flex items-center gap-1.5">
+                        <Phone size={13} className="text-teal-600" />
+                        <span>Numer Telefonu *</span>
+                        <span className="text-[10px] font-bold text-teal-700 bg-teal-100/90 border border-teal-200 px-1.5 py-0.2 rounded-md">
+                          SKN Uzależnienia
+                        </span>
+                      </label>
+                      <span className="text-[11px] text-teal-700 font-mono">
+                        9 cyfr (np. 501 234 567)
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="tel"
+                        name="phone"
+                        required
+                        value={formData.phone}
+                        onChange={handleChange}
+                        onBlur={() => handleBlur('phone')}
+                        placeholder="np. 501 234 567 lub +48 501 234 567"
+                        className={`w-full px-4 py-3.5 rounded-2xl border text-slate-900 text-sm font-medium transition-all duration-200 shadow-2xs outline-none ${
+                          touched.phone && phoneError
+                            ? 'border-rose-400 bg-rose-50/40 focus:border-rose-500 focus:bg-white focus:ring-4 focus:ring-rose-400/25 focus:shadow-lg focus:shadow-rose-500/10'
+                            : formData.phone && phoneValidation.isValid
+                            ? 'border-teal-500 bg-teal-50/30 focus:border-teal-600 focus:bg-white focus:ring-4 focus:ring-teal-400/25 focus:shadow-lg focus:shadow-teal-500/10'
+                            : 'border-slate-300 bg-slate-50/50 hover:border-teal-400 focus:bg-white focus:border-teal-500 focus:ring-4 focus:ring-teal-400/25 focus:shadow-lg focus:shadow-teal-500/15'
+                        }`}
+                      />
+                      {formData.phone && phoneValidation.isValid && (
+                        <div className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center gap-1 text-teal-700 bg-teal-100/90 border border-teal-300 px-2 py-0.5 rounded-lg text-xs font-bold">
+                          <Check size={12} strokeWidth={3} />
+                          <span>Poprawny</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Komunikat o błędzie lub podgląd sformatowanego numeru */}
+                    {touched.phone && phoneError ? (
+                      <div className="mt-1.5 flex items-center gap-1.5 text-xs text-rose-600 font-medium">
+                        <AlertCircle size={13} className="shrink-0 text-rose-500" />
+                        <span>{phoneError}</span>
+                      </div>
+                    ) : phoneValidation.formatted ? (
+                      <p className="text-[11px] text-teal-700 mt-1 flex items-center gap-1 font-medium">
+                        <span>Format zapisu:</span>
+                        <strong className="font-mono text-teal-900 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200">
+                          {phoneValidation.formatted}
+                        </strong>
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-slate-500 mt-1">
+                        Podaj 9-cyfrowy numer kontaktowy (komórkowy lub stacjonarny).
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {/* Kierunek i Rok/Semestr Studiów */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
