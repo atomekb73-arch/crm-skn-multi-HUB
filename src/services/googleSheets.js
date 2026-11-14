@@ -348,7 +348,7 @@ export async function saveMeetingAttendanceToSupabase({ kodSpotkania, dataSpotka
     }
   }
 
-  const rowsToInsert = listToSave.map(item => {
+  const rowsToInsert = listToSave.map((item, idx) => {
     if (typeof item === 'string') {
       const isIdx = /^\d+$/.test(item.trim());
       return {
@@ -357,23 +357,29 @@ export async function saveMeetingAttendanceToSupabase({ kodSpotkania, dataSpotka
         meeting_date: dateStr,
         index_number: item.trim(),
         role: isIdx ? 'Członek koła' : 'Gość',
-        points: 1,
+        points: isIdx ? 1 : 0,
         activity_description: 'Obecność na spotkaniu naukowym'
       };
     }
-    const nrIndeksu = String(item.nrIndeksu || item.index || '').replace(/\D/g, '').trim();
-    const name = String(item.name || item.fullName || item.rawName || '').trim();
-    const isSup = item.role === 'supervisor' || item.rola === 'Opiekun' || item.rola === 'Opiekun Koła';
-    const isSpk = item.role === 'speaker' || item.rola === 'Prelegent';
-    const isGst = item.role === 'guest' || item.rola === 'Gość' || item.isGuest || item.isExternalGuest || (!nrIndeksu && item.role !== 'member');
-    const rola = String(item.rola || item.role || (isSup ? 'Opiekun' : (isSpk ? 'Prelegent' : (isGst ? 'Gość' : 'Członek koła')))).trim();
+    const isSup = item.role === 'supervisor' || item.rola === 'Opiekun' || item.rola === 'Opiekun Koła' || item.isSupervisor;
+    const isSpk = !isSup && (item.role === 'speaker' || item.rola === 'Prelegent' || item.isSpeaker);
+    const nrIndeksu = (!isSup && !isSpk) ? String(item.nrIndeksu || item.index || '').replace(/\D/g, '').trim() : '';
+    const isGst = !isSup && !isSpk && (item.role === 'guest' || item.rola === 'Gość' || item.rola === 'Gość' || item.isGuest || item.isExternalGuest || (!nrIndeksu && item.role !== 'member'));
+    const rawItemName = String(item.name || item.fullName || item.rawName || '').trim();
+    const cleanItemName = rawItemName.replace(/^\[(?:OPIEKUN|SPEAKER|PRELEGENT|GOŚĆ|GOSC)\]:\s*/i, '').trim();
+    const name = cleanItemName || (isGst ? `Gość #${idx + 1}` : (isSup ? `Opiekun #${idx + 1}` : (isSpk ? `Prelegent #${idx + 1}` : `Uczestnik #${idx + 1}`)));
+    const rola = String(item.rola || (isSup ? 'Opiekun' : (isSpk ? 'Prelegent' : (isGst ? 'Gość' : 'Członek koła')))).trim();
     const rawPts = item.punkty !== undefined ? item.punkty : (item.points !== undefined ? item.points : 1);
-    const punkty = Number(rawPts) > 0 ? Number(rawPts) : 1;
+    const punkty = (isSup || isSpk || isGst) ? 0 : (Number(rawPts) >= 0 ? Number(rawPts) : 1);
     const opisAktywnosci = String(item.opisAktywnosci || item.description || 'Obecność na spotkaniu naukowym').trim();
 
     const identifier = isSup
-      ? (name.startsWith('[OPIEKUN]') ? name : `[OPIEKUN]: ${name}`)
-      : (isSpk ? (name.startsWith('[SPEAKER]') ? name : `[SPEAKER]: ${name}`) : (nrIndeksu || name));
+      ? `[OPIEKUN]: ${name}`
+      : (isSpk
+        ? `[SPEAKER]: ${name}`
+        : (isGst
+          ? `[GOŚĆ]: ${name}`
+          : (nrIndeksu || name)));
 
     const metaPayload = {
       desc: opisAktywnosci,
@@ -382,6 +388,9 @@ export async function saveMeetingAttendanceToSupabase({ kodSpotkania, dataSpotka
       joinTime: String(item.joinTime || '').trim(),
       durationMinutes: item.durationMinutes !== undefined && item.durationMinutes !== null ? Number(item.durationMinutes) : null,
       durationStr: String(item.durationStr || '').trim(),
+      manualApproved: true,
+      isEligible: true,
+      status: isSup ? 'supervisor' : (isSpk ? 'speaker' : (isGst ? 'guest' : 'approved')),
       ...(Array.isArray(item.activities) && item.activities.length > 0 ? { activities: item.activities } : {}),
     };
 

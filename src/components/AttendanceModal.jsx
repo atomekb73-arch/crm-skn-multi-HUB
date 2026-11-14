@@ -1434,13 +1434,21 @@ export default function AttendanceModal({
 
       const allVerifiedList = localParticipants
         .filter(isApprovedParticipant)
-        .map(p => {
-          const nrIndeksu = String(p.member?.index || p.nrIndeksu || p.index || (isMonikaLyniewska(p.rawName) ? '34327' : (p.rawName.match(/\d{4,6}/)?.[0] || ''))).trim();
-          const name = String(p.member?.fullName || p.fullName || p.rawName || '').trim();
-          const isSup = p.role === 'supervisor' || isFacultySupervisor(p.rawName);
-          const isSpk = p.role === 'speaker';
-          const isGst = p.role === 'guest' || p.isGuest || p.isExternalGuest || (!nrIndeksu && p.role !== 'member');
-          const rola = String(isSup ? 'Opiekun' : (isSpk ? 'Prelegent' : (isGst ? 'Gość' : 'Członek koła'))).trim();
+        .map((p, idx) => {
+          const safeRawName = String(p.rawName || '').trim();
+          const isSup = isSupervisorPerson(p);
+          const isSpk = isSpeakerPerson(p);
+          const isGst = isGuestPerson(p);
+          const rawCandidateIdx = (!isSup && !isSpk && !isGst)
+            ? String(p.member?.index || p.nrIndeksu || p.index || (isMonikaLyniewska(safeRawName) ? '34327' : (safeRawName.match(/\d{4,6}/)?.[0] || ''))).replace(/\D/g, '').trim()
+            : '';
+          const nrIndeksu = rawCandidateIdx;
+          const finalIsGst = isGst || (!isSup && !isSpk && !nrIndeksu && p.role !== 'member');
+          const cleanNameBase = String(p.member?.fullName || p.fullName || p.name || safeRawName || '')
+            .replace(/^\[(?:OPIEKUN|SPEAKER|PRELEGENT|GOŚĆ|GOSC)\]:\s*/i, '')
+            .trim();
+          const name = cleanNameBase || (finalIsGst ? `Gość #${idx + 1}` : (isSup ? `Opiekun #${idx + 1}` : (isSpk ? `Prelegent #${idx + 1}` : `Uczestnik #${idx + 1}`)));
+          const rola = String(isSup ? 'Opiekun' : (isSpk ? 'Prelegent' : (finalIsGst ? 'Gość' : 'Członek koła'))).trim();
 
           const attendeeDays = typeof p.daysAttended === 'number' && p.daysAttended > 0 ? Math.min(totalEventDays, p.daysAttended) : totalEventDays;
           const extraActs = Array.isArray(p.activities) ? p.activities : [];
@@ -1453,7 +1461,7 @@ export default function AttendanceModal({
           });
 
           // Punkty naliczane są tylko zweryfikowanym członkom koła
-          const finalPointsForMeeting = (!isSup && !isSpk && !isGst) ? breakdown.totalPoints : 0;
+          const finalPointsForMeeting = (!isSup && !isSpk && !finalIsGst) ? breakdown.totalPoints : 0;
 
           const activityDesc = extraActs.length > 0
             ? `Obecność + aktywności (${extraActs.join(', ')})`
@@ -1463,12 +1471,16 @@ export default function AttendanceModal({
             nrIndeksu,
             name,
             fullName: name,
-            rawName: p.rawName || name,
+            rawName: safeRawName || name,
             joinTime: p.joinTime || '',
             durationMinutes: p.durationMinutes ?? null,
             durationStr: p.durationStr || '',
             activities: extraActs,
             rola,
+            role: isSup ? 'supervisor' : (isSpk ? 'speaker' : (finalIsGst ? 'guest' : 'member')),
+            isSupervisor: isSup,
+            isSpeaker: isSpk,
+            isGuest: finalIsGst,
             punkty: finalPointsForMeeting,
             trybUdzialu: breakdown.isParticipantOnline ? 'ONLINE' : 'STACJONARNY',
             opisAktywnosci: activityDesc,
@@ -2415,9 +2427,15 @@ export default function AttendanceModal({
         </div>
 
         {/* ── Modal Footer Bar ─────────────────────────────────────────────── */}
+        {saveError && (
+          <div className="px-6 py-2.5 bg-rose-50 border-t border-rose-200 flex items-center gap-2 text-rose-800 text-xs font-semibold shrink-0">
+            <AlertTriangle size={15} className="text-rose-600 shrink-0" />
+            <span className="truncate">{saveError}</span>
+          </div>
+        )}
         <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
           <div className="text-xs text-slate-500">
-            Podsumowanie do zapisu: <strong className="text-emerald-700 font-bold">{countApprovedTotal}</strong> zaliczonych obecności (w tym {countApprovedMembers} członków koła, {countSupervisors} opiekunów).
+            Podsumowanie do zapisu: <strong className="text-emerald-700 font-bold">{countApprovedTotal}</strong> zaliczonych obecności (w tym {countApprovedMembers} członków koła, {countSupervisors} opiekunów{countGuests > 0 ? `, ${countGuests} gości` : ''}).
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">

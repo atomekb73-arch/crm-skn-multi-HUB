@@ -1164,8 +1164,13 @@ export default function App() {
             rawIdxStr.includes('[SPEAKER]')
           );
 
+          const isGuestRow = !isSupervisor && !isSpeaker && (
+            rawIdxStr.includes('[GOŚĆ]') || rawIdxStr.includes('[GOSC]') ||
+            (row.role && (row.role.toLowerCase().includes('gość') || row.role.toLowerCase().includes('guest') || row.role.toLowerCase().includes('gosc')))
+          );
+
           // Automatyczne powiązanie (join) z tabelą members po indeksie, emailu lub nazwisku
-          const matchedMember = (!isSupervisor && !isSpeaker)
+          const matchedMember = (!isSupervisor && !isSpeaker && !isGuestRow)
             ? ((cleanIdxStr && memberByIndex.get(cleanIdxStr)) ||
                memberByIndex.get(rawIdxStr) ||
                memberByEmail.get(rawIdxStr.toLowerCase()) ||
@@ -1178,9 +1183,11 @@ export default function App() {
             ? rawIdxStr.replace(/^\[OPIEKUN\]:\s*/i, '').trim()
             : isSpeaker
             ? rawIdxStr.replace(/^\[SPEAKER\]:\s*/i, '').trim()
+            : isGuestRow
+            ? rawIdxStr.replace(/^\[(?:GOŚĆ|GOSC)\]:\s*/i, '').trim()
             : (matchedMember ? matchedMember.fullName : rawIdxStr);
 
-          const resolvedIndex = isSupervisor ? '' : (isSpeaker ? '[SPEAKER]' : (matchedMember ? matchedMember.index : (cleanIdxStr || rawIdxStr)));
+          const resolvedIndex = isSupervisor ? '' : (isSpeaker ? '[SPEAKER]' : (isGuestRow ? '' : (matchedMember ? matchedMember.index : (cleanIdxStr || rawIdxStr))));
 
           let parsedDesc = null;
           try {

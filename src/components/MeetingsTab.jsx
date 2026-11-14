@@ -1357,7 +1357,7 @@ export default function MeetingsTab({
 
     if (Array.isArray(participants) && participants.length > 0) {
       participants = participants.map((p, i) => {
-        if (p && typeof p === 'object' && p.fullName && p.member) return p;
+        if (p && typeof p === 'object' && p.fullName && (p.member || p.isSupervisor || p.isSpeaker || p.isGuest)) return p;
         return resolveParticipantFromSavedIndex(p, members, FACULTY_SUPERVISORS, i);
       }).filter(Boolean);
     }
@@ -1450,27 +1450,38 @@ export default function MeetingsTab({
 
     const verifiedList = participantsList
       .filter(p => p.manualApproved)
-      .map(p => {
-        const nrIndeksu = String(p.member?.index || p.nrIndeksu || p.index || (isMonikaLyniewska(p.rawName) ? '34327' : (p.rawName?.match(/\d{4,6}/)?.[0] || ''))).replace(/\D/g, '').trim();
-        let name = String(p.member?.fullName || p.fullName || p.rawName || '').trim();
+      .map((p, idx) => {
+        const safeRawName = String(p.rawName || '').trim();
+        const isSup = p.role === 'supervisor' || p.isSupervisor || isFacultySupervisor(safeRawName);
+        const isSpk = !isSup && (p.role === 'speaker' || p.isSpeaker);
+        const rawGst = !isSup && !isSpk && (p.role === 'guest' || p.rola === 'Gość' || p.isGuest || p.isExternalGuest);
+        const nrIndeksu = (!isSup && !isSpk && !rawGst)
+          ? String(p.member?.index || p.nrIndeksu || p.index || (isMonikaLyniewska(safeRawName) ? '34327' : (safeRawName.match(/\d{4,6}/)?.[0] || ''))).replace(/\D/g, '').trim()
+          : '';
+        const isGst = rawGst || (!isSup && !isSpk && !nrIndeksu && p.role !== 'member');
+        let name = String(p.member?.fullName || p.fullName || p.name || safeRawName || '').replace(/^\[(?:OPIEKUN|SPEAKER|PRELEGENT|GOŚĆ|GOSC)\]:\s*/i, '').trim();
         if (/^\d+$/.test(name) && nrIndeksu) {
           name = (p.member && !/^\d+$/.test(p.member.fullName || '')) ? p.member.fullName : '';
         }
-        const isSup = p.role === 'supervisor' || isFacultySupervisor(p.rawName);
-        const isSpk = p.role === 'speaker';
-        const isGst = p.role === 'guest' || p.isGuest || p.isExternalGuest || (!nrIndeksu && p.role !== 'member');
+        if (!name && !nrIndeksu) {
+          name = isGst ? `Gość #${idx + 1}` : (isSup ? `Opiekun #${idx + 1}` : `Uczestnik #${idx + 1}`);
+        }
         const rola = String(isSup ? 'Opiekun' : (isSpk ? 'Prelegent' : (isGst ? 'Gość' : 'Członek koła'))).trim();
         return {
           nrIndeksu: nrIndeksu || '',
           name,
           fullName: name,
-          rawName: p.rawName || name,
+          rawName: safeRawName || name,
           joinTime: p.joinTime || '',
           durationMinutes: p.durationMinutes ?? null,
           durationStr: p.durationStr || '',
           activities: Array.isArray(p.activities) ? p.activities : [],
           rola,
-          punkty: Number(p.punkty ?? p.points ?? 1) || 1,
+          role: isSup ? 'supervisor' : (isSpk ? 'speaker' : (isGst ? 'guest' : 'member')),
+          isSupervisor: isSup,
+          isSpeaker: isSpk,
+          isGuest: isGst,
+          punkty: (isSup || isSpk || isGst) ? 0 : (Number(p.punkty ?? p.points ?? 1) || 1),
           opisAktywnosci: p.opisAktywnosci || 'Obecność na spotkaniu'
         };
       })
@@ -3091,7 +3102,9 @@ export default function MeetingsTab({
         onThresholdChange={handleThresholdChange}
         onSaveAttendance={(meetingId, confirmedIndexes, updatedParticipants, payload) => {
           const activeOrgId = currentOrg?.id || 'skn_seksuologii';
-          const targetMeeting = meetings.find(m => m.id === meetingId || m.date === meetingId || m.code === meetingId) || selectedMeeting;
+          const targetMeeting = (selectedMeeting && (selectedMeeting.id === meetingId || selectedMeeting.date === meetingId || selectedMeeting.code === meetingId) ? selectedMeeting : null) ||
+            meetings.find(m => m.id === meetingId || m.date === meetingId || m.code === meetingId) ||
+            selectedMeeting;
           const finalPayload = {
             organization_id: activeOrgId,
             orgName: currentOrg?.name || '',
