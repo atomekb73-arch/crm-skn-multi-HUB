@@ -25,12 +25,14 @@ import {
   restoreUserClubAccess,
 } from '../services/settingsService';
 import { WSKZ_ORGANIZATIONS } from '../config/wskzRegistry';
+import AdminPanelPage from './AdminPanelPage';
 
 export default function SuperAdminPanel({ isOpen, onClose, onPermissionsChanged }) {
-  const { user, isSuperAdmin } = useAuth();
+  const { user, isSuperAdmin, hasFullAccess } = useAuth();
   const actorEmail = String(user?.email || '').trim().toLowerCase();
-  const isAuthorizedSuperadmin = Boolean(isSuperAdmin && actorEmail === GLOBAL_SUPERADMIN_EMAIL);
+  const isAuthorizedSuperadmin = Boolean((isSuperAdmin || hasFullAccess) && actorEmail === GLOBAL_SUPERADMIN_EMAIL);
 
+  const [activeTab, setActiveTab] = useState('rbac');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [matrix, setMatrix] = useState(null);
@@ -208,7 +210,7 @@ export default function SuperAdminPanel({ isOpen, onClose, onPermissionsChanged 
 
   return (
     <div className="fixed inset-0 z-[120] bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto">
-      <div className="w-full max-w-6xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-150">
+      <div className="w-full max-w-7xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-900 text-white px-5 py-4 flex items-center justify-between gap-4 border-b border-indigo-500/30 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
@@ -218,41 +220,85 @@ export default function SuperAdminPanel({ isOpen, onClose, onPermissionsChanged 
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-base sm:text-lg font-black tracking-tight text-white">
-                  Panel Superadministratora — Macierz Dostępów i Izolacji
+                  Panel Administratora (RBAC) &amp; Izolacja Dostępów
                 </h2>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-400/20 text-amber-200 border border-amber-400/40 uppercase tracking-wider">
                   Wyłącznie {GLOBAL_SUPERADMIN_EMAIL}
                 </span>
               </div>
               <p className="text-xs text-indigo-200/80 mt-0.5 truncate">
-                Centralny audyt uprawnień między kołami naukowymi, wykrywanie anomalii oraz natychmiastowy Kill Switch
+                Zarządzanie kontami RBAC, przypisaniami do kół naukowych WSKZ, audyt anomalii i Kill Switch
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={loadMatrix}
-              disabled={loading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-white transition cursor-pointer disabled:opacity-50"
-            >
-              <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-              <span className="hidden sm:inline">Odśwież audyt</span>
-            </button>
+            {activeTab === 'audit' && (
+              <button
+                type="button"
+                onClick={loadMatrix}
+                disabled={loading}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-white transition cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+                <span className="hidden sm:inline">Odśwież audyt</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={onClose}
               className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white transition cursor-pointer"
-              aria-label="Zamknij Panel Superadministratora"
+              aria-label="Zamknij Panel Administratora"
             >
               <X size={18} />
             </button>
           </div>
         </div>
 
+        {/* Navigation Tabs */}
+        <div className="px-5 py-2.5 bg-slate-900/95 border-b border-slate-800 flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => setActiveTab('rbac')}
+            className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+              activeTab === 'rbac'
+                ? 'bg-indigo-500 text-white shadow-xs'
+                : 'text-slate-300 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            <UserPlus size={13} />
+            <span>Panel Administratora (RBAC)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('audit')}
+            className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+              activeTab === 'audit'
+                ? 'bg-amber-500 text-slate-950 shadow-xs'
+                : 'text-slate-300 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            <ShieldAlert size={13} />
+            <span>Audyt Anomalii &amp; Kill Switch</span>
+            {stats.anomalyCount > 0 && (
+              <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-black bg-rose-500 text-white">
+                {stats.anomalyCount}
+              </span>
+            )}
+          </button>
+        </div>
+
         {/* Scrollable Body */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 bg-slate-50/70">
+          {activeTab === 'rbac' ? (
+            <AdminPanelPage
+              onPermissionsChanged={() => {
+                loadMatrix();
+                onPermissionsChanged?.();
+              }}
+            />
+          ) : (
+            <>
           {/* Summary KPI Row */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-2xs">
@@ -608,6 +654,8 @@ export default function SuperAdminPanel({ isOpen, onClose, onPermissionsChanged 
               </div>
             )}
           </div>
+            </>
+          )}
         </div>
       </div>
     </div>

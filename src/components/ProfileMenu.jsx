@@ -109,7 +109,7 @@ export default function ProfileMenu({ onOpenSettings }) {
 
     setIsSubmitting(true);
     try {
-      const res = changeUserPassword(currentPassword, newPassword, confirmPassword);
+      const res = await changeUserPassword(currentPassword, newPassword, confirmPassword);
       if (!res.success) {
         setChangeError(res.error || 'Nie udało się zmienić hasła.');
       } else {

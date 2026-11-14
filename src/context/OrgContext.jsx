@@ -302,6 +302,7 @@ export function OrgProvider({ children }) {
 
     if (isAuthenticated && typeof canAccessOrg === 'function' && !canAccessOrg(cleanId)) {
       console.warn(`[OrgContext] Zablokowano próbę przełączenia na nieautoryzowane koło: ${cleanId}`);
+      showToast('Brak uprawnień do wybranego koła naukowego.');
       return;
     }
 
@@ -398,11 +399,17 @@ export function OrgProvider({ children }) {
     return true;
   }, [currentOrgId, switchOrg]);
 
+  const accessibleOrganizations = useMemo(() => {
+    if (!isAuthenticated || typeof canAccessOrg !== 'function') return [];
+    return organizations.filter((o) => canAccessOrg(o.id));
+  }, [isAuthenticated, canAccessOrg, organizations]);
+
   const value = useMemo(() => ({
     currentOrg,
     currentOrgId,
     theme,
     organizations,
+    accessibleOrganizations,
     switchOrg,
     addOrganization,
     updateOrganization,
@@ -430,6 +437,7 @@ export function OrgProvider({ children }) {
     currentOrgId,
     theme,
     organizations,
+    accessibleOrganizations,
     switchOrg,
     addOrganization,
     updateOrganization,

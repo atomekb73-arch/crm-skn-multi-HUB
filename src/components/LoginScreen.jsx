@@ -43,7 +43,7 @@ export default function LoginScreen({ onOpenPublicForm, currentOrgId }) {
   // Validation rules for new password during first-time activation
   const hasMinLength = newPassword.length >= 8;
   const passwordsMatch = newPassword.length > 0 && newPassword === confirmPassword;
-  const isNotStarterPassword = Boolean(newPassword) && newPassword !== DEFAULT_STARTER_PASSWORD && newPassword !== 'Start2026!';
+  const isNotStarterPassword = Boolean(newPassword) && newPassword !== DEFAULT_STARTER_PASSWORD && newPassword !== 'Start2026!' && newPassword !== 'StartCRM2026!';
   const isActivationValid = hasMinLength && passwordsMatch && isNotStarterPassword;
 
   // STEP 1: Verify Email
@@ -471,12 +471,12 @@ export default function LoginScreen({ onOpenPublicForm, currentOrgId }) {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {newPassword && newPassword !== DEFAULT_STARTER_PASSWORD ? (
+                  {isNotStarterPassword ? (
                     <CheckCircle2 size={13} className="text-emerald-600" />
                   ) : (
                     <div className="w-3 h-3 rounded-full border border-slate-300" />
                   )}
-                  <span className={newPassword && newPassword !== DEFAULT_STARTER_PASSWORD ? 'text-emerald-700 font-semibold' : 'text-slate-500'}>
+                  <span className={isNotStarterPassword ? 'text-emerald-700 font-semibold' : 'text-slate-500'}>
                     Różne od hasła startowego
                   </span>
                 </div>

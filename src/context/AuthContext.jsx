@@ -6,6 +6,11 @@ import {
   GLOBAL_SUPERADMIN_EMAIL,
 } from '../services/settingsService';
 import { hashPassword, verifyPassword } from '../utils/crypto';
+import {
+  fetchRbacLoginProfile,
+  syncRbacPasswordChangeInDb,
+  PRODUCTION_CLUB_IDS,
+} from '../services/adminUsersService';
 
 export const ROLES = {
   SUPER_ADMIN: {
@@ -43,7 +48,7 @@ export const ROLES = {
 export const ADMIN_PASSWORD = import.meta.env?.VITE_ADMIN_PASSWORD || '';
 
 /** Stałe domyślne hasło startowe dla wszystkich nowych użytkowników */
-export const DEFAULT_STARTER_PASSWORD = 'StartCRM2026!';
+export const DEFAULT_STARTER_PASSWORD = 'Start2026!';
 
 export const MASTER_ADMIN_EMAILS = [
   GLOBAL_SUPERADMIN_EMAIL,
@@ -127,10 +132,18 @@ export async function refreshRemoteAccess(email) {
   if (!cleanEmail) return null;
   try {
     const timeout = new Promise(resolve => setTimeout(() => resolve(null), REMOTE_ACCESS_TIMEOUT_MS));
-    const res = await Promise.race([fetchLoginAccessForEmail(cleanEmail), timeout]);
-    if (res && res.ok) {
-      remoteAccessCache.set(cleanEmail, res);
-      return res;
+    const [res, rbacProfile] = await Promise.all([
+      Promise.race([fetchLoginAccessForEmail(cleanEmail), timeout]),
+      Promise.race([fetchRbacLoginProfile(cleanEmail), timeout]),
+    ]);
+    if ((res && res.ok) || rbacProfile) {
+      const merged = {
+        ...(res || { ok: true, accessMatches: [], supervisorMatches: [], boardMatches: [], revokedOrgs: [] }),
+        ok: true,
+        rbacProfile: rbacProfile || null,
+      };
+      remoteAccessCache.set(cleanEmail, merged);
+      return merged;
     }
   } catch (err) {
     console.warn('[AuthContext] Nie udało się pobrać uprawnień z Supabase:', err);
@@ -142,9 +155,9 @@ export async function refreshRemoteAccess(email) {
  * Zapis hasła stałego w Supabase dla każdego koła, do którego użytkownik ma dostęp
  * (dzięki temu logowanie działa z dowolnego urządzenia). Dla kont globalnych – aktywne koło.
  */
-function persistPasswordToSupabase(cleanEmail, password, userData = null) {
-  const orgs = (userData?.accessibleOrgs || userData?.organizations || [])
-    .filter(o => o && o !== '*')
+async function persistPasswordToSupabase(cleanEmail, passwordHash, userData = null, oldPasswordHash = null) {
+  const orgs = (userData?.clubs || userData?.accessibleOrgs || userData?.organizations || [])
+    .filter(o => o && o !== '*' && o !== 'test')
     .map(normalizeAuthOrgId);
   if (orgs.length === 0) {
     const current = (typeof window !== 'undefined'
@@ -152,9 +165,12 @@ function persistPasswordToSupabase(cleanEmail, password, userData = null) {
       : null) || 'skn_seksuologii';
     orgs.push(normalizeAuthOrgId(current));
   }
-  Array.from(new Set(orgs)).forEach(orgId => {
-    saveUserPasswordToDB(orgId, cleanEmail, password, false).catch(console.warn);
-  });
+  await Promise.all([
+    ...Array.from(new Set(orgs)).map(orgId =>
+      saveUserPasswordToDB(orgId, cleanEmail, passwordHash, false).catch(console.warn)
+    ),
+    syncRbacPasswordChangeInDb(cleanEmail, passwordHash, oldPasswordHash).catch(console.warn),
+  ]);
   remoteAccessCache.delete(cleanEmail);
 }
 
@@ -256,12 +272,17 @@ function sanitizeSessionUser(rawUser) {
       ...rawUser,
       email: cleanEmail,
       role: 'SUPER_ADMIN',
+      rbacRole: 'superadmin',
       is_global_admin: true,
+      mustChangePassword: false,
+      clubs: ['*'],
       accessibleOrgs: ['*'],
       organizations: ['*'],
     };
   }
-  const rawOrgs = Array.isArray(rawUser.accessibleOrgs)
+  const rawOrgs = Array.isArray(rawUser.clubs)
+    ? rawUser.clubs
+    : Array.isArray(rawUser.accessibleOrgs)
     ? rawUser.accessibleOrgs
     : Array.isArray(rawUser.organizations)
     ? rawUser.organizations
@@ -269,16 +290,26 @@ function sanitizeSessionUser(rawUser) {
   const filteredOrgs = Array.from(new Set(
     rawOrgs
       .map(o => normalizeAuthOrgId(o))
-      .filter(o => o && o !== '*' && o !== 'test')
+      .filter(o => o && o !== '*' && o !== 'test' && PRODUCTION_CLUB_IDS.includes(o))
   ));
   if (filteredOrgs.length === 0) {
     return null;
   }
+  const derivedRbacRole =
+    rawUser.rbacRole === 'admin' ||
+    rawUser.role === 'ADMIN' ||
+    rawUser.isClubAdmin
+      ? 'admin'
+      : 'user';
+
   return {
     ...rawUser,
     email: cleanEmail,
-    role: rawUser.role === 'SUPER_ADMIN' ? 'ADMIN' : (rawUser.role || 'COORDINATOR'),
+    role: rawUser.role === 'SUPER_ADMIN' ? 'ADMIN' : (rawUser.role || (derivedRbacRole === 'admin' ? 'ADMIN' : 'USER')),
+    rbacRole: derivedRbacRole,
     is_global_admin: false,
+    mustChangePassword: Boolean(rawUser.mustChangePassword),
+    clubs: filteredOrgs,
     accessibleOrgs: filteredOrgs,
     organizations: filteredOrgs,
     organization_id: filteredOrgs[0],
@@ -351,19 +382,25 @@ export function AuthProvider({ children }) {
     return userEmail === GLOBAL_SUPERADMIN_EMAIL;
   }, [user]);
 
+  /** Pełny przekrojowy dostęp wyłącznie dla Superadministratora (atomekb73@gmail.com) */
+  const hasFullAccess = useMemo(() => {
+    if (!user || !isAuthenticated) return false;
+    return isMasterUser && user?.rbacRole === 'superadmin';
+  }, [user, isAuthenticated, isMasterUser]);
+
   /** Ścisła weryfikacja czy zalogowany użytkownik ma uprawnienia do danego koła (zero wycieku między kołami) */
   const canAccessOrg = useCallback((orgId) => {
     if (!user || !isAuthenticated) return false;
-    if (isMasterUser) return true;
+    if (hasFullAccess || isMasterUser) return true;
     const cleanTarget = normalizeAuthOrgId(orgId);
     if (!cleanTarget || cleanTarget === '*' || cleanTarget === 'test') return false;
-    const allowedOrgs = user.organizations || user.accessibleOrgs || [];
+    const allowedOrgs = user.clubs || user.organizations || user.accessibleOrgs || [];
     if (!Array.isArray(allowedOrgs) || allowedOrgs.length === 0) return false;
     return allowedOrgs.some(o => {
       const norm = normalizeAuthOrgId(o);
       return Boolean(norm && norm !== '*' && norm === cleanTarget);
     });
-  }, [user, isAuthenticated, isMasterUser]);
+  }, [user, isAuthenticated, isMasterUser, hasFullAccess]);
 
   /** Superadministrator globalny (wyłącznie atomekb73@gmail.com) */
   const isSuperAdmin = isMasterUser;
@@ -410,6 +447,16 @@ export function AuthProvider({ children }) {
 
     // Źródła uprawnień (Supabase SSOT ma bezwzględny priorytet nad localStorage)
     const remote = remoteAccessCache.get(cleanEmail) || null;
+    const rbacProfile = remote?.rbacProfile || null;
+
+    if (!isMaster && rbacProfile && rbacProfile.isActive === false) {
+      return {
+        authorized: false,
+        revoked: true,
+        error: 'Twoje konto zostało zablokowane przez Superadministratora.',
+      };
+    }
+
     const sameEmail = (v) => String(v || '').trim().toLowerCase() === cleanEmail;
     const revokedSet = new Set((remote?.revokedOrgs || []).map(o => normalizeAuthOrgId(o)));
 
@@ -460,7 +507,9 @@ export function AuthProvider({ children }) {
     };
     const boardMatch = boardMatches.find(isBoardAdminRole) || boardMatches[0] || null;
 
-    if (!isMaster && !accessMatch && !supervisorMatch && !boardMatch) {
+    const hasRbacClubs = Boolean(rbacProfile && Array.isArray(rbacProfile.clubs) && rbacProfile.clubs.length > 0);
+
+    if (!isMaster && !hasRbacClubs && !accessMatch && !supervisorMatch && !boardMatch) {
       const wasRevoked = revokedSet.size > 0;
       return {
         authorized: false,
@@ -477,6 +526,7 @@ export function AuthProvider({ children }) {
     const recordOrgRole = (rawOrg, newRole) => {
       const o = normalizeAuthOrgId(rawOrg);
       if (!o || o === '*' || o === 'test' || revokedSet.has(o)) return;
+      if (!PRODUCTION_CLUB_IDS.includes(o)) return;
       orgSet.add(o);
       const prev = rolePerOrg[o];
       const rank = { ADMIN: 4, 'Dostęp pełny': 3, 'Koordynator / Pełny dostęp': 3, COORDINATOR: 2, VIEWER: 1 };
@@ -488,6 +538,10 @@ export function AuthProvider({ children }) {
     boardMatches.forEach(b => recordOrgRole(b.orgId, isBoardAdminRole(b) ? 'ADMIN' : 'COORDINATOR'));
     accessMatches.forEach(u => recordOrgRole(u.orgId, u.role === 'VIEWER' ? 'VIEWER' : (u.role === 'ADMIN' || u.role === 'SUPER_ADMIN' ? 'ADMIN' : (u.role || 'COORDINATOR'))));
     supervisorMatches.forEach(s => recordOrgRole(s.orgId, 'COORDINATOR'));
+    if (rbacProfile && Array.isArray(rbacProfile.clubs)) {
+      const rbacMappedRole = rbacProfile.role === 'admin' ? 'ADMIN' : 'VIEWER';
+      rbacProfile.clubs.forEach(c => recordOrgRole(c, rbacMappedRole));
+    }
 
     if (!isMaster && orgSet.size === 0) {
       return {
@@ -499,44 +553,60 @@ export function AuthProvider({ children }) {
 
     // 2. Utwórz profil użytkownika z uwzględnieniem ścisłej izolacji koła
     let role = 'COORDINATOR';
-    let name = cleanEmail.split('@')[0];
+    let rbacRole = 'user';
+    let name = rbacProfile?.name || cleanEmail.split('@')[0];
     const accessibleOrgs = isMaster ? ['*'] : Array.from(orgSet);
     let inheritedRole = null;
     let isClubAdminFlag = false;
 
     if (isMaster) {
       role = 'SUPER_ADMIN';
+      rbacRole = 'superadmin';
       name = 'Tomasz Bratkowski (Superadmin)';
       isClubAdminFlag = true;
-    } else if (boardMatch || accessMatch) {
-      const hasAnyAdmin = Object.values(rolePerOrg).includes('ADMIN');
-      role = hasAnyAdmin ? 'ADMIN' : (accessMatch?.role === 'VIEWER' ? 'VIEWER' : 'COORDINATOR');
+    } else if (rbacProfile || boardMatch || accessMatch) {
+      const hasAnyAdmin = rbacProfile?.role === 'admin' || Object.values(rolePerOrg).includes('ADMIN');
+      role = hasAnyAdmin ? 'ADMIN' : (accessMatch?.role === 'VIEWER' || rbacProfile?.role === 'user' ? 'VIEWER' : 'COORDINATOR');
+      rbacRole = hasAnyAdmin ? 'admin' : 'user';
       isClubAdminFlag = hasAnyAdmin || ['ADMIN', 'SUPER_ADMIN', 'Dostęp pełny', 'Koordynator / Pełny dostęp'].includes(accessMatch?.role);
-      name = boardMatch?.memberName || boardMatch?.name || accessMatch?.name || cleanEmail.split('@')[0];
+      name = rbacProfile?.name || boardMatch?.memberName || boardMatch?.name || accessMatch?.name || cleanEmail.split('@')[0];
       if (boardMatch) inheritedRole = boardMatch.roleName || 'Członek Zarządu';
     } else if (supervisorMatch) {
       role = 'COORDINATOR';
+      rbacRole = 'user';
       name = supervisorMatch.name || supervisorMatch.fullName || 'Opiekun Naukowy';
       inheritedRole = 'Opiekun Naukowy Koła';
     }
 
-    // 3. Stan aktywacji konta: konto aktywowane (własne hasło) na dowolnym urządzeniu → hasło startowe nieważne
+    // 3. Stan aktywacji konta: jeśli user_profiles.must_change_password === true lub firstLogin === true, wymuszamy zmianę
     const remotePassword = remote?.password || null;
+    const forcedByRbac = !isMaster && rbacProfile?.mustChangePassword === true;
     const activated = Boolean(
-      remote?.firstLogin === false ||
-      (remotePassword && !STARTER_PASSWORD_SET.has(remotePassword)) ||
-      getUserFirstLoginStatus(cleanEmail, null) === false
+      !forcedByRbac && (
+        remote?.firstLogin === false ||
+        rbacProfile?.mustChangePassword === false ||
+        (remotePassword && !STARTER_PASSWORD_SET.has(remotePassword)) ||
+        getUserFirstLoginStatus(cleanEmail, null) === false
+      )
     );
 
     const tempPass = activated ? null : (accessMatch?.tempPassword || null);
+
+    const isFirstLogin = !isMaster && (
+      forcedByRbac ||
+      (!activated && Boolean(tempPass || accessMatch?.isFirstLogin || getUserFirstLoginStatus(cleanEmail, accessMatch)))
+    );
 
     const authUser = {
       email: cleanEmail,
       name,
       role,
+      rbacRole,
       is_global_admin: isMaster,
       isClubAdmin: isClubAdminFlag,
+      mustChangePassword: isFirstLogin,
       rolePerOrg,
+      clubs: accessibleOrgs,
       accessibleOrgs,
       organizations: accessibleOrgs,
       organization_id: accessibleOrgs[0] !== '*' ? accessibleOrgs[0] : undefined,
@@ -546,12 +616,12 @@ export function AuthProvider({ children }) {
 
     const storedPass = getUserStoredPassword(cleanEmail);
     const hasPassword = Boolean(storedPass || tempPass || remotePassword);
-    const isFirstLogin = !activated && Boolean(tempPass || accessMatch?.isFirstLogin || getUserFirstLoginStatus(cleanEmail, accessMatch));
 
     return {
       authorized: true,
       hasPassword,
       isFirstLogin,
+      mustChangePassword: isFirstLogin,
       activated,
       remotePassword,
       tempPassword: tempPass,
@@ -640,9 +710,9 @@ export function AuthProvider({ children }) {
 
       // 4. Utwórz profil (wyłącznie ze zweryfikowanych uprawnień, nigdy wildcard ['*'] dla zwykłych kont)
       const verified = userData || checkEmailStatus(cleanEmail)?.user;
-      const authUser = sanitizeSessionUser(verified);
+      const authUser = sanitizeSessionUser({ ...verified, mustChangePassword: false });
       if (!authUser) {
-        return { success: false, error: 'Brak aktywnych uprawnień do któregokolwiek koła naukowego.' };
+        return { success: false, error: 'Brak aktywnych uprawnie\u0144 do kt\u00f3regokolwiek ko\u0142a naukowego.' };
       }
 
       setUser(authUser);
@@ -742,34 +812,44 @@ export function AuthProvider({ children }) {
       } catch {}
     }
 
-    // Wymuszenie zmiany hasła przy pierwszym logowaniu lub gdy podano hasło startowe StartCRM2026!
+    // Wymuszenie zmiany hasła przy pierwszym logowaniu lub gdy podano hasło startowe Start2026!
     const isStarterMatch = isStarterPassword;
-    const mustChangePassword = isStarterMatch || (tempPassword && cleanPassword === tempPassword) || status.isFirstLogin;
-    if (!isMasterOrBoard && mustChangePassword) {
-      return {
-        success: false,
-        requiresActivation: true,
-        user: status.user,
-        error: 'Wymagana zmiana hasła przy pierwszym logowaniu. Wprowadź swoje nowe hasło stałe.',
-      };
+    const requiresFirstChange = !isMaster && (
+      isStarterMatch ||
+      (tempPassword && cleanPassword === tempPassword) ||
+      status.isFirstLogin ||
+      status.mustChangePassword
+    );
+
+    const sessionUser = sanitizeSessionUser({
+      ...status.user,
+      mustChangePassword: requiresFirstChange,
+    });
+    if (!sessionUser) {
+      return { success: false, error: 'Brak aktywnego przypisania do żadnego koła naukowego.' };
     }
 
-    setUser(status.user);
+    setUser(sessionUser);
     setIsAuthenticated(true);
 
     try {
       localStorage.setItem('crm_skn_auth_session', JSON.stringify({
         email: cleanEmail,
-        name: status.user.name,
-        role: status.user.role,
+        name: sessionUser.name,
+        role: sessionUser.role,
+        mustChangePassword: requiresFirstChange,
         timestamp: Date.now(),
       }));
-      localStorage.setItem('crm_skn_auth_user', JSON.stringify(status.user));
+      localStorage.setItem('crm_skn_auth_user', JSON.stringify(sessionUser));
     } catch (e) {
       console.warn('Błąd zapisu sesji:', e);
     }
 
-    return { success: true };
+    return {
+      success: true,
+      mustChangePassword: requiresFirstChange,
+      user: sessionUser,
+    };
   }, [checkEmailStatus]);
 
   /** Logowanie z weryfikacją adresu e-mail i hasła (kompatybilność wsteczna) */
@@ -778,7 +858,7 @@ export function AuthProvider({ children }) {
   }, [loginWithPassword]);
 
   /** Zmiana hasła przy pierwszym logowaniu lub na żądanie */
-  const changePassword = useCallback((email, newPassword, confirmPassword, userData = null) => {
+  const changePassword = useCallback(async (email, newPassword, confirmPassword, userData = null) => {
     if (!email || !newPassword || !confirmPassword) {
       return { success: false, error: 'Wypełnij wszystkie pola formularza.' };
     }
@@ -807,23 +887,25 @@ export function AuthProvider({ children }) {
     ].filter(Boolean).includes(p1);
 
     if (isStarter) {
-      return { success: false, error: 'Nowe hasło nie może być takie samo jak hasło tymczasowe. Wybierz inne, bezpieczne hasło stałe.' };
+      return { success: false, error: 'Nowe hasło nie może być takie samo jak hasło startowe. Wybierz inne, bezpieczne hasło stałe.' };
     }
 
     try {
-      // 1. Zapisz nowe hasło w rejestrze haseł użytkowników
+      // 1. Zapisz nowe hasło jako bezpieczny skrót SHA-256 z solą
       let passwords = {};
       try {
         const rawPass = localStorage.getItem('skn_user_passwords');
         if (rawPass) passwords = JSON.parse(rawPass);
       } catch {}
-      passwords[cleanEmail] = p1;
+      const oldHash = passwords[cleanEmail] || null;
+      const hashed = await hashPassword(p1, cleanEmail);
+      passwords[cleanEmail] = hashed;
       localStorage.setItem('skn_user_passwords', JSON.stringify(passwords));
 
       // Zapis nowego hasła w Supabase SSOT (logowanie z dowolnego urządzenia)
-      persistPasswordToSupabase(cleanEmail, p1, userData);
+      await persistPasswordToSupabase(cleanEmail, hashed, userData, oldHash);
 
-      // 2. Oznacz isFirstLogin jako false
+      // 2. Oznacz isFirstLogin / mustChangePassword jako false
       let statusMap = {};
       try {
         const rawStatus = localStorage.getItem('skn_user_first_login_status');
@@ -831,6 +913,8 @@ export function AuthProvider({ children }) {
       } catch {}
       statusMap[cleanEmail] = false;
       localStorage.setItem('skn_user_first_login_status', JSON.stringify(statusMap));
+
+      clearTempPasswordInAccessLists(cleanEmail);
 
       // 3. Zaktualizuj rekord w skn_access_users jeśli istnieje
       try {
@@ -851,7 +935,7 @@ export function AuthProvider({ children }) {
 
       // 4. Utwórz obiekt zautoryzowanego użytkownika ze ścisłą izolacją kół
       const verified = userData || checkEmailStatus(cleanEmail)?.user;
-      const authUser = sanitizeSessionUser(verified);
+      const authUser = sanitizeSessionUser({ ...verified, mustChangePassword: false });
       if (!authUser) {
         return { success: false, error: 'Brak aktywnych uprawnień do któregokolwiek koła naukowego.' };
       }
@@ -863,16 +947,25 @@ export function AuthProvider({ children }) {
         email: cleanEmail,
         name: authUser.name,
         role: authUser.role,
+        mustChangePassword: false,
         timestamp: Date.now(),
       }));
       localStorage.setItem('crm_skn_auth_user', JSON.stringify(authUser));
 
-      return { success: true };
+      return { success: true, user: authUser };
     } catch (e) {
       console.error('Błąd podczas zapisywania nowego hasła:', e);
       return { success: false, error: 'Wystąpił błąd podczas zapisywania hasła.' };
     }
   }, [checkEmailStatus]);
+
+  /** Obowiązkowa zmiana hasła przy pierwszym logowaniu (ChangePasswordPage) */
+  const completeMandatoryPasswordChange = useCallback(async (newPassword, confirmPassword) => {
+    if (!user || !user.email) {
+      return { success: false, error: 'Brak aktywnej sesji użytkownika.' };
+    }
+    return await changePassword(user.email, newPassword, confirmPassword, user);
+  }, [user, changePassword]);
 
   /** Logowanie za pomocą Google OAuth 2.0 z pełną weryfikacją uprawnień w Supabase */
   const loginWithGoogle = useCallback(async (credentialResponse) => {
@@ -916,7 +1009,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   /** Zmiana hasła przez zalogowanego użytkownika (z weryfikacją aktualnego hasła) */
-  const changeUserPassword = useCallback((currentPassword, newPassword, confirmPassword) => {
+  const changeUserPassword = useCallback(async (currentPassword, newPassword, confirmPassword) => {
     if (!user || !user.email) {
       return { success: false, error: 'Brak aktywnej sesji użytkownika.' };
     }
@@ -935,22 +1028,30 @@ export function AuthProvider({ children }) {
     let isCurrentValid = false;
 
     if (customPass) {
-      isCurrentValid = customPass === curPass;
+      isCurrentValid = await verifyPassword(curPass, customPass, cleanEmail);
     } else {
-      let accessUsers = [];
-      try {
-        const savedUsers = localStorage.getItem('skn_access_users');
-        if (savedUsers) accessUsers = JSON.parse(savedUsers);
-      } catch {}
-      const accessMatch = (Array.isArray(accessUsers) ? accessUsers : DEFAULT_AUTHORIZED_ACCOUNTS)
-        .find(u => (u?.email || '').toLowerCase() === cleanEmail);
+      await refreshRemoteAccess(cleanEmail);
+      const status = checkEmailStatus(cleanEmail);
+      if (status.remotePassword) {
+        isCurrentValid = await verifyPassword(curPass, status.remotePassword, cleanEmail);
+      } else {
+        let accessUsers = [];
+        try {
+          const savedUsers = localStorage.getItem('skn_access_users');
+          if (savedUsers) accessUsers = JSON.parse(savedUsers);
+        } catch {}
+        const accessMatch = (Array.isArray(accessUsers) ? accessUsers : DEFAULT_AUTHORIZED_ACCOUNTS)
+          .find(u => (u?.email || '').toLowerCase() === cleanEmail);
 
-      const allowedTempPasswords = [
-        STARTER_PASSWORDS[cleanEmail],
-        accessMatch?.tempPassword,
-        ...ACCESS_PASSWORDS,
-      ].filter(Boolean);
-      isCurrentValid = allowedTempPasswords.some(p => p && p.trim() === curPass);
+        const allowedTempPasswords = [
+          STARTER_PASSWORDS[cleanEmail],
+          accessMatch?.tempPassword,
+          ...ACCESS_PASSWORDS,
+          'Start2026!',
+          'StartCRM2026!',
+        ].filter(Boolean);
+        isCurrentValid = allowedTempPasswords.some(p => p && p.trim() === curPass);
+      }
     }
 
     if (!isCurrentValid) {
@@ -958,8 +1059,8 @@ export function AuthProvider({ children }) {
     }
 
     // 2. Wywołaj właściwą procedurę zmiany hasła
-    return changePassword(cleanEmail, p1, p2, user);
-  }, [user, changePassword]);
+    return await changePassword(cleanEmail, p1, p2, user);
+  }, [user, changePassword, checkEmailStatus]);
 
   /** Wylogowanie */
   const logout = useCallback((noticeMessage = null) => {
@@ -1015,7 +1116,7 @@ export function AuthProvider({ children }) {
     const nextOrgs = JSON.stringify(sanitizedNext.accessibleOrgs || []);
     const prevRoles = JSON.stringify(user.rolePerOrg || {});
     const nextRoles = JSON.stringify(sanitizedNext.rolePerOrg || {});
-    if (prevOrgs !== nextOrgs || prevRoles !== nextRoles || user.role !== sanitizedNext.role || user.is_global_admin !== sanitizedNext.is_global_admin) {
+    if (prevOrgs !== nextOrgs || prevRoles !== nextRoles || user.role !== sanitizedNext.role || user.rbacRole !== sanitizedNext.rbacRole || Boolean(user.mustChangePassword) !== Boolean(sanitizedNext.mustChangePassword) || user.is_global_admin !== sanitizedNext.is_global_admin) {
       setUser(sanitizedNext);
     }
 
@@ -1048,6 +1149,7 @@ export function AuthProvider({ children }) {
     user,
     isAuthenticated,
     isSuperAdmin,
+    hasFullAccess,
     isClubAdmin,
     canAdminOrg,
     isCoordinator,
@@ -1061,6 +1163,7 @@ export function AuthProvider({ children }) {
     loginWithCredentials,
     changePassword,
     changeUserPassword,
+    completeMandatoryPasswordChange,
     loginWithGoogle,
     switchDemoAccount,
     logout,
@@ -1071,6 +1174,7 @@ export function AuthProvider({ children }) {
     user,
     isAuthenticated,
     isSuperAdmin,
+    hasFullAccess,
     isClubAdmin,
     canAdminOrg,
     isCoordinator,
@@ -1083,6 +1187,7 @@ export function AuthProvider({ children }) {
     loginWithCredentials,
     changePassword,
     changeUserPassword,
+    completeMandatoryPasswordChange,
     loginWithGoogle,
     switchDemoAccount,
     logout,

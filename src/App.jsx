@@ -27,6 +27,7 @@ import SettingsTab   from './components/SettingsTab';
 import Navbar        from './components/Navbar';
 import SettingsModal from './components/SettingsModal';
 import SuperAdminPanel from './components/SuperAdminPanel';
+import ChangePasswordPage from './components/ChangePasswordPage';
 import ProfileMenu   from './components/ProfileMenu';
 import SyncIndicator from './components/SyncIndicator';
 import PwaInstallPrompt from './components/PwaInstallPrompt';
@@ -112,11 +113,11 @@ try {
 }
 
 export default function App() {
-  const { user, isAuthenticated, isSuperAdmin, canAccessOrg, canAdminOrg, revalidateSessionAccess } = useAuth();
+  const { user, isAuthenticated, isSuperAdmin, hasFullAccess, canAccessOrg, canAdminOrg, revalidateSessionAccess } = useAuth();
   const { currentOrg, organizations, switchOrg, getStorageKey, theme } = useOrg();
   const isExclusiveGlobalSuperadmin = Boolean(
     isAuthenticated &&
-    isSuperAdmin &&
+    (isSuperAdmin || hasFullAccess) &&
     user?.email?.toLowerCase().trim() === GLOBAL_SUPERADMIN_EMAIL
   );
   const accessibleOrganizations = useMemo(
@@ -3142,6 +3143,10 @@ export default function App() {
     return <LoginScreen onOpenPublicForm={() => setShowPublicForm(true)} currentOrgId={currentOrgCleanId} />;
   }
 
+  if (user?.mustChangePassword && user?.email?.toLowerCase().trim() !== GLOBAL_SUPERADMIN_EMAIL) {
+    return <ChangePasswordPage />;
+  }
+
   return (
     <div
       className={`min-h-screen w-full max-w-full overflow-x-clip tenant-backdrop bg-gradient-to-br transition-colors duration-500 ${theme?.backdropGradientClass || 'from-slate-50 via-sky-50/40 to-indigo-50/50'}`}
@@ -3302,16 +3307,16 @@ export default function App() {
                 <span className="hidden md:inline">{isSyncing ? 'Synchronizacja...' : 'Odśwież dane'}</span>
               </button>
 
-              {/* Wyłączny Panel Superadministratora (renderowany wyłącznie dla atomekb73@gmail.com) */}
+              {/* Wyłączny Panel Administratora (RBAC) — renderowany wyłącznie dla atomekb73@gmail.com */}
               {isExclusiveGlobalSuperadmin && (
                 <button
                   type="button"
                   onClick={() => setIsSuperAdminPanelOpen(true)}
-                  title="Panel Superadministratora — globalny audyt dostępów i Kill Switch"
+                  title="Panel Administratora (RBAC) — konta, role, przypisania do kół i Kill Switch"
                   className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 border border-amber-400/40 text-xs font-bold transition-all shadow-sm cursor-pointer whitespace-nowrap min-h-[36px] sm:min-h-0"
                 >
                   <ShieldCheck size={14} className="text-amber-300 shrink-0" />
-                  <span className="hidden sm:inline">Panel Superadmina</span>
+                  <span className="hidden sm:inline">Panel Administratora</span>
                 </button>
               )}
 
