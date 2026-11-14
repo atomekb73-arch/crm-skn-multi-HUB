@@ -1,9 +1,7 @@
-import { supabase } from '../supabaseClient.js';
-import { hashPassword } from '../utils/crypto.js';
+import { supabase, getSupabaseForOrg } from '../supabaseClient.js';
 import {
   GLOBAL_SUPERADMIN_EMAIL,
   normalizeOrgId,
-  fetchGlobalAccessMatrix,
 } from './settingsService.js';
 
 export const RBAC_STARTER_PASSWORD = 'Start2026!';
@@ -170,11 +168,28 @@ export const PRODUCTION_CRM_ORGANIZATIONS = ALL_WSKZ_RBAC_ORGANIZATIONS;
 
 export const PRODUCTION_CLUB_IDS = ALL_WSKZ_ORGANIZATION_IDS;
 
+const ACTIVE_CRM_ORG_IDS = ['skn_seksuologii', 'uzaleznienia', 'psychoonkologia'];
+const REGISTRY_HOST_ORG_ID = 'skn_seksuologii';
+
 function normalizeRbacRole(rawRole, email = '') {
   const cleanEmail = String(email || '').trim().toLowerCase();
   if (cleanEmail === GLOBAL_SUPERADMIN_EMAIL) return 'superadmin';
   const r = String(rawRole || '').trim().toLowerCase();
-  if (['admin', 'club_admin', 'board', 'zarzad', 'coordinator'].includes(r)) {
+  if (
+    [
+      'admin',
+      'club_admin',
+      'board',
+      'zarzad',
+      'coordinator',
+      'moderator',
+      'administrator koła',
+    ].includes(r) ||
+    r.includes('admin') ||
+    r.includes('przewodnicz') ||
+    r.includes('zarząd') ||
+    r.includes('zarzad')
+  ) {
     return 'admin';
   }
   return 'user';
@@ -194,149 +209,311 @@ function sanitizeClubs(rawClubs, email = '') {
   return Array.from(valid);
 }
 
-async function getAuthHeaders(actorEmail) {
-  const headers = {
-    'Content-Type': 'application/json',
-    'X-Actor-Email': String(actorEmail || '').trim().toLowerCase(),
-  };
-  try {
-    const { data } = await supabase.auth.getSession();
-    const token = data?.session?.access_token;
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
-  } catch {
-    // Brak sesji Supabase Auth — korzystamy z nagłówka X-Actor-Email
+async function readOrgSettingsRow(orgId) {
+  const cleanOrg = normalizeOrgId(orgId);
+  const client = getSupabaseForOrg(cleanOrg);
+  const { data, error } = await client
+    .from('organization_settings')
+    .select('id, organization_id, settings')
+    .eq('organization_id', cleanOrg)
+    .limit(1);
+
+  if (error) {
+    throw error;
   }
-  return headers;
+  const row = data?.[0] || null;
+  const settings = row?.settings && typeof row.settings === 'object' ? { ...row.settings } : {};
+  return { row, settings };
 }
 
-async function callAdminApi(method, actorEmail, body = null) {
-  const headers = await getAuthHeaders(actorEmail);
-  const res = await fetch('/api/admin/users', {
-    method,
-    headers,
-    ...(body ? { body: JSON.stringify(body) } : {}),
-  });
+async function writeOrgSettingsRow(orgId, nextSettings, existingRowId = null) {
+  const cleanOrg = normalizeOrgId(orgId);
+  const client = getSupabaseForOrg(cleanOrg);
+  const nowIso = new Date().toISOString();
 
-  const contentType = res.headers.get('content-type') || '';
-  if (!contentType.includes('application/json')) {
-    // Zwrócono HTML lub 404 (np. lokalne `vite dev` bez Vercel Functions)
-    const err = new Error('API_UNAVAILABLE');
-    err.code = 'API_UNAVAILABLE';
-    err.status = res.status;
-    throw err;
+  if (existingRowId) {
+    const { error } = await client
+      .from('organization_settings')
+      .update({
+        settings: nextSettings,
+        updated_at: nowIso,
+      })
+      .eq('id', existingRowId);
+    if (error) throw error;
+  } else {
+    const { error } = await client
+      .from('organization_settings')
+      .insert({
+        organization_id: cleanOrg,
+        settings: nextSettings,
+        updated_at: nowIso,
+      });
+    if (error) throw error;
   }
-
-  const payload = await res.json();
-  if (!res.ok) {
-    const err = new Error(payload?.error || `Błąd serwera (${res.status})`);
-    err.status = res.status;
-    err.payload = payload;
-    throw err;
-  }
-  return payload;
 }
 
-async function fallbackFetchRbacUsers(actorEmail) {
+/**
+ * Buduje zunifikowaną listę wszystkich użytkowników RBAC bezpośrednio z Supabase
+ * (organization_settings.settings + club_memberships + user_profiles),
+ * gwarantując 100% zgodność pomiędzy "Panel Administratora (RBAC)" a "Audyt & Kill Switch".
+ */
+export async function fetchRbacUsers() {
   const usersMap = new Map();
-  let dbTablesReady = true;
 
-  // 1. Próba odczytu z tabel RBAC (user_profiles + user_organization_access)
-  try {
-    const { data: profiles, error: pErr } = await supabase
-      .from('user_profiles')
-      .select('id, email, name, role, must_change_password, is_active, created_at, updated_at, last_login_at')
-      .order('created_at', { ascending: true });
+  const [orgSettingsRes, membershipsRes] = await Promise.all([
+    supabase
+      .from('organization_settings')
+      .select('id, organization_id, settings, updated_at')
+      .then((r) => r)
+      .catch(() => ({ data: [], error: true })),
+    supabase
+      .from('club_memberships')
+      .select('id, club_id, email, member_name, role, role_label, active, source, updated_at')
+      .then((r) => r)
+      .catch(() => ({ data: [], error: true })),
+  ]);
 
-    if (pErr) {
-      dbTablesReady = false;
-    } else {
-      const { data: orgAccess } = await supabase
-        .from('user_organization_access')
-        .select('user_id, organization_id, role');
+  const orgRows = Array.isArray(orgSettingsRes?.data) ? orgSettingsRes.data : [];
+  const memberships = Array.isArray(membershipsRes?.data) ? membershipsRes.data : [];
 
-      const clubsByUser = new Map();
-      for (const row of orgAccess || []) {
-        const orgId = row.organization_id === '*' ? '*' : normalizeOrgId(row.organization_id);
-        if (!orgId || orgId === 'test') continue;
-        if (!clubsByUser.has(row.user_id)) clubsByUser.set(row.user_id, new Set());
-        clubsByUser.get(row.user_id).add(orgId);
-      }
+  const deletedEmails = new Set();
+  const revokedByOrg = new Map();
+  const firstLoginByEmail = new Map();
+  const passwordHashByEmail = new Map();
+  const registryByEmail = new Map();
 
-      for (const p of profiles || []) {
-        const email = String(p.email || '').trim().toLowerCase();
-        if (!email) continue;
-        const isProtected = email === GLOBAL_SUPERADMIN_EMAIL;
-        const rawClubs = Array.from(clubsByUser.get(p.id) || []);
-        const clubs = isProtected ? ['*'] : rawClubs.filter((c) => PRODUCTION_CLUB_IDS.includes(c));
-        usersMap.set(email, {
-          id: p.id,
-          email,
-          name: p.name || email.split('@')[0],
-          role: isProtected ? 'superadmin' : normalizeRbacRole(p.role, email),
-          mustChangePassword: isProtected ? false : Boolean(p.must_change_password),
-          isActive: isProtected ? true : p.is_active !== false,
-          clubs,
-          isProtected,
-          createdAt: p.created_at,
-          updatedAt: p.updated_at,
-          lastLoginAt: p.last_login_at,
-          source: 'user_profiles',
-        });
-      }
-    }
-  } catch {
-    dbTablesReady = false;
-  }
+  for (const row of orgRows) {
+    const orgId = normalizeOrgId(row.organization_id);
+    if (!orgId || orgId === 'test') continue;
+    const s = row.settings && typeof row.settings === 'object' ? row.settings : {};
 
-  // 2. Połączenie z globalną macierzą dostępów CRM (club_memberships + organization_settings)
-  try {
-    const matrix = await fetchGlobalAccessMatrix(actorEmail);
-    for (const row of matrix?.users || []) {
-      const email = String(row.email || '').trim().toLowerCase();
-      if (!email) continue;
-      const isProtected = email === GLOBAL_SUPERADMIN_EMAIL;
-      const validClubs = isProtected
-        ? ['*']
-        : (row.clubs || [])
-            .filter((c) => c.active !== false)
-            .map((c) => normalizeOrgId(c.clubId))
-            .filter((id) => PRODUCTION_CLUB_IDS.includes(id));
-
-      if (!usersMap.has(email)) {
-        const hasAdmin = (row.clubs || []).some(
-          (c) => c.active !== false && String(c.role || '').toUpperCase().includes('ADMIN')
-        );
-        usersMap.set(email, {
-          id: `crm-${email}`,
-          email,
-          name: row.name || email.split('@')[0],
-          role: isProtected ? 'superadmin' : hasAdmin ? 'admin' : 'user',
-          mustChangePassword: false,
-          isActive: isProtected ? true : validClubs.length > 0 && row.status !== 'revoked',
-          clubs: validClubs,
-          isProtected,
-          source: 'club_memberships',
-        });
-      } else {
-        const existing = usersMap.get(email);
-        if (!existing.isProtected) {
-          for (const cid of validClubs) {
-            if (!existing.clubs.includes(cid)) existing.clubs.push(cid);
-          }
+    // Usunięci użytkownicy (kosz w RBAC)
+    if (s.rbac_deleted_users && typeof s.rbac_deleted_users === 'object') {
+      for (const [rawEmail, entry] of Object.entries(s.rbac_deleted_users)) {
+        const em = String(rawEmail || '').trim().toLowerCase();
+        if (em && em !== GLOBAL_SUPERADMIN_EMAIL && entry && entry.deleted !== false) {
+          deletedEmails.add(em);
         }
       }
     }
-  } catch (e) {
-    console.warn('[adminUsersService] Fallback matrix fetch error:', e);
+
+    // Zablokowane dostępy (Kill Switch / odebrane koła)
+    const revSet = new Set();
+    if (s.revoked_access && typeof s.revoked_access === 'object') {
+      for (const [rawEmail, revEntry] of Object.entries(s.revoked_access)) {
+        const em = String(rawEmail || '').trim().toLowerCase();
+        if (em && em !== GLOBAL_SUPERADMIN_EMAIL && revEntry && revEntry.active === false) {
+          revSet.add(em);
+        }
+      }
+    }
+    revokedByOrg.set(orgId, revSet);
+
+    // Status pierwszego logowania (wymagana zmiana hasła)
+    if (s.user_first_login_status && typeof s.user_first_login_status === 'object') {
+      for (const [rawEmail, val] of Object.entries(s.user_first_login_status)) {
+        const em = String(rawEmail || '').trim().toLowerCase();
+        if (em && val === true) {
+          firstLoginByEmail.set(em, true);
+        } else if (em && val === false && !firstLoginByEmail.has(em)) {
+          firstLoginByEmail.set(em, false);
+        }
+      }
+    }
+
+    if (s.user_passwords && typeof s.user_passwords === 'object') {
+      for (const [rawEmail, hash] of Object.entries(s.user_passwords)) {
+        const em = String(rawEmail || '').trim().toLowerCase();
+        if (em && hash) {
+          passwordHashByEmail.set(em, hash);
+        }
+      }
+    }
+
+    // Rejestr kont utworzonych/edytowanych w Panelu RBAC
+    if (s.rbac_users_registry && typeof s.rbac_users_registry === 'object') {
+      for (const [rawEmail, regUser] of Object.entries(s.rbac_users_registry)) {
+        const em = String(rawEmail || regUser?.email || '').trim().toLowerCase();
+        if (!em || em === GLOBAL_SUPERADMIN_EMAIL) continue;
+        registryByEmail.set(em, regUser);
+      }
+    }
   }
 
+  const ensureUser = (rawEmail, fallbackName = '', defaultRole = 'user') => {
+    const email = String(rawEmail || '').trim().toLowerCase();
+    if (!email || deletedEmails.has(email)) return null;
+    const isProtected = email === GLOBAL_SUPERADMIN_EMAIL;
+    if (!usersMap.has(email)) {
+      const reg = registryByEmail.get(email);
+      const hasFirstLogin = firstLoginByEmail.get(email);
+      const mustChange = isProtected
+        ? false
+        : reg?.mustChangePassword !== undefined
+          ? Boolean(reg.mustChangePassword) && !passwordHashByEmail.has(email)
+          : Boolean(hasFirstLogin);
+
+      usersMap.set(email, {
+        id: reg?.id || `rbac-${email}`,
+        email,
+        name:
+          reg?.name ||
+          fallbackName ||
+          (isProtected ? 'Super Admin' : email.split('@')[0]),
+        role: isProtected
+          ? 'superadmin'
+          : reg?.role
+            ? normalizeRbacRole(reg.role, email)
+            : normalizeRbacRole(defaultRole, email),
+        mustChangePassword: mustChange,
+        isActive: isProtected ? true : reg?.isActive !== undefined ? Boolean(reg.isActive) : true,
+        clubs: isProtected ? ['*'] : [],
+        isProtected,
+        updatedAt: reg?.updatedAt || null,
+        source: reg ? 'rbac_registry' : 'organization_settings',
+      });
+    } else if (fallbackName) {
+      const existing = usersMap.get(email);
+      if (
+        !existing.name ||
+        existing.name === existing.email ||
+        existing.name === existing.email.split('@')[0]
+      ) {
+        existing.name = fallbackName;
+      }
+    }
+    return usersMap.get(email);
+  };
+
+  const addClubToUser = (userObj, clubId) => {
+    if (!userObj || userObj.isProtected) return;
+    const norm = normalizeOrgId(clubId);
+    if (!norm || norm === 'test' || norm === '*' || !ALL_WSKZ_ORGANIZATION_IDS.includes(norm)) {
+      return;
+    }
+    if (revokedByOrg.get(norm)?.has(userObj.email)) {
+      return;
+    }
+    if (!userObj.clubs.includes(norm)) {
+      userObj.clubs.push(norm);
+    }
+  };
+
+  // 1. Najpierw wczytaj użytkowników z rejestru RBAC (obsługuje wszystkie 17 kół WSKZ)
+  for (const [email, reg] of registryByEmail.entries()) {
+    if (deletedEmails.has(email)) continue;
+    const u = ensureUser(email, reg?.name, reg?.role || 'user');
+    if (!u) continue;
+    const regClubs = sanitizeClubs(reg?.clubs || [], email);
+    for (const cid of regClubs) {
+      addClubToUser(u, cid);
+    }
+  }
+
+  // 2. Wczytaj z organization_settings (board, supervisors, access_users, revoked_access)
+  for (const row of orgRows) {
+    const orgId = normalizeOrgId(row.organization_id);
+    if (!orgId || orgId === 'test' || !ALL_WSKZ_ORGANIZATION_IDS.includes(orgId)) continue;
+    const s = row.settings && typeof row.settings === 'object' ? row.settings : {};
+    const revSet = revokedByOrg.get(orgId) || new Set();
+
+    // A) Zarząd koła (domyślnie rola Admin, chyba że nadpisano w rejestrze RBAC)
+    const board = Array.isArray(s.board) ? s.board : [];
+    for (const b of board) {
+      const email = String(b?.email || '').trim().toLowerCase();
+      if (!email || deletedEmails.has(email)) continue;
+      const isRevoked = b.accessRevoked === true || b.active === false || revSet.has(email);
+      const u = ensureUser(email, b.name, 'admin');
+      if (!u) continue;
+      if (!registryByEmail.has(email) && !u.isProtected) {
+        u.role = 'admin';
+      }
+      if (!isRevoked) {
+        addClubToUser(u, orgId);
+      }
+    }
+
+    // B) Opiekunowie koła (domyślnie rola User)
+    const supervisors = Array.isArray(s.supervisors) ? s.supervisors : [];
+    for (const sup of supervisors) {
+      const email = String(sup?.email || '').trim().toLowerCase();
+      if (!email || deletedEmails.has(email)) continue;
+      const isRevoked = sup.accessRevoked === true || sup.active === false || revSet.has(email);
+      const u = ensureUser(email, sup.name, 'user');
+      if (!u) continue;
+      if (!isRevoked) {
+        addClubToUser(u, orgId);
+      }
+    }
+
+    // C) Ustawienia i dostęp (access_users)
+    const accessUsers = Array.isArray(s.access_users) ? s.access_users : [];
+    for (const au of accessUsers) {
+      const email = String(au?.email || '').trim().toLowerCase();
+      if (!email || deletedEmails.has(email)) continue;
+      const isRevoked = au.active === false || revSet.has(email);
+      const inferredRole = normalizeRbacRole(au.rbacRole || au.role_code || au.role, email);
+      const u = ensureUser(email, au.name, inferredRole);
+      if (!u) continue;
+      if (!registryByEmail.has(email) && !u.isProtected && inferredRole === 'admin') {
+        u.role = 'admin';
+      }
+      if (!isRevoked) {
+        addClubToUser(u, orgId);
+      }
+    }
+
+    // D) Osoby zablokowane w Kill Switchu (revoked_access), jeśli nie zostały usunięte koszem
+    if (s.revoked_access && typeof s.revoked_access === 'object') {
+      for (const [rawEmail, revEntry] of Object.entries(s.revoked_access)) {
+        const email = String(rawEmail || '').trim().toLowerCase();
+        if (!email || email === GLOBAL_SUPERADMIN_EMAIL || deletedEmails.has(email)) continue;
+        if (revEntry && revEntry.active === false) {
+          ensureUser(email, revEntry.name || email.split('@')[0], 'user');
+        }
+      }
+    }
+  }
+
+  // 3. Uzupełnij z tabeli club_memberships (z poszanowaniem revoked_access i rbac_deleted_users)
+  for (const m of memberships) {
+    const email = String(m?.email || '').trim().toLowerCase();
+    const clubId = normalizeOrgId(m?.club_id);
+    if (!email || !clubId || clubId === 'test' || deletedEmails.has(email)) continue;
+    if (clubId === '*' && email !== GLOBAL_SUPERADMIN_EMAIL) continue;
+
+    const inferredRole = normalizeRbacRole(m.role, email);
+    const u = ensureUser(email, m.member_name, inferredRole);
+    if (!u) continue;
+
+    const isRevoked = m.active === false || revokedByOrg.get(clubId)?.has(email);
+    if (!isRevoked) {
+      // Jeśli użytkownik miał już zapisany zestaw kół w rejestrze RBAC i dane koło zostało mu tam odznaczone, nie nadpisujemy
+      const reg = registryByEmail.get(email);
+      if (!reg || !Array.isArray(reg.clubs) || reg.clubs.includes(clubId)) {
+        addClubToUser(u, clubId);
+      }
+    }
+  }
+
+  // 4. Przelicz ostateczny status aktywności (jeśli użytkownik nie ma żadnych aktywnych kół -> Zablokowane)
+  for (const u of usersMap.values()) {
+    if (u.isProtected) {
+      u.role = 'superadmin';
+      u.clubs = ['*'];
+      u.isActive = true;
+      u.mustChangePassword = false;
+    } else if (u.clubs.length === 0) {
+      u.isActive = false;
+    }
+  }
+
+  // 5. Zagwarantuj obecność chronionego konta Superadministratora na samej górze
   if (!usersMap.has(GLOBAL_SUPERADMIN_EMAIL)) {
     usersMap.set(GLOBAL_SUPERADMIN_EMAIL, {
       id: 'superadmin-root',
       email: GLOBAL_SUPERADMIN_EMAIL,
-      name: 'Tomasz Bratkowski (Superadmin)',
+      name: 'Super Admin',
       role: 'superadmin',
       mustChangePassword: false,
       isActive: true,
@@ -344,321 +521,386 @@ async function fallbackFetchRbacUsers(actorEmail) {
       isProtected: true,
       source: 'system_root',
     });
+  } else {
+    const sa = usersMap.get(GLOBAL_SUPERADMIN_EMAIL);
+    sa.role = 'superadmin';
+    sa.clubs = ['*'];
+    sa.isActive = true;
+    sa.mustChangePassword = false;
+    sa.isProtected = true;
   }
 
   const users = Array.from(usersMap.values()).sort((a, b) => {
     if (a.isProtected && !b.isProtected) return -1;
     if (!a.isProtected && b.isProtected) return 1;
-    return a.email.localeCompare(b.email, 'pl');
+    if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
+    return (a.name || a.email).localeCompare(b.name || b.email, 'pl');
   });
 
   return {
     users,
-    dbTablesReady,
-    serviceRoleConfigured: false,
-    fallbackMode: true,
+    dbTablesReady: true,
+    serviceRoleConfigured: true,
+    fallbackMode: false,
   };
 }
 
-async function fallbackSyncClubSettings({ actorEmail, email, name, role, clubs, isActive, resetStarterPassword }) {
+/**
+ * Zapisuje zmiany użytkownika RBAC bezpośrednio do organization_settings.settings
+ * z użyciem nagłówka x-organization-id (zgodnie z polityką RLS).
+ */
+async function syncRbacUserToOrganizationSettings({
+  actorEmail,
+  email,
+  name,
+  role,
+  clubs,
+  isActive = true,
+  resetStarterPassword = false,
+}) {
   const cleanEmail = String(email || '').trim().toLowerCase();
-  const isClubAdmin = role === 'admin';
+  if (!cleanEmail || cleanEmail === GLOBAL_SUPERADMIN_EMAIL) return;
+
+  const cleanClubs = sanitizeClubs(clubs, cleanEmail);
+  const cleanRole = normalizeRbacRole(role, cleanEmail);
+  const displayName = String(name || '').trim() || cleanEmail.split('@')[0];
+  const isClubAdmin = cleanRole === 'admin';
   const legacyRole = isClubAdmin ? 'CLUB_ADMIN' : 'VIEWER';
-  const legacyRoleLabel = isClubAdmin ? 'Administrator koła' : 'Użytkownik koła';
+  const legacyRoleLabel = isClubAdmin ? 'Administrator koła' : 'Członek zarządu (Odczyt)';
+  const nowIso = new Date().toISOString();
 
-  for (const clubId of PRODUCTION_CLUB_IDS) {
-    const assigned = clubs.includes(clubId);
-    const shouldBeActive = Boolean(isActive && assigned);
+  // 1. Zaktualizuj główny rejestr RBAC w kole hostującym (skn_seksuologii)
+  try {
+    const { row, settings } = await readOrgSettingsRow(REGISTRY_HOST_ORG_ID);
+    const registry =
+      settings.rbac_users_registry && typeof settings.rbac_users_registry === 'object'
+        ? { ...settings.rbac_users_registry }
+        : {};
+    const deletedMap =
+      settings.rbac_deleted_users && typeof settings.rbac_deleted_users === 'object'
+        ? { ...settings.rbac_deleted_users }
+        : {};
 
+    delete deletedMap[cleanEmail];
+
+    const prevEntry = registry[cleanEmail] || {};
+    registry[cleanEmail] = {
+      id: prevEntry.id || `rbac-${cleanEmail}`,
+      email: cleanEmail,
+      name: displayName,
+      role: cleanRole,
+      clubs: cleanClubs,
+      isActive: Boolean(isActive && cleanClubs.length > 0),
+      mustChangePassword: resetStarterPassword
+        ? true
+        : prevEntry.mustChangePassword !== undefined
+          ? Boolean(prevEntry.mustChangePassword)
+          : false,
+      updatedAt: nowIso,
+      updatedBy: actorEmail || GLOBAL_SUPERADMIN_EMAIL,
+    };
+
+    settings.rbac_users_registry = registry;
+    settings.rbac_deleted_users = deletedMap;
+
+    await writeOrgSettingsRow(REGISTRY_HOST_ORG_ID, settings, row?.id);
+  } catch (err) {
+    console.warn('[adminUsersService] Registry update error:', err);
+  }
+
+  // 2. Zsynchronizuj ustawienia każdego aktywnego koła w bazie (skn_seksuologii, uzaleznienia, psychoonkologia)
+  for (const orgId of ACTIVE_CRM_ORG_IDS) {
+    const assigned = cleanClubs.includes(orgId) && Boolean(isActive);
     try {
-      const { data: existing } = await supabase
-        .from('club_memberships')
-        .select('id')
-        .eq('club_id', clubId)
-        .ilike('email', cleanEmail)
-        .limit(1);
+      const { row, settings } = await readOrgSettingsRow(orgId);
 
-      if (existing && existing.length > 0) {
-        await supabase
-          .from('club_memberships')
-          .update({
-            member_name: name || cleanEmail.split('@')[0],
-            role: legacyRole,
-            role_label: legacyRoleLabel,
-            active: shouldBeActive,
-            source: 'rbac_admin_panel',
-            granted_by: actorEmail || GLOBAL_SUPERADMIN_EMAIL,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', existing[0].id);
-      } else if (assigned && isActive) {
-        await supabase.from('club_memberships').insert({
-          club_id: clubId,
-          email: cleanEmail,
-          member_name: name || cleanEmail.split('@')[0],
-          role: legacyRole,
-          role_label: legacyRoleLabel,
-          source: 'rbac_admin_panel',
-          active: true,
-          granted_by: actorEmail || GLOBAL_SUPERADMIN_EMAIL,
-          updated_at: new Date().toISOString(),
-        });
-      }
-    } catch (e) {
-      console.warn(`[adminUsersService] Fallback club_memberships (${clubId}) error:`, e);
-    }
-
-    try {
-      const { data: settingsRows } = await supabase
-        .from('organization_settings')
-        .select('settings_key, settings_value')
-        .eq('organization_id', clubId)
-        .in('settings_key', ['access_users', 'user_first_login_status', 'user_passwords']);
-
-      const byKey = {};
-      for (const r of settingsRows || []) byKey[r.settings_key] = r.settings_value;
-
-      const curUsers = Array.isArray(byKey.access_users) ? byKey.access_users : [];
-      const nextUsers = curUsers.filter(
+      // A) access_users
+      const existingAccess = Array.isArray(settings.access_users) ? settings.access_users : [];
+      const filteredAccess = existingAccess.filter(
         (u) => String(u?.email || '').trim().toLowerCase() !== cleanEmail
       );
-      if (assigned && isActive) {
-        nextUsers.push({
+      if (assigned) {
+        filteredAccess.push({
           id: cleanEmail,
           email: cleanEmail,
-          name: name || cleanEmail.split('@')[0],
-          role: isClubAdmin ? 'Administrator koła' : 'Członek zarządu (Odczyt)',
+          name: displayName,
+          role: legacyRoleLabel,
           role_code: legacyRole,
-          rbacRole: role,
-          addedAt: new Date().toISOString(),
+          rbacRole: cleanRole,
+          addedAt: nowIso,
         });
       }
-      if (assigned || curUsers.length !== nextUsers.length) {
-        await supabase.from('organization_settings').upsert(
-          {
-            id: `${clubId}__access_users`,
-            organization_id: clubId,
-            settings_key: 'access_users',
-            settings_value: nextUsers,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'organization_id,settings_key' }
+      settings.access_users = filteredAccess;
+
+      // B) revoked_access (jeśli koło nie jest przypisane, blokujemy ewentualne stare wpisy z club_memberships/board)
+      const revokedMap =
+        settings.revoked_access && typeof settings.revoked_access === 'object'
+          ? { ...settings.revoked_access }
+          : {};
+      if (assigned) {
+        delete revokedMap[cleanEmail];
+      } else {
+        revokedMap[cleanEmail] = {
+          email: cleanEmail,
+          name: displayName,
+          active: false,
+          revokedAt: nowIso,
+          revokedBy: actorEmail || GLOBAL_SUPERADMIN_EMAIL,
+          reason: 'RBAC_UNASSIGNED',
+        };
+      }
+      settings.revoked_access = revokedMap;
+
+      // C) Zaktualizuj flagę accessRevoked w Zarządzie / Opiekunach, jeśli tam figuruje
+      if (Array.isArray(settings.board)) {
+        settings.board = settings.board.map((b) =>
+          String(b?.email || '').trim().toLowerCase() === cleanEmail
+            ? { ...b, name: displayName || b.name, accessRevoked: !assigned }
+            : b
+        );
+      }
+      if (Array.isArray(settings.supervisors)) {
+        settings.supervisors = settings.supervisors.map((sup) =>
+          String(sup?.email || '').trim().toLowerCase() === cleanEmail
+            ? { ...sup, name: displayName || sup.name, accessRevoked: !assigned }
+            : sup
         );
       }
 
+      // D) Hasło startowe i wymuszenie zmiany hasła przy 1. logowaniu
       if (resetStarterPassword && assigned) {
-        const flMap = { ...(byKey.user_first_login_status || {}), [cleanEmail]: true };
-        await supabase.from('organization_settings').upsert(
-          {
-            id: `${clubId}__user_first_login_status`,
-            organization_id: clubId,
-            settings_key: 'user_first_login_status',
-            settings_value: flMap,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'organization_id,settings_key' }
-        );
+        const flMap =
+          settings.user_first_login_status && typeof settings.user_first_login_status === 'object'
+            ? { ...settings.user_first_login_status }
+            : {};
+        flMap[cleanEmail] = true;
+        settings.user_first_login_status = flMap;
 
-        const pwdMap = { ...(byKey.user_passwords || {}) };
-        delete pwdMap[cleanEmail];
-        await supabase.from('organization_settings').upsert(
-          {
-            id: `${clubId}__user_passwords`,
-            organization_id: clubId,
-            settings_key: 'user_passwords',
-            settings_value: pwdMap,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'organization_id,settings_key' }
-        );
+        if (settings.user_passwords && typeof settings.user_passwords === 'object') {
+          const pwdMap = { ...settings.user_passwords };
+          delete pwdMap[cleanEmail];
+          settings.user_passwords = pwdMap;
+        }
       }
-    } catch (e) {
-      console.warn(`[adminUsersService] Fallback organization_settings (${clubId}) error:`, e);
-    }
-  }
-}
 
-export async function fetchRbacUsers(actorEmail) {
-  try {
-    return await callAdminApi('GET', actorEmail);
-  } catch (err) {
-    if (err.code === 'API_UNAVAILABLE' || err.status === 404 || err.status === 500) {
-      return await fallbackFetchRbacUsers(actorEmail);
+      await writeOrgSettingsRow(orgId, settings, row?.id);
+    } catch (err) {
+      console.warn(`[adminUsersService] Sync org (${orgId}) error:`, err);
     }
-    throw err;
   }
 }
 
 export async function createRbacUser({ actorEmail, name, email, role, clubs }) {
   const cleanEmail = String(email || '').trim().toLowerCase();
-  const cleanClubs = sanitizeClubs(clubs, cleanEmail);
-  const cleanRole = normalizeRbacRole(role, cleanEmail);
-  try {
-    return await callAdminApi('POST', actorEmail, {
-      name,
-      email: cleanEmail,
-      role: cleanRole,
-      clubs: cleanClubs,
-    });
-  } catch (err) {
-    if (err.code === 'API_UNAVAILABLE' || err.status === 404) {
-      const starterHash = await hashPassword(RBAC_STARTER_PASSWORD, cleanEmail);
-      await supabase
-        .from('user_profiles')
-        .upsert(
-          {
-            email: cleanEmail,
-            name: String(name || '').trim() || cleanEmail.split('@')[0],
-            role: cleanRole,
-            password_hash: starterHash,
-            must_change_password: true,
-            is_active: true,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'email' }
-        );
-      await fallbackSyncClubSettings({
-        actorEmail,
-        email: cleanEmail,
-        name,
-        role: cleanRole,
-        clubs: cleanClubs,
-        isActive: true,
-        resetStarterPassword: true,
-      });
-      return await fallbackFetchRbacUsers(actorEmail);
-    }
-    throw err;
+  if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+    throw new Error('Podaj prawidłowy adres e-mail użytkownika.');
   }
+  if (cleanEmail === GLOBAL_SUPERADMIN_EMAIL) {
+    throw new Error('Konto Superadministratora już istnieje i jest chronione.');
+  }
+  const cleanClubs = sanitizeClubs(clubs, cleanEmail);
+  if (cleanClubs.length === 0) {
+    throw new Error('Wybierz co najmniej jedno koło naukowe dla nowego użytkownika.');
+  }
+  const cleanRole = normalizeRbacRole(role, cleanEmail);
+
+  await syncRbacUserToOrganizationSettings({
+    actorEmail,
+    email: cleanEmail,
+    name,
+    role: cleanRole,
+    clubs: cleanClubs,
+    isActive: true,
+    resetStarterPassword: true,
+  });
+
+  return await fetchRbacUsers(actorEmail);
 }
 
 export async function updateRbacUser({ actorEmail, email, name, role, clubs, isActive }) {
   const cleanEmail = String(email || '').trim().toLowerCase();
-  const cleanClubs = sanitizeClubs(clubs, cleanEmail);
-  const cleanRole = normalizeRbacRole(role, cleanEmail);
-  try {
-    return await callAdminApi('PUT', actorEmail, {
-      action: 'update',
-      email: cleanEmail,
-      name,
-      role: cleanRole,
-      clubs: cleanClubs,
-      ...(isActive !== undefined ? { isActive } : {}),
-    });
-  } catch (err) {
-    if (err.code === 'API_UNAVAILABLE' || err.status === 404) {
-      await fallbackSyncClubSettings({
-        actorEmail,
-        email: cleanEmail,
-        name,
-        role: cleanRole,
-        clubs: cleanClubs,
-        isActive: isActive !== false,
-        resetStarterPassword: false,
-      });
-      return await fallbackFetchRbacUsers(actorEmail);
-    }
-    throw err;
+  if (!cleanEmail) {
+    throw new Error('Brak adresu e-mail użytkownika.');
   }
+  if (cleanEmail === GLOBAL_SUPERADMIN_EMAIL) {
+    throw new Error('Konto Superadministratora jest chronione.');
+  }
+  const cleanClubs = sanitizeClubs(clubs, cleanEmail);
+  if (cleanClubs.length === 0) {
+    throw new Error('Użytkownik musi mieć przypisane co najmniej jedno koło naukowe.');
+  }
+  const cleanRole = normalizeRbacRole(role, cleanEmail);
+
+  await syncRbacUserToOrganizationSettings({
+    actorEmail,
+    email: cleanEmail,
+    name,
+    role: cleanRole,
+    clubs: cleanClubs,
+    isActive: isActive !== false,
+    resetStarterPassword: false,
+  });
+
+  return await fetchRbacUsers(actorEmail);
 }
 
 export async function resetRbacUserPassword({ actorEmail, email }) {
   const cleanEmail = String(email || '').trim().toLowerCase();
-  try {
-    return await callAdminApi('PUT', actorEmail, {
-      action: 'reset_password',
-      email: cleanEmail,
-    });
-  } catch (err) {
-    if (err.code === 'API_UNAVAILABLE' || err.status === 404) {
-      for (const clubId of PRODUCTION_CLUB_IDS) {
-        const { data: settingsRows } = await supabase
-          .from('organization_settings')
-          .select('settings_key, settings_value')
-          .eq('organization_id', clubId)
-          .in('settings_key', ['user_first_login_status', 'user_passwords']);
-
-        const byKey = {};
-        for (const r of settingsRows || []) byKey[r.settings_key] = r.settings_value;
-
-        await supabase.from('organization_settings').upsert(
-          {
-            id: `${clubId}__user_first_login_status`,
-            organization_id: clubId,
-            settings_key: 'user_first_login_status',
-            settings_value: { ...(byKey.user_first_login_status || {}), [cleanEmail]: true },
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'organization_id,settings_key' }
-        );
-
-        if (byKey.user_passwords?.[cleanEmail]) {
-          const pwdMap = { ...byKey.user_passwords };
-          delete pwdMap[cleanEmail];
-          await supabase.from('organization_settings').upsert(
-            {
-              id: `${clubId}__user_passwords`,
-              organization_id: clubId,
-              settings_key: 'user_passwords',
-              settings_value: pwdMap,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: 'organization_id,settings_key' }
-          );
-        }
-      }
-      return await fallbackFetchRbacUsers(actorEmail);
-    }
-    throw err;
+  if (!cleanEmail || cleanEmail === GLOBAL_SUPERADMIN_EMAIL) {
+    throw new Error('Nie można zresetować hasła dla tego konta.');
   }
+
+  for (const orgId of ACTIVE_CRM_ORG_IDS) {
+    try {
+      const { row, settings } = await readOrgSettingsRow(orgId);
+      const flMap =
+        settings.user_first_login_status && typeof settings.user_first_login_status === 'object'
+          ? { ...settings.user_first_login_status }
+          : {};
+      flMap[cleanEmail] = true;
+      settings.user_first_login_status = flMap;
+
+      if (settings.user_passwords && typeof settings.user_passwords === 'object') {
+        const pwdMap = { ...settings.user_passwords };
+        delete pwdMap[cleanEmail];
+        settings.user_passwords = pwdMap;
+      }
+
+      if (
+        orgId === REGISTRY_HOST_ORG_ID &&
+        settings.rbac_users_registry &&
+        settings.rbac_users_registry[cleanEmail]
+      ) {
+        settings.rbac_users_registry = {
+          ...settings.rbac_users_registry,
+          [cleanEmail]: {
+            ...settings.rbac_users_registry[cleanEmail],
+            mustChangePassword: true,
+            updatedAt: new Date().toISOString(),
+          },
+        };
+      }
+
+      await writeOrgSettingsRow(orgId, settings, row?.id);
+    } catch (err) {
+      console.warn(`[adminUsersService] Reset password (${orgId}) error:`, err);
+    }
+  }
+
+  return await fetchRbacUsers(actorEmail);
 }
 
 export async function toggleRbacUserActive({ actorEmail, email, isActive }) {
   const cleanEmail = String(email || '').trim().toLowerCase();
-  try {
-    return await callAdminApi('PUT', actorEmail, {
-      action: 'toggle_active',
-      email: cleanEmail,
-      isActive: Boolean(isActive),
-    });
-  } catch (err) {
-    if (err.code === 'API_UNAVAILABLE' || err.status === 404) {
-      await supabase
-        .from('club_memberships')
-        .update({ active: Boolean(isActive), updated_at: new Date().toISOString() })
-        .ilike('email', cleanEmail);
-      return await fallbackFetchRbacUsers(actorEmail);
-    }
-    throw err;
+  if (!cleanEmail || cleanEmail === GLOBAL_SUPERADMIN_EMAIL) {
+    throw new Error('Konto Superadministratora jest chronione.');
   }
+
+  const current = await fetchRbacUsers(actorEmail);
+  const existing = (current.users || []).find((u) => u.email === cleanEmail);
+  const clubs = existing?.clubs?.length ? existing.clubs : ['skn_seksuologii'];
+
+  await syncRbacUserToOrganizationSettings({
+    actorEmail,
+    email: cleanEmail,
+    name: existing?.name || cleanEmail.split('@')[0],
+    role: existing?.role || 'user',
+    clubs: isActive ? clubs : [],
+    isActive: Boolean(isActive),
+    resetStarterPassword: false,
+  });
+
+  return await fetchRbacUsers(actorEmail);
 }
 
 export async function deleteRbacUser({ actorEmail, email }) {
   const cleanEmail = String(email || '').trim().toLowerCase();
-  try {
-    return await callAdminApi('DELETE', actorEmail, { email: cleanEmail });
-  } catch (err) {
-    if (err.code === 'API_UNAVAILABLE' || err.status === 404) {
-      await fallbackSyncClubSettings({
-        actorEmail,
-        email: cleanEmail,
-        name: '',
-        role: 'user',
-        clubs: [],
-        isActive: false,
-        resetStarterPassword: false,
-      });
-      return await fallbackFetchRbacUsers(actorEmail);
-    }
-    throw err;
+  if (!cleanEmail) {
+    throw new Error('Brak adresu e-mail użytkownika do usunięcia.');
   }
+  if (cleanEmail === GLOBAL_SUPERADMIN_EMAIL) {
+    throw new Error('Konto Superadministratora jest chronione i nie może zostać usunięte.');
+  }
+
+  const nowIso = new Date().toISOString();
+
+  // 1. Oznacz jako usunięte w głównym rejestrze i usuń z rbac_users_registry
+  try {
+    const { row, settings } = await readOrgSettingsRow(REGISTRY_HOST_ORG_ID);
+    const registry =
+      settings.rbac_users_registry && typeof settings.rbac_users_registry === 'object'
+        ? { ...settings.rbac_users_registry }
+        : {};
+    delete registry[cleanEmail];
+    settings.rbac_users_registry = registry;
+
+    const deletedMap =
+      settings.rbac_deleted_users && typeof settings.rbac_deleted_users === 'object'
+        ? { ...settings.rbac_deleted_users }
+        : {};
+    deletedMap[cleanEmail] = {
+      email: cleanEmail,
+      deleted: true,
+      deletedAt: nowIso,
+      deletedBy: actorEmail || GLOBAL_SUPERADMIN_EMAIL,
+    };
+    settings.rbac_deleted_users = deletedMap;
+
+    await writeOrgSettingsRow(REGISTRY_HOST_ORG_ID, settings, row?.id);
+  } catch (err) {
+    console.warn('[adminUsersService] Delete from registry error:', err);
+  }
+
+  // 2. Wyczyść uprawnienia we wszystkich aktywnych kołach i zablokuj w revoked_access
+  for (const orgId of ACTIVE_CRM_ORG_IDS) {
+    try {
+      const { row, settings } = await readOrgSettingsRow(orgId);
+
+      if (Array.isArray(settings.access_users)) {
+        settings.access_users = settings.access_users.filter(
+          (u) => String(u?.email || '').trim().toLowerCase() !== cleanEmail
+        );
+      }
+      if (Array.isArray(settings.board)) {
+        settings.board = settings.board.map((b) =>
+          String(b?.email || '').trim().toLowerCase() === cleanEmail
+            ? { ...b, accessRevoked: true }
+            : b
+        );
+      }
+      if (Array.isArray(settings.supervisors)) {
+        settings.supervisors = settings.supervisors.map((sup) =>
+          String(sup?.email || '').trim().toLowerCase() === cleanEmail
+            ? { ...sup, accessRevoked: true }
+            : sup
+        );
+      }
+
+      const revokedMap =
+        settings.revoked_access && typeof settings.revoked_access === 'object'
+          ? { ...settings.revoked_access }
+          : {};
+      revokedMap[cleanEmail] = {
+        email: cleanEmail,
+        active: false,
+        revokedAt: nowIso,
+        revokedBy: actorEmail || GLOBAL_SUPERADMIN_EMAIL,
+        reason: 'RBAC_DELETED',
+      };
+      settings.revoked_access = revokedMap;
+
+      await writeOrgSettingsRow(orgId, settings, row?.id);
+    } catch (err) {
+      console.warn(`[adminUsersService] Delete cleanup (${orgId}) error:`, err);
+    }
+  }
+
+  return await fetchRbacUsers(actorEmail);
 }
 
-let _hasRbacRpc = true;
-
 /**
- * Pobiera profil RBAC użytkownika podczas logowania (RPC get_rbac_login_profile).
- * Jeśli tabela / RPC nie zostały jeszcze zmigrowane, zwraca null bez powtarzania błędów w konsoli.
+ * Pobiera profil RBAC użytkownika podczas logowania bezpośrednio z organization_settings
+ * (bez wywoływania nieistniejącego RPC get_rbac_login_profile, co zapobiega błędom HTTP 404 w konsoli).
  */
 export async function fetchRbacLoginProfile(email) {
   const cleanEmail = String(email || '').trim().toLowerCase();
@@ -676,54 +918,84 @@ export async function fetchRbacLoginProfile(email) {
     };
   }
 
-  if (!_hasRbacRpc) return null;
-
   try {
-    const { data, error } = await supabase.rpc('get_rbac_login_profile', {
-      p_email: cleanEmail,
-    });
-    if (error) {
-      if (error.code === 'PGRST202' || error.message?.includes('Could not find') || error.code === '42883') {
-        _hasRbacRpc = false;
-      }
-      return null;
-    }
-    if (data) {
-      const clubs = cleanEmail === GLOBAL_SUPERADMIN_EMAIL
-        ? ['*']
-        : (Array.isArray(data.clubs) ? data.clubs : [])
-            .map((c) => normalizeOrgId(c))
-            .filter((c) => PRODUCTION_CLUB_IDS.includes(c));
+    const { data: rows } = await supabase
+      .from('organization_settings')
+      .select('organization_id, settings');
 
+    if (!Array.isArray(rows) || rows.length === 0) return null;
+
+    let regEntry = null;
+    let isDeleted = false;
+    let mustChange = false;
+    let hasCustomPassword = false;
+
+    for (const row of rows) {
+      const s = row.settings && typeof row.settings === 'object' ? row.settings : {};
+      if (s.rbac_deleted_users?.[cleanEmail]?.deleted) {
+        isDeleted = true;
+      }
+      if (s.rbac_users_registry?.[cleanEmail]) {
+        regEntry = s.rbac_users_registry[cleanEmail];
+      }
+      if (s.user_first_login_status?.[cleanEmail] === true) {
+        mustChange = true;
+      }
+      if (s.user_passwords?.[cleanEmail]) {
+        hasCustomPassword = true;
+      }
+    }
+
+    if (isDeleted) {
       return {
-        id: data.id,
+        id: `deleted-${cleanEmail}`,
         email: cleanEmail,
-        name: data.name || cleanEmail.split('@')[0],
-        role: cleanEmail === GLOBAL_SUPERADMIN_EMAIL ? 'superadmin' : normalizeRbacRole(data.role, cleanEmail),
-        mustChangePassword: cleanEmail === GLOBAL_SUPERADMIN_EMAIL ? false : Boolean(data.must_change_password),
-        isActive: cleanEmail === GLOBAL_SUPERADMIN_EMAIL ? true : data.is_active !== false,
+        name: cleanEmail.split('@')[0],
+        role: 'user',
+        mustChangePassword: false,
+        isActive: false,
+        clubs: [],
+      };
+    }
+
+    if (regEntry) {
+      const clubs = sanitizeClubs(regEntry.clubs || [], cleanEmail);
+      return {
+        id: regEntry.id || `rbac-${cleanEmail}`,
+        email: cleanEmail,
+        name: regEntry.name || cleanEmail.split('@')[0],
+        role: normalizeRbacRole(regEntry.role, cleanEmail),
+        mustChangePassword: hasCustomPassword ? false : Boolean(regEntry.mustChangePassword || mustChange),
+        isActive: regEntry.isActive !== false && clubs.length > 0,
         clubs,
       };
     }
   } catch {
-    _hasRbacRpc = false;
+    // Bezpieczny fallback do standardowego sprawdzania w AuthContext
   }
   return null;
 }
 
 /**
- * Aktualizuje status obowiązkowej zmiany hasła i nowy hash hasła w user_profiles.
+ * Aktualizuje status obowiązkowej zmiany hasła w rejestrze RBAC po zmianie hasła przez użytkownika.
  */
-export async function syncRbacPasswordChangeInDb(email, newPasswordHash, oldPasswordHash = null) {
+export async function syncRbacPasswordChangeInDb(email, newPasswordHash) {
   const cleanEmail = String(email || '').trim().toLowerCase();
   if (!cleanEmail || !newPasswordHash) return false;
   try {
-    const { data, error } = await supabase.rpc('complete_rbac_password_change', {
-      p_email: cleanEmail,
-      p_new_password_hash: newPasswordHash,
-      p_old_password_hash: oldPasswordHash,
-    });
-    return !error && Boolean(data);
+    const { row, settings } = await readOrgSettingsRow(REGISTRY_HOST_ORG_ID);
+    if (settings.rbac_users_registry?.[cleanEmail]) {
+      settings.rbac_users_registry = {
+        ...settings.rbac_users_registry,
+        [cleanEmail]: {
+          ...settings.rbac_users_registry[cleanEmail],
+          mustChangePassword: false,
+          updatedAt: new Date().toISOString(),
+        },
+      };
+      await writeOrgSettingsRow(REGISTRY_HOST_ORG_ID, settings, row?.id);
+    }
+    return true;
   } catch {
     return false;
   }

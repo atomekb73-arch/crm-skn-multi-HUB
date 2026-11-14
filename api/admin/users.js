@@ -171,7 +171,7 @@ function parseBody(req) {
   return req.body;
 }
 
-async function syncMembershipAndSettings(client, { email, name, role, clubs, isActive, resetStarterPassword }) {
+async function syncMembershipAndSettings(client, hasServiceRole, { email, name, role, clubs, isActive, resetStarterPassword }) {
   if (!client || !email) return;
   const cleanEmail = email.trim().toLowerCase();
   if (cleanEmail === GLOBAL_SUPERADMIN_EMAIL) return;
@@ -180,63 +180,63 @@ async function syncMembershipAndSettings(client, { email, name, role, clubs, isA
   const legacyRole = isClubAdmin ? 'CLUB_ADMIN' : 'VIEWER';
   const legacyRoleLabel = isClubAdmin ? 'Administrator koła' : 'Użytkownik koła';
 
-  // 1. Synchronizacja club_memberships dla wszystkich kół produkcyjnych
-  for (const clubId of PRODUCTION_CLUB_IDS) {
-    const assigned = clubs.includes(clubId);
-    const shouldBeActive = Boolean(isActive && assigned);
+  // 1. Synchronizacja club_memberships (tylko gdy skonfigurowany jest SUPABASE_SERVICE_ROLE_KEY, bo anon ma REVOKE na zapis)
+  if (hasServiceRole) {
+    for (const clubId of PRODUCTION_CLUB_IDS) {
+      const assigned = clubs.includes(clubId);
+      const shouldBeActive = Boolean(isActive && assigned);
 
-    const { data: existingRows } = await client
-      .from('club_memberships')
-      .select('id, active')
-      .eq('club_id', clubId)
-      .ilike('email', cleanEmail)
-      .limit(1);
-
-    if (existingRows && existingRows.length > 0) {
-      await client
+      const { data: existingRows } = await client
         .from('club_memberships')
-        .update({
+        .select('id, active')
+        .eq('club_id', clubId)
+        .ilike('email', cleanEmail)
+        .limit(1);
+
+      if (existingRows && existingRows.length > 0) {
+        await client
+          .from('club_memberships')
+          .update({
+            member_name: name || cleanEmail.split('@')[0],
+            role: legacyRole,
+            role_label: legacyRoleLabel,
+            active: shouldBeActive,
+            source: 'rbac_admin_panel',
+            granted_by: GLOBAL_SUPERADMIN_EMAIL,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existingRows[0].id);
+      } else if (assigned && isActive) {
+        await client.from('club_memberships').insert({
+          club_id: clubId,
+          email: cleanEmail,
           member_name: name || cleanEmail.split('@')[0],
           role: legacyRole,
           role_label: legacyRoleLabel,
-          active: shouldBeActive,
           source: 'rbac_admin_panel',
+          active: true,
           granted_by: GLOBAL_SUPERADMIN_EMAIL,
           updated_at: new Date().toISOString(),
-        })
-        .eq('id', existingRows[0].id);
-    } else if (assigned && isActive) {
-      await client.from('club_memberships').insert({
-        club_id: clubId,
-        email: cleanEmail,
-        member_name: name || cleanEmail.split('@')[0],
-        role: legacyRole,
-        role_label: legacyRoleLabel,
-        source: 'rbac_admin_panel',
-        active: true,
-        granted_by: GLOBAL_SUPERADMIN_EMAIL,
-        updated_at: new Date().toISOString(),
-      });
+        });
+      }
     }
   }
 
-  // 2. Synchronizacja organization_settings (access_users, user_first_login_status, user_passwords)
-  for (const clubId of PRODUCTION_CLUB_IDS) {
+  // 2. Synchronizacja organization_settings (kolumna JSONB settings)
+  const activeCrmOrgs = ['skn_seksuologii', 'uzaleznienia', 'psychoonkologia'];
+  for (const clubId of activeCrmOrgs) {
     const assigned = clubs.includes(clubId);
-    const { data: settingsRows } = await client
+    const { data: rows } = await client
       .from('organization_settings')
-      .select('id, settings_key, settings_value')
+      .select('id, organization_id, settings')
       .eq('organization_id', clubId)
-      .in('settings_key', ['access_users', 'user_first_login_status', 'user_passwords']);
+      .limit(1);
 
-    const byKey = {};
-    for (const row of settingsRows || []) {
-      byKey[row.settings_key] = row;
-    }
+    const row = rows?.[0] || null;
+    const currentSettings = row?.settings && typeof row.settings === 'object' ? { ...row.settings } : {};
 
-    // access_users
-    const existingAccess = Array.isArray(byKey.access_users?.settings_value)
-      ? byKey.access_users.settings_value
+    const existingAccess = Array.isArray(currentSettings.access_users)
+      ? currentSettings.access_users
       : [];
     const filteredAccess = existingAccess.filter(
       (u) => String(u?.email || '').trim().toLowerCase() !== cleanEmail
@@ -252,46 +252,25 @@ async function syncMembershipAndSettings(client, { email, name, role, clubs, isA
         addedAt: new Date().toISOString(),
       });
     }
-    if (assigned || existingAccess.length !== filteredAccess.length) {
-      await client.from('organization_settings').upsert(
-        {
-          id: `${clubId}__access_users`,
-          organization_id: clubId,
-          settings_key: 'access_users',
-          settings_value: filteredAccess,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'organization_id,settings_key' }
-      );
+    currentSettings.access_users = filteredAccess;
+
+    if (resetStarterPassword && assigned) {
+      currentSettings.user_first_login_status = {
+        ...(currentSettings.user_first_login_status || {}),
+        [cleanEmail]: true,
+      };
+      if (currentSettings.user_passwords && typeof currentSettings.user_passwords === 'object') {
+        const pwdMap = { ...currentSettings.user_passwords };
+        delete pwdMap[cleanEmail];
+        currentSettings.user_passwords = pwdMap;
+      }
     }
 
-    // user_first_login_status & user_passwords przy tworzeniu / resecie hasła
-    if (resetStarterPassword && assigned) {
-      const flMap = { ...(byKey.user_first_login_status?.settings_value || {}) };
-      flMap[cleanEmail] = true;
-      await client.from('organization_settings').upsert(
-        {
-          id: `${clubId}__user_first_login_status`,
-          organization_id: clubId,
-          settings_key: 'user_first_login_status',
-          settings_value: flMap,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'organization_id,settings_key' }
-      );
-
-      const pwdMap = { ...(byKey.user_passwords?.settings_value || {}) };
-      delete pwdMap[cleanEmail];
-      await client.from('organization_settings').upsert(
-        {
-          id: `${clubId}__user_passwords`,
-          organization_id: clubId,
-          settings_key: 'user_passwords',
-          settings_value: pwdMap,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'organization_id,settings_key' }
-      );
+    if (row?.id) {
+      await client
+        .from('organization_settings')
+        .update({ settings: currentSettings, updated_at: new Date().toISOString() })
+        .eq('id', row.id);
     }
   }
 }
@@ -524,7 +503,7 @@ export default async function handler(req, res) {
         );
       }
 
-      await syncMembershipAndSettings(db, {
+      await syncMembershipAndSettings(db, hasServiceRole, {
         email,
         name,
         role,
@@ -591,43 +570,31 @@ export default async function handler(req, res) {
             .eq('id', existingProfile.id);
         }
 
-        // Wyzeruj hasło i przywróć wymuszenie zmiany w organization_settings
-        for (const clubId of PRODUCTION_CLUB_IDS) {
-          const { data: settingsRows } = await db
+        // Wyzeruj hasło i przywróć wymuszenie zmiany w organization_settings (kolumna JSONB settings)
+        const activeCrmOrgs = ['skn_seksuologii', 'uzaleznienia', 'psychoonkologia'];
+        for (const clubId of activeCrmOrgs) {
+          const { data: rows } = await db
             .from('organization_settings')
-            .select('settings_key, settings_value')
+            .select('id, organization_id, settings')
             .eq('organization_id', clubId)
-            .in('settings_key', ['user_first_login_status', 'user_passwords']);
+            .limit(1);
 
-          const byKey = {};
-          for (const row of settingsRows || []) byKey[row.settings_key] = row.settings_value;
-
-          const flMap = { ...(byKey.user_first_login_status || {}), [email]: true };
-          await db.from('organization_settings').upsert(
-            {
-              id: `${clubId}__user_first_login_status`,
-              organization_id: clubId,
-              settings_key: 'user_first_login_status',
-              settings_value: flMap,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: 'organization_id,settings_key' }
-          );
-
-          if (byKey.user_passwords && byKey.user_passwords[email]) {
-            const pwdMap = { ...byKey.user_passwords };
+          const row = rows?.[0] || null;
+          if (!row?.id) continue;
+          const currentSettings = row.settings && typeof row.settings === 'object' ? { ...row.settings } : {};
+          currentSettings.user_first_login_status = {
+            ...(currentSettings.user_first_login_status || {}),
+            [email]: true,
+          };
+          if (currentSettings.user_passwords && typeof currentSettings.user_passwords === 'object') {
+            const pwdMap = { ...currentSettings.user_passwords };
             delete pwdMap[email];
-            await db.from('organization_settings').upsert(
-              {
-                id: `${clubId}__user_passwords`,
-                organization_id: clubId,
-                settings_key: 'user_passwords',
-                settings_value: pwdMap,
-                updated_at: new Date().toISOString(),
-              },
-              { onConflict: 'organization_id,settings_key' }
-            );
+            currentSettings.user_passwords = pwdMap;
           }
+          await db
+            .from('organization_settings')
+            .update({ settings: currentSettings, updated_at: new Date().toISOString() })
+            .eq('id', row.id);
         }
 
         const listResult = await listUsers(db, hasServiceRole);
@@ -651,10 +618,12 @@ export default async function handler(req, res) {
             .update({ is_active: nextActive, updated_at: new Date().toISOString() })
             .eq('id', existingProfile.id);
         }
-        await db
-          .from('club_memberships')
-          .update({ active: nextActive, updated_at: new Date().toISOString() })
-          .ilike('email', email);
+        if (hasServiceRole) {
+          await db
+            .from('club_memberships')
+            .update({ active: nextActive, updated_at: new Date().toISOString() })
+            .ilike('email', email);
+        }
 
         const listResult = await listUsers(db, hasServiceRole);
         return res.status(200).json({ success: true, users: listResult.users });
@@ -718,7 +687,7 @@ export default async function handler(req, res) {
         }
       }
 
-      await syncMembershipAndSettings(db, {
+      await syncMembershipAndSettings(db, hasServiceRole, {
         email,
         name,
         role,
@@ -756,7 +725,7 @@ export default async function handler(req, res) {
         await db.from('user_profiles').delete().eq('id', existingProfile.id);
       }
 
-      await syncMembershipAndSettings(db, {
+      await syncMembershipAndSettings(db, hasServiceRole, {
         email,
         name: '',
         role: 'user',

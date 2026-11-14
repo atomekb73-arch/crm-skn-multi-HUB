@@ -564,64 +564,80 @@ export async function saveEmailConfigToDB(orgId = 'skn_seksuologii', emailConfig
 export async function fetchAccessUsersFromDB(orgId = 'skn_seksuologii') {
   const cleanOrg = normalizeOrgId(orgId);
 
-  // 1. Relacyjna tabela club_memberships
-  try {
-    const { data, error } = await supabase
+  const [resSettings, cmRes] = await Promise.all([
+    fetchOrgSettingsFromDB(cleanOrg),
+    supabase
       .from('club_memberships')
       .select('*')
       .eq('club_id', cleanOrg)
-      .eq('active', true);
+      .eq('active', true)
+      .then((r) => r)
+      .catch(() => ({ data: null, error: true })),
+  ]);
 
-    if (!error && Array.isArray(data) && data.length > 0) {
-      const users = data.map(r => ({
+  const settings = resSettings?.settings || {};
+  const revokedEmails = new Set();
+
+  if (Array.isArray(settings.revoked_access)) {
+    settings.revoked_access.forEach((item) => {
+      const em = String(typeof item === 'string' ? item : item?.email || '').trim().toLowerCase();
+      if (em && item?.active !== true) revokedEmails.add(em);
+    });
+  }
+  if (Array.isArray(settings.rbac_deleted_users)) {
+    settings.rbac_deleted_users.forEach((em) => {
+      const clean = String(em || '').trim().toLowerCase();
+      if (clean) revokedEmails.add(clean);
+    });
+  }
+
+  const byEmail = new Map();
+
+  // 1. Zapisani w organization_settings.settings.access_users (nadrzędny SSOT)
+  if (Array.isArray(settings.access_users)) {
+    settings.access_users.forEach((u) => {
+      const em = String(u?.email || '').trim().toLowerCase();
+      if (!em || revokedEmails.has(em) || u?.active === false || u?.isActive === false || u?.status === 'revoked') {
+        return;
+      }
+      byEmail.set(em, {
+        ...u,
+        email: em,
+      });
+    });
+  }
+
+  // 2. Uzupełnienie z relacyjnej tabeli club_memberships (z uwzględnieniem blokad Kill Switch)
+  if (!cmRes.error && Array.isArray(cmRes.data)) {
+    cmRes.data.forEach((r) => {
+      const em = String(r?.email || '').trim().toLowerCase();
+      if (!em || revokedEmails.has(em) || byEmail.has(em)) return;
+      byEmail.set(em, {
         id: r.id,
         name: r.member_name,
-        email: r.email,
+        email: em,
         role: r.role,
         roleLabel: r.role_label || r.role,
         source: r.source,
         memberId: r.member_id,
         isPermanent: r.source === 'system',
-      }));
-      return { ok: true, source: 'club_memberships', users };
-    }
-  } catch (err) {}
-
-  // 2. Fallback na organization_settings / attendance fallback
-  const res = await fetchOrgSettingsFromDB(cleanOrg);
-  if (res.ok && res.settings && Array.isArray(res.settings.access_users)) {
-    return { ok: true, source: res.source, users: res.settings.access_users };
+      });
+    });
   }
-  return { ok: false, users: [] };
+
+  return {
+    ok: resSettings.ok || !cmRes.error,
+    source: 'organization_settings',
+    users: Array.from(byEmail.values()),
+  };
 }
 
 /**
- * Zapis uprawnień użytkowników koła (SSOT).
- * Zapisuje do dedykowanej tabeli club_memberships oraz utrzymuje kompatybilność wsteczną w settings.
+ * Zapis uprawnień użytkowników koła (SSOT w organization_settings.settings.access_users).
  */
 export async function saveAccessUsersToDB(orgId = 'skn_seksuologii', users = []) {
   const cleanOrg = normalizeOrgId(orgId);
-  const orgClient = getSupabaseForOrg(cleanOrg);
   const listToSave = Array.isArray(users) ? users : [];
-
-  // 1. Zapis do relacyjnej tabeli club_memberships (może być zablokowany dla anon po security hardening)
-  try {
-    await orgClient.from('club_memberships').delete().eq('club_id', cleanOrg).eq('source', 'manual');
-    if (listToSave.length > 0) {
-      const rows = listToSave.map(u => ({
-        club_id: cleanOrg,
-        email: String(u.email || '').trim().toLowerCase(),
-        member_name: u.name || (u.email ? u.email.split('@')[0] : 'Użytkownik'),
-        role: u.role === 'ADMIN' ? 'ADMIN' : (u.role === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : (u.role === 'VIEWER' ? 'VIEWER' : 'COORDINATOR')),
-        role_label: u.roleLabel || u.role,
-        source: 'manual',
-        active: true,
-      }));
-      await orgClient.from('club_memberships').upsert(rows, { onConflict: 'club_id,email,source' });
-    }
-  } catch (err) {}
-
-  // 2. Zapis SSOT w organization_settings.settings.access_users
   return saveOrgSettingsKeyToDB(cleanOrg, 'access_users', listToSave);
 }
 
@@ -742,7 +758,7 @@ export async function fetchLoginAccessForEmail(email) {
         if (!isValidProductionOrg(orgId)) return;
         const settings = row.settings && typeof row.settings === 'object' ? row.settings : {};
 
-        // Kill Switch: lista zablokowanych kont per koło
+        // Kill Switch: lista zablokowanych kont per koło oraz globalnie usunięte konta RBAC
         if (Array.isArray(settings.revoked_access)) {
           settings.revoked_access.forEach(item => {
             const revEmail = typeof item === 'string' ? item : item?.email;
@@ -751,12 +767,56 @@ export async function fetchLoginAccessForEmail(email) {
             }
           });
         }
+        if (Array.isArray(settings.rbac_deleted_users)) {
+          settings.rbac_deleted_users.forEach(delEmail => {
+            if (sameEmail(delEmail)) {
+              markRevoked('*', delEmail);
+            }
+          });
+        }
+
+        // Globalny rejestr kont z Panelu Administratora RBAC (rbac_users_registry)
+        if (settings.rbac_users_registry && typeof settings.rbac_users_registry === 'object') {
+          const regKey = Object.keys(settings.rbac_users_registry).find(k => sameEmail(k));
+          const regEntry = regKey ? settings.rbac_users_registry[regKey] : null;
+          if (regEntry) {
+            if (regEntry.isActive === false) {
+              markRevoked('*', cleanEmail);
+            } else if (Array.isArray(regEntry.clubs)) {
+              regEntry.clubs.forEach(cid => {
+                const normClub = normalizeOrgId(cid);
+                if (isValidProductionOrg(normClub)) {
+                  result.accessMatches.push({
+                    id: regEntry.id || `rbac_${cleanEmail}`,
+                    name: regEntry.name || cleanEmail.split('@')[0],
+                    email: cleanEmail,
+                    role: regEntry.role === 'admin' ? 'ADMIN' : 'VIEWER',
+                    roleLabel: regEntry.role === 'admin' ? 'Administrator koła' : 'Użytkownik koła',
+                    orgId: normClub,
+                    source: 'rbac_admin_panel',
+                  });
+                }
+              });
+            }
+            if (regEntry.passwordHash && !result.password) {
+              result.password = regEntry.passwordHash;
+            }
+            if (regEntry.mustChangePassword !== undefined) {
+              result.firstLogin = result.firstLogin === false ? false : Boolean(regEntry.mustChangePassword);
+            }
+          }
+        }
 
         // a) Z kolumny JSONB settings
         if (Array.isArray(settings.access_users)) {
           settings.access_users
             .filter(u => sameEmail(u?.email) && u?.active !== false && u?.isActive !== false && u?.status !== 'revoked' && u?.status !== 'blocked')
-            .forEach(u => result.accessMatches.push({ ...u, orgId, source: u.source || 'access_users' }));
+            .forEach(u => {
+              result.accessMatches.push({ ...u, orgId, source: u.source || 'access_users' });
+              if (u.isFirstLogin !== undefined && result.firstLogin === null) {
+                result.firstLogin = Boolean(u.isFirstLogin);
+              }
+            });
         }
         if (Array.isArray(settings.supervisors)) {
           settings.supervisors
@@ -816,30 +876,6 @@ export async function fetchLoginAccessForEmail(email) {
     }
   } catch (err) {
     console.warn('[fetchLoginAccessForEmail] Błąd odczytu organization_settings:', err);
-  }
-
-  // 3. board_terms – aktywne kadencje zarządu we wszystkich kołach
-  try {
-    const { data, error } = await supabase
-      .from('board_terms')
-      .select('organization_id, member_name, member_email, role_name, is_active')
-      .ilike('member_email', cleanEmail);
-
-    if (!error && Array.isArray(data)) {
-      result.ok = true;
-      data
-        .filter(r => sameEmail(r.member_email) && r.is_active !== false && isValidProductionOrg(r.organization_id))
-        .forEach(r => result.boardMatches.push({
-          orgId: normalizeOrgId(r.organization_id),
-          memberName: r.member_name,
-          memberEmail: r.member_email,
-          roleName: r.role_name,
-          isActive: r.is_active !== false,
-          source: 'board_terms',
-        }));
-    }
-  } catch (err) {
-    console.warn('[fetchLoginAccessForEmail] Błąd odczytu board_terms:', err);
   }
 
   // Egzekwuj Kill Switch (odfiltruj cofnięte dostępy per organizacja)
@@ -1087,13 +1123,11 @@ export async function fetchGlobalAccessMatrix(actorEmail) {
     effRes,
     membershipsRes,
     orgSettingsRes,
-    boardTermsRes,
     ...membersPerClubRes
   ] = await Promise.all([
     supabase.from('v_effective_access').select('*').then(r => r).catch(() => ({ data: null, error: true })),
     supabase.from('club_memberships').select('*').then(r => r).catch(() => ({ data: null, error: true })),
     supabase.from('organization_settings').select('*').then(r => r).catch(() => ({ data: null, error: true })),
-    supabase.from('board_terms').select('*').then(r => r).catch(() => ({ data: null, error: true })),
     ...activeClubIds.map(orgId =>
       fetchAllTenantRows('members', orgId, {
         select: 'organization_id, full_name, email, index_number',
@@ -1207,7 +1241,19 @@ export async function fetchGlobalAccessMatrix(actorEmail) {
     assignmentMap.set(key, existing);
   };
 
+  const deletedEmails = new Set();
+
   // A) organization_settings
+  (orgSettingsRes?.data || []).forEach(row => {
+    const settings = row.settings && typeof row.settings === 'object' ? row.settings : {};
+    if (Array.isArray(settings.rbac_deleted_users)) {
+      settings.rbac_deleted_users.forEach(em => {
+        const clean = String(em || '').trim().toLowerCase();
+        if (clean && clean !== GLOBAL_SUPERADMIN_EMAIL) deletedEmails.add(clean);
+      });
+    }
+  });
+
   (orgSettingsRes?.data || []).forEach(row => {
     const orgId = normalizeOrgId(row.organization_id);
     const settings = row.settings && typeof row.settings === 'object' ? row.settings : {};
@@ -1215,7 +1261,7 @@ export async function fetchGlobalAccessMatrix(actorEmail) {
     if (Array.isArray(settings.revoked_access)) {
       settings.revoked_access.forEach(item => {
         const em = String(typeof item === 'string' ? item : item?.email || '').trim().toLowerCase();
-        if (!em || item?.active === true) return;
+        if (!em || item?.active === true || deletedEmails.has(em)) return;
         ensureSet(orgRevokedMap, orgId).add(em);
         upsertAssignment({
           orgId,
@@ -1231,10 +1277,35 @@ export async function fetchGlobalAccessMatrix(actorEmail) {
       });
     }
 
+    if (settings.rbac_users_registry && typeof settings.rbac_users_registry === 'object') {
+      Object.values(settings.rbac_users_registry).forEach(reg => {
+        const em = String(reg?.email || '').trim().toLowerCase();
+        if (!em || deletedEmails.has(em)) return;
+        const active = reg.isActive !== false;
+        const clubs = Array.isArray(reg.clubs) ? reg.clubs : [];
+        clubs.forEach(cid => {
+          const normClub = normalizeOrgId(cid);
+          if (!normClub || normClub === 'test' || normClub === '*') return;
+          if (active) ensureSet(orgAccessUsersMap, normClub).add(em);
+          upsertAssignment({
+            orgId: normClub,
+            email: em,
+            name: reg.name || '',
+            role: reg.role === 'admin' ? 'ADMIN' : 'VIEWER',
+            roleLabel: reg.role === 'admin' ? 'Administrator koła (RBAC)' : 'Użytkownik koła (RBAC)',
+            sourceKey: 'rbac_admin_panel',
+            sourceLabel: 'Panel Administratora (RBAC)',
+            isActive: active,
+            addedAt: reg.updatedAt ? String(reg.updatedAt).slice(0, 10) : '',
+          });
+        });
+      });
+    }
+
     if (Array.isArray(settings.board)) {
       settings.board.forEach(b => {
         const em = String(b?.memberEmail || b?.email || '').trim().toLowerCase();
-        if (!em) return;
+        if (!em || deletedEmails.has(em)) return;
         const active = b.isActive !== false && b.accessRevoked !== true;
         if (active) ensureSet(orgBoardsMap, orgId).add(em);
         upsertAssignment({
@@ -1255,7 +1326,7 @@ export async function fetchGlobalAccessMatrix(actorEmail) {
     if (Array.isArray(settings.supervisors)) {
       settings.supervisors.forEach(s => {
         const em = String(s?.email || '').trim().toLowerCase();
-        if (!em) return;
+        if (!em || deletedEmails.has(em)) return;
         const active = s.isActive !== false && s.status !== 'revoked';
         if (active) ensureSet(orgSupervisorsMap, orgId).add(em);
         upsertAssignment({
@@ -1275,7 +1346,7 @@ export async function fetchGlobalAccessMatrix(actorEmail) {
     if (Array.isArray(settings.access_users)) {
       settings.access_users.forEach(u => {
         const em = String(u?.email || '').trim().toLowerCase();
-        if (!em) return;
+        if (!em || deletedEmails.has(em)) return;
         const active = u?.active !== false && u?.isActive !== false && u?.status !== 'revoked' && u?.status !== 'blocked';
         if (active) ensureSet(orgAccessUsersMap, orgId).add(em);
         const isSuperadminGrant = u?.grantedBy === GLOBAL_SUPERADMIN_EMAIL || u?.source === 'superadmin';
@@ -1294,26 +1365,7 @@ export async function fetchGlobalAccessMatrix(actorEmail) {
     }
   });
 
-  // B) board_terms
-  (boardTermsRes?.data || []).forEach(b => {
-    const orgId = normalizeOrgId(b.organization_id);
-    const em = String(b.member_email || '').trim().toLowerCase();
-    if (!em) return;
-    const active = b.is_active !== false;
-    if (active) ensureSet(orgBoardsMap, orgId).add(em);
-    upsertAssignment({
-      orgId,
-      email: em,
-      name: b.member_name || '',
-      role: b.role_name || 'Zarząd Koła',
-      roleLabel: b.role_name || 'Zarząd Koła',
-      sourceKey: 'board_terms',
-      sourceLabel: 'Zarząd Koła (board_terms)',
-      isActive: active,
-    });
-  });
-
-  // C) club_memberships & v_effective_access
+  // B) club_memberships & v_effective_access
   const relRows = [
     ...((membershipsRes?.data || []).map(r => ({ ...r, _fromView: false }))),
     ...((effRes?.data || []).map(r => ({ ...r, _fromView: true }))),
@@ -1322,8 +1374,12 @@ export async function fetchGlobalAccessMatrix(actorEmail) {
   relRows.forEach(r => {
     const orgId = normalizeOrgId(r.club_id);
     const em = String(r.email || '').trim().toLowerCase();
-    if (!em || !orgId) return;
-    const active = r.active !== false;
+    if (!em || !orgId || orgId === 'test' || deletedEmails.has(em)) return;
+    const isRevoked = orgRevokedMap.get(orgId)?.has(em);
+    const active = r.active !== false && !isRevoked;
+    if (active && r.source === 'manual') {
+      ensureSet(orgAccessUsersMap, orgId).add(em);
+    }
     const srcLabel =
       r.source === 'manual'
         ? 'Dodane w Ustawieniach (club_memberships)'
@@ -1351,22 +1407,6 @@ export async function fetchGlobalAccessMatrix(actorEmail) {
     anomalies.push(anomaly);
   };
 
-  relRows.forEach(r => {
-    const orgId = normalizeOrgId(r.club_id);
-    const em = String(r.email || '').trim().toLowerCase();
-    if (!em || !orgId) return;
-    if (orgId === 'test' && r.active !== false) {
-      pushAnomaly({
-        id: `test_org_${em}`,
-        severity: 'warning',
-        orgId,
-        email: em,
-        title: `Wpis testowy w club_memberships (${em})`,
-        description: `Konto ${em} ma aktywny rekord w nielive'owej organizacji "test". Warstwa logowania CRM odrzuca ten rekord automatycznie.`,
-      });
-    }
-  });
-
   assignmentMap.forEach(item => {
     if (item.email === GLOBAL_SUPERADMIN_EMAIL) return;
     if (item.orgId === 'test') return;
@@ -1384,17 +1424,6 @@ export async function fetchGlobalAccessMatrix(actorEmail) {
         email: item.email,
         title: `Sierocy dostęp w ${item.clubShortName}: ${item.email}`,
         description: `Użytkownik ma aktywny wpis w club_memberships/v_effective_access dla "${item.clubShortName}", mimo że nie figuruje w aktywnym Zarządzie, wśród Opiekunów ani w "Ustawienia i dostęp" tego koła. Możesz użyć Kill Switcha poniżej.`,
-      });
-    }
-
-    if (isRevoked && (item.sources.includes('club_memberships') || item.sources.includes('v_effective_access'))) {
-      pushAnomaly({
-        id: `revoked_still_in_cm_${item.orgId}_${item.email}`,
-        severity: 'info',
-        orgId: item.orgId,
-        email: item.email,
-        title: `Zablokowane konto (${item.email}) wciąż istnieje w club_memberships`,
-        description: `Dostęp w CRM dla ${item.clubShortName} jest zablokowany przez Kill Switch (revoked_access), ale rekord club_memberships wymaga uruchomienia migracji SQL dla usunięcia z widoku SQL.`,
       });
     }
   });
@@ -1571,22 +1600,6 @@ export async function revokeUserClubAccess({ orgId, email, memberName = '', role
     }
   }
 
-  // 2. Próba aktualizacji board_terms i club_memberships (best-effort w zależności od uprawnień RLS)
-  try {
-    await orgClient
-      .from('board_terms')
-      .update({ is_active: false })
-      .eq('organization_id', cleanOrg)
-      .ilike('member_email', cleanEmail);
-  } catch {}
-  try {
-    await orgClient
-      .from('club_memberships')
-      .update({ active: false })
-      .eq('club_id', cleanOrg)
-      .ilike('email', cleanEmail);
-  } catch {}
-
   return { ok: true, orgId: cleanOrg, email: cleanEmail, revokedAt: nowIso };
 }
 
@@ -1672,14 +1685,6 @@ export async function restoreUserClubAccess({ orgId, email, memberName = '', rol
       .insert({ organization_id: cleanOrg, settings: nextSettings, updated_at: nowIso });
     if (insErr) return { ok: false, error: insErr.message };
   }
-
-  try {
-    await orgClient
-      .from('club_memberships')
-      .update({ active: true })
-      .eq('club_id', cleanOrg)
-      .ilike('email', cleanEmail);
-  } catch {}
 
   return { ok: true, orgId: cleanOrg, email: cleanEmail };
 }

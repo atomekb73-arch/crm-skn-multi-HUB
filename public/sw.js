@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skn-crm-pwa-v1';
+const CACHE_NAME = 'skn-crm-pwa-v3';
 
 // Statyczne zasoby powłoki aplikacji
 const PRECACHE_ASSETS = [
@@ -38,11 +38,12 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
-  // Nigdy nie buforujemy w Service Workerze żądań do bazy Supabase ani API backendowego,
-  // aby zapewnić zawsze 100% świeże dane i nie zakłócać działania RLS / logowania
+  // Nigdy nie przechwytujemy w Service Workerze żądań cross-origin (Google Fonts, Supabase,
+  // Vercel Live, Teamup, Google Apps Script) ani endpointów API — przeglądarka obsługuje je natywnie
   if (
-    url.origin.includes('supabase.co') ||
+    url.origin !== self.location.origin ||
     url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/api-teamup/') ||
     url.pathname.startsWith('/rest/') ||
     url.pathname.startsWith('/auth/')
   ) {
@@ -63,13 +64,14 @@ self.addEventListener('fetch', (event) => {
         .catch(async () => {
           const cached = await caches.match(event.request);
           if (cached) return cached;
-          return caches.match('/index.html');
+          const fallbackIndex = await caches.match('/index.html');
+          return fallbackIndex || new Response('Offline', { status: 503, statusText: 'Offline' });
         })
     );
     return;
   }
 
-  // Stale-While-Revalidate dla assetów statycznych (CSS, JS, czcionki, ikony)
+  // Stale-While-Revalidate dla lokalnych assetów statycznych (CSS, JS, ikony)
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request)
@@ -84,7 +86,7 @@ self.addEventListener('fetch', (event) => {
           }
           return networkResponse;
         })
-        .catch(() => null);
+        .catch(() => cachedResponse || new Response('', { status: 504, statusText: 'Gateway Timeout' }));
 
       return cachedResponse || fetchPromise;
     })

@@ -99,11 +99,14 @@ createRoot(document.getElementById('root')).render(
   </StrictMode>
 );
 
-// Rejestracja Service Workera dla instalacji PWA na telefonie
+// Rejestracja i natychmiastowa aktualizacja Service Workera PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
-      .register('/sw.js')
+      .register('/sw.js', { updateViaCache: 'none' })
+      .then((reg) => {
+        reg.update().catch(() => {});
+      })
       .catch((err) => {
         console.warn('[PWA] Service Worker registration:', err);
       });
