@@ -2478,6 +2478,8 @@ export function OfficialMeetingMinutesTemplate({
   );
 }
 
+export { default as InterClubSummaryTemplate } from './InterClubSummaryTemplate';
+
 
 
 

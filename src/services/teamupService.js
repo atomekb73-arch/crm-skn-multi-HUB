@@ -1,5 +1,6 @@
 import { readSWRData, writeSWRData, CACHE_KEYS } from '../hooks/useCachedData.js';
 import { getAcademicYearFromDate } from '../utils/helpers.js';
+import { isSubcalendarExcluded, EXCLUDED_SUBCALENDAR_IDS } from '../config/wskzRegistry.js';
 
 const DEFAULT_CALENDAR_ID = 'ks9aiux4jiza1ronpd';
 const DEFAULT_API_TOKEN = '20dc4242d0d74be314e5ee108dc618cf3f6fbcb7647865568775fe4d9a89c112';
@@ -81,6 +82,7 @@ export async function fetchTeamupEvents({
   startDate = '2026-10-01',
   endDate = '2027-09-30',
   subcalendarId = DEFAULT_SUBCALENDAR_ID,
+  subcalendarIds = null,
   yearPrefix = '26/27',
   calendarId = null,
   token = null,
@@ -91,13 +93,14 @@ export async function fetchTeamupEvents({
   const calId = String(calendarId || TEAMUP_CALENDAR_ID || DEFAULT_CALENDAR_ID).trim();
   const apiToken = String(token || TEAMUP_TOKEN || DEFAULT_API_TOKEN).trim();
   const targetSubId = String(subcalendarId || DEFAULT_SUBCALENDAR_ID || '').trim();
+  const isMulti = Array.isArray(subcalendarIds) && subcalendarIds.length > 0;
 
   if (!apiToken || !calId) {
     return isBypass ? [] : (getCachedTeamupEvents(targetSubId, yearPrefix) || []);
   }
 
-  // Jeśli nie wymuszono bypassCache/force, spróbuj najpierw odczytać cache
-  if (!isBypass) {
+  // Jeśli nie wymuszono bypassCache/force i to pojedynczy kalendarz, spróbuj najpierw odczytać cache
+  if (!isBypass && !isMulti) {
     const cached = getCachedTeamupEvents(targetSubId, yearPrefix);
     if (cached && Array.isArray(cached) && cached.length > 0) {
       // Sprawdź czy wydarzenia w cache pasują do zakresu dat
@@ -117,7 +120,14 @@ export async function fetchTeamupEvents({
       endDate,
     });
 
-    if (targetSubId) {
+    if (isMulti) {
+      subcalendarIds.forEach(id => {
+        const numId = Number(id);
+        if (numId && !isSubcalendarExcluded(numId)) {
+          params.append('subcalendarId[]', String(numId));
+        }
+      });
+    } else if (targetSubId && !isSubcalendarExcluded(targetSubId)) {
       params.append('subcalendarId[]', targetSubId);
     }
 
@@ -156,23 +166,41 @@ export async function fetchTeamupEvents({
     }
 
     if (!eventsData || !eventsData.events) {
-      return bypassCache ? [] : (getCachedTeamupEvents(targetSubId, yearPrefix) || []);
+      return (isBypass || isMulti) ? [] : (getCachedTeamupEvents(targetSubId, yearPrefix) || []);
     }
 
     const data = eventsData;
 
-    // Ścisłe filtrowanie: wyklucz zdarzenia z innych podkalendarzy oraz spoza zadanego zakresu dat
+    // Ścisłe filtrowanie: wyklucz zdarzenia z wykluczonych podkalendarzy oraz spoza zadanego zakresu dat
     const rawEvents = data.events || [];
-    const events = rawEvents.filter(evt => {
-      if (targetSubId) {
+    const validEvents = rawEvents.filter(evt => {
+      const pSub = evt.subcalendar_id;
+      const allSubs = Array.isArray(evt.subcalendar_ids) && evt.subcalendar_ids.length > 0
+        ? evt.subcalendar_ids
+        : [pSub];
+
+      if (allSubs.every(s => isSubcalendarExcluded(s))) return false;
+
+      if (!isMulti && targetSubId) {
         const subIdMatches = String(evt.subcalendar_id) === String(targetSubId);
         const subIdsMatches = Array.isArray(evt.subcalendar_ids) && evt.subcalendar_ids.some(id => String(id) === String(targetSubId));
         if (!subIdMatches && !subIdsMatches) return false;
       }
+
       const evtDate = evt.start_dt ? evt.start_dt.split('T')[0] : (evt.startDate || '');
       if (startDate && evtDate && evtDate < startDate) return false;
       if (endDate && evtDate && evtDate > endDate) return false;
       return true;
+    });
+
+    // Deduplikacja zdarzeń z Teamup po id
+    const seenIds = new Set();
+    const events = [];
+    validEvents.forEach(evt => {
+      const eid = String(evt.id || '');
+      if (eid && seenIds.has(eid)) return;
+      if (eid) seenIds.add(eid);
+      events.push(evt);
     });
 
     console.log('[Teamup] Pobrane wydarzenia Teamup (subcalendar: ' + targetSubId + ', ' + startDate + ' do ' + endDate + '):', events);
@@ -213,6 +241,9 @@ export async function fetchTeamupEvents({
         who: evt.who || '', // Prowadzący
         attendees: [],
         subcalendar_id: evt.subcalendar_id,
+        subcalendar_ids: Array.isArray(evt.subcalendar_ids) && evt.subcalendar_ids.length > 0
+          ? evt.subcalendar_ids
+          : (evt.subcalendar_id ? [evt.subcalendar_id] : []),
         isUpcoming,
         isLive: true,
         academicYear: acadYear.full,

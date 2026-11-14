@@ -32,6 +32,10 @@ import {
   Clock,
   User,
   AlertTriangle,
+  FileSpreadsheet,
+  Download,
+  RefreshCw,
+  Loader2,
 } from 'lucide-react';
 import {
   MembershipCertificateTemplate,
@@ -42,11 +46,15 @@ import {
   ResearchConferencesRegistryTemplate,
   AnnualReportProtocolTemplate,
   OfficialRegistryProtocolTemplate,
+  InterClubSummaryTemplate,
   generateDocumentNumber,
   formatPolishDate,
   getMeetingAttendeesCount,
   getOrgMetadata,
 } from './DocumentTemplates';
+import { exportMultipleSheetsToXlsx } from '../utils/exportToExcel';
+import { WSKZ_ORGANIZATIONS, getWskzOrgById } from '../config/wskzRegistry';
+import { fetchInterClubReportData } from '../services/interClubReportService';
 import DocumentCustomizer, { DEFAULT_TABLE_COLUMNS } from './DocumentCustomizer';
 import { useSettings } from '../context/SettingsContext';
 import { useOrg } from '../context/OrgContext';
@@ -135,6 +143,15 @@ const DOCUMENT_CATEGORIES = [
     badgeColor: 'bg-indigo-50 text-indigo-700 border-indigo-200',
     description: 'Zestawienie wystąpień konferencyjnych, publikacji, badań ankietowych i materiałów edukacyjnych.',
   },
+  {
+    id: 'inter_club_summary',
+    title: 'Zestawienie Aktywności Kół',
+    subtitle: 'Dla Władz Uczelni (14 Kół)',
+    icon: Building2,
+    badge: 'Dla Władz Uczelni',
+    badgeColor: 'bg-emerald-50 text-emerald-800 border-emerald-300',
+    description: 'Międzykołowe zestawienie spotkań merytorycznych i projektowych dla Władz Uczelni z deduplikacją i frekwencją z gośćmi.',
+  },
 ];
 
 export default function ReportsTab({
@@ -200,6 +217,107 @@ export default function ReportsTab({
       setBoardRole(`Przewodniczący ${currentOrg.name}`);
     }
   }, [currentOrg?.name]);
+
+  // Stan dla Generatora Zestawień Międzykołowych dla Władz Uczelni
+  const [interClubStartDate, setInterClubStartDate] = useState('2026-10-01');
+  const [interClubEndDate, setInterClubEndDate] = useState('2027-09-30');
+  const [selectedInterClubOrgIds, setSelectedInterClubOrgIds] = useState(() =>
+    WSKZ_ORGANIZATIONS.map(o => o.orgId)
+  );
+  const [interClubData, setInterClubData] = useState(null);
+  const [isLoadingInterClub, setIsLoadingInterClub] = useState(false);
+
+  const selectedInterClubOrgs = useMemo(() => {
+    return WSKZ_ORGANIZATIONS.filter(o => selectedInterClubOrgIds.includes(o.orgId));
+  }, [selectedInterClubOrgIds]);
+
+  const handleFetchInterClubReport = useCallback(async () => {
+    setIsLoadingInterClub(true);
+    try {
+      const result = await fetchInterClubReportData({
+        startDate: interClubStartDate,
+        endDate: interClubEndDate,
+        selectedOrgIds: selectedInterClubOrgIds,
+      });
+      setInterClubData(result);
+    } catch (err) {
+      console.error('Błąd pobierania raportu międzykołowego:', err);
+      showToast('Wystąpił błąd podczas generowania zestawienia', 'error');
+    } finally {
+      setIsLoadingInterClub(false);
+    }
+  }, [interClubStartDate, interClubEndDate, selectedInterClubOrgIds]);
+
+  useEffect(() => {
+    if (selectedDocType === 'inter_club_summary' && !interClubData && !isLoadingInterClub) {
+      handleFetchInterClubReport();
+    }
+  }, [selectedDocType, interClubData, isLoadingInterClub, handleFetchInterClubReport]);
+
+  const handleToggleInterClubOrg = (orgId) => {
+    setSelectedInterClubOrgIds(prev =>
+      prev.includes(orgId) ? prev.filter(id => id !== orgId) : [...prev, orgId]
+    );
+  };
+
+  const handleSelectAllInterClubOrgs = () => {
+    setSelectedInterClubOrgIds(WSKZ_ORGANIZATIONS.map(o => o.orgId));
+  };
+
+  const handleSelectActiveCrmInterClubOrgs = () => {
+    setSelectedInterClubOrgIds(WSKZ_ORGANIZATIONS.filter(o => o.hasActiveCrm).map(o => o.orgId));
+  };
+
+  const handleClearInterClubOrgs = () => {
+    setSelectedInterClubOrgIds([]);
+  };
+
+  const handleExportInterClubToExcel = async () => {
+    if (!interClubData) return;
+    try {
+      const substantiveRows = (interClubData.substantiveMeetings || []).map((m, idx) => ({
+        'Lp.': idx + 1,
+        'Data': m.date,
+        'Koło wiodące': m.primaryOrg?.name || '',
+        'Współorganizatorzy': (m.coOrgs || []).map(co => co.shortName || co.name).join(', ') || 'Brak',
+        'Temat / Tytuł spotkania': m.title,
+        'Prelegent / Prowadzący': m.speaker,
+        'Łączna frekwencja (z gośćmi)': m.totalParticipants || 0,
+      }));
+
+      const projectRows = (interClubData.projectMeetings || []).map((m, idx) => ({
+        'Lp.': idx + 1,
+        'Data': m.date,
+        'Koło naukowe': m.primaryOrg?.name || '',
+        'Współorganizatorzy': (m.coOrgs || []).map(co => co.shortName || co.name).join(', ') || 'Brak',
+        'Temat / Cel prac projektowych': m.title,
+        'Koordynator / Prowadzący': m.speaker,
+      }));
+
+      const summaryRows = (interClubData.byOrgStats || []).map(item => ({
+        'Lp.': item.lp,
+        'Kod': item.org.code || item.org.number,
+        'Nazwa Koła Naukowego': item.org.name,
+        'Spotkania merytoryczne (liczba)': item.substantiveCount,
+        'Łączna frekwencja merytoryczna': item.substantiveAttendees,
+        'Średnia frekwencja': item.substantiveCount > 0 ? Math.round(item.substantiveAttendees / item.substantiveCount) : 0,
+        'Prace projektowe i techniczne': item.projectCount,
+        'Wydarzenia współorganizowane': item.jointCount,
+        'Suma wszystkich aktywności': item.totalActivities,
+      }));
+
+      await exportMultipleSheetsToXlsx({
+        'Spotkania Merytoryczne': substantiveRows,
+        'Spotkania Projektowe': projectRows,
+        'Zbiorcze Zestawienie Kół': summaryRows,
+      }, `Zestawienie_Kol_WSKZ_${interClubStartDate}_${interClubEndDate}`);
+
+      showToast('Pomyślnie wyeksportowano zestawienie do Excela (.xlsx)', 'success');
+    } catch (e) {
+      console.error('Błąd eksportu Excel:', e);
+      showToast('Błąd eksportu do pliku Excel', 'error');
+    }
+  };
 
   // Custom Editable fields
   const [membershipCustomText, setMembershipCustomText] = useState(null);
@@ -540,6 +658,7 @@ export default function ReportsTab({
       speaker: 'SPEAKER',
       board: 'BOARD',
       meetings_summary: 'TABELA-SPOTKAN',
+      inter_club_summary: 'ZESTAWIENIE-KOL',
       members_registry: 'EWIDENCJA',
       research_conferences: 'BADANIA-KONF',
       annual_report: 'PROTOKOL-DZIEKANAT',
@@ -562,6 +681,7 @@ export default function ReportsTab({
       speaker: 'Dyplom Prelegenta',
       board: 'Zaświadczenie Zarządu',
       meetings_summary: 'Tabela Zbiorcza Spotkań',
+      inter_club_summary: 'Zestawienie Aktywności Kół (Dla Władz Uczelni)',
       members_registry: 'Ewidencja Członków',
       research_conferences: 'Wykaz Dorobku Naukowego',
       annual_report: 'Protokół Sprawozdawczy dla Dziekanatu',
@@ -577,6 +697,8 @@ export default function ReportsTab({
       detailsText = `Funkcja: ${roleObj?.label || boardRole}`;
     } else if (selectedDocType === 'meetings_summary') {
       detailsText = `Zrealizowano spotkań: ${legitimateMeetings.length}`;
+    } else if (selectedDocType === 'inter_club_summary') {
+      detailsText = `Łącznie wydarzeń: ${interClubData?.summaryStats?.totalEvents || 0} (${selectedInterClubOrgs.length} kół)`;
     } else if (selectedDocType === 'members_registry') {
       detailsText = `Liczba członków: ${members.length}`;
     } else {
@@ -585,7 +707,7 @@ export default function ReportsTab({
 
     const recipientName = selectedMember
       ? (selectedMember.fullName || `${selectedMember.firstName || ''} ${selectedMember.lastName || ''}`.trim())
-      : (selectedDocType === 'members_registry' || selectedDocType === 'meetings_summary' || selectedDocType === 'annual_report' ? 'Koło Naukowe (Dziekanat)' : '—');
+      : (selectedDocType === 'inter_club_summary' ? 'Władze Uczelni WSKZ' : (selectedDocType === 'members_registry' || selectedDocType === 'meetings_summary' || selectedDocType === 'annual_report' ? 'Koło Naukowe (Dziekanat)' : '—'));
 
     const recipientIndex = selectedMember?.index || selectedMember?.indexNumber || (selectedDocType.includes('summary') || selectedDocType.includes('report') ? 'WSKZ' : '—');
 
@@ -804,7 +926,7 @@ export default function ReportsTab({
                 <Layers size={14} className="text-indigo-600" />
                 1. Wybierz Kategorię Dokumentu:
               </h2>
-              <span className="text-[11px] font-mono text-slate-400">6 szablonów</span>
+              <span className="text-[11px] font-mono text-slate-400">{DOCUMENT_CATEGORIES.length} szablonów</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-2.5">
@@ -1165,6 +1287,152 @@ export default function ReportsTab({
               </div>
             )}
 
+            {/* Opcje parametrów dla Zestawienia Międzykołowego dla Władz Uczelni */}
+            {selectedDocType === 'inter_club_summary' && (
+              <div className="space-y-3.5 pt-2 border-t border-slate-100">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <Calendar size={14} className="text-indigo-600" />
+                    <span>Przedział czasowy zestawienia:</span>
+                  </label>
+                  <span className="text-[10px] font-mono text-slate-400">Teamup & Supabase</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Data od:</label>
+                    <input
+                      type="date"
+                      value={interClubStartDate}
+                      onChange={(e) => setInterClubStartDate(e.target.value)}
+                      className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Data do:</label>
+                    <input
+                      type="date"
+                      value={interClubEndDate}
+                      onChange={(e) => setInterClubEndDate(e.target.value)}
+                      className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Szybki wybór okresu */}
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInterClubStartDate('2026-10-01');
+                      setInterClubEndDate('2027-09-30');
+                    }}
+                    className="px-2 py-1 rounded-md text-[10px] font-bold bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-900 border border-slate-200 transition cursor-pointer"
+                  >
+                    Cały rok 26/27
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInterClubStartDate('2026-10-01');
+                      setInterClubEndDate('2027-02-28');
+                    }}
+                    className="px-2 py-1 rounded-md text-[10px] font-bold bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-900 border border-slate-200 transition cursor-pointer"
+                  >
+                    Semestr zimowy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInterClubStartDate('2027-03-01');
+                      setInterClubEndDate('2027-09-30');
+                    }}
+                    className="px-2 py-1 rounded-md text-[10px] font-bold bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-900 border border-slate-200 transition cursor-pointer"
+                  >
+                    Semestr letni
+                  </button>
+                </div>
+
+                {/* Wybór Kół Naukowych */}
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <Building2 size={14} className="text-indigo-600" />
+                      <span>Koła Naukowe ({selectedInterClubOrgIds.length} / {WSKZ_ORGANIZATIONS.length}):</span>
+                    </label>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={handleSelectAllInterClubOrgs}
+                        className="text-[10px] font-bold text-indigo-600 hover:underline px-1 cursor-pointer"
+                      >
+                        Wszystkie (14)
+                      </button>
+                      <span className="text-slate-300">•</span>
+                      <button
+                        type="button"
+                        onClick={handleSelectActiveCrmInterClubOrgs}
+                        className="text-[10px] font-bold text-indigo-600 hover:underline px-1 cursor-pointer"
+                      >
+                        Z CRM (3)
+                      </button>
+                      <span className="text-slate-300">•</span>
+                      <button
+                        type="button"
+                        onClick={handleClearInterClubOrgs}
+                        className="text-[10px] font-bold text-slate-500 hover:underline px-1 cursor-pointer"
+                      >
+                        Wyczyść
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="max-h-52 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50/50 p-2 space-y-1">
+                    {WSKZ_ORGANIZATIONS.map(org => {
+                      const isSelected = selectedInterClubOrgIds.includes(org.orgId);
+                      return (
+                        <label
+                          key={org.orgId}
+                          className={`flex items-center justify-between p-1.5 rounded-lg text-xs cursor-pointer transition select-none ${
+                            isSelected ? 'bg-white font-bold text-slate-900 shadow-2xs border border-slate-200' : 'hover:bg-slate-100/70 text-slate-600'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 truncate pr-1">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleInterClubOrg(org.orgId)}
+                              className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5"
+                            />
+                            <span className="font-mono text-[10px] px-1 py-0.2 rounded bg-slate-100 border border-slate-200 text-slate-600">
+                              {org.number}
+                            </span>
+                            <span className="truncate">{org.name}</span>
+                          </div>
+                          {org.hasActiveCrm && (
+                            <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200 shrink-0">
+                              CRM
+                            </span>
+                          )}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Przycisk Generuj / Odśwież Zestawienie */}
+                <button
+                  type="button"
+                  onClick={handleFetchInterClubReport}
+                  disabled={isLoadingInterClub || selectedInterClubOrgIds.length === 0}
+                  className="w-full py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition disabled:opacity-50 cursor-pointer"
+                >
+                  <RefreshCw size={14} className={isLoadingInterClub ? 'animate-spin' : ''} />
+                  <span>{isLoadingInterClub ? 'Pobieranie danych z Teamup & Supabase...' : 'Wygeneruj / Zaktualizuj Zestawienie'}</span>
+                </button>
+              </div>
+            )}
+
             {/* Academic Year Selection */}
             <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
               <label className="text-xs font-semibold text-slate-600">Rok akademicki:</label>
@@ -1265,6 +1533,20 @@ export default function ReportsTab({
                   {issuedRegistry.length}
                 </span>
               </button>
+
+              {/* Eksport do Excela (.xlsx) dla Zestawienia Międzykołowego */}
+              {selectedDocType === 'inter_club_summary' && (
+                <button
+                  type="button"
+                  onClick={handleExportInterClubToExcel}
+                  disabled={isLoadingInterClub || !interClubData}
+                  className="px-3.5 py-2 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-xs font-bold flex items-center gap-2 shadow-2xs transition-all cursor-pointer disabled:opacity-50"
+                  title="Pobierz pełne zestawienie w formacie skoroszytu Excel (.xlsx)"
+                >
+                  <FileSpreadsheet size={18} strokeWidth={2} className="w-[18px] h-[18px] text-emerald-700 shrink-0" />
+                  <span>Eksportuj do Excela (.xlsx)</span>
+                </button>
+              )}
 
               {/* 5. Drukuj dokument (PDF) */}
               <button
@@ -1376,6 +1658,22 @@ export default function ReportsTab({
                       onOpenAddModal={() => setIsAddMeetingModalOpen(true)}
                       org={currentOrg}
                       columnVisibility={columnVisibility}
+                    />
+                  )}
+
+                  {selectedDocType === 'inter_club_summary' && (
+                    <InterClubSummaryTemplate
+                      startDate={interClubStartDate}
+                      endDate={interClubEndDate}
+                      selectedOrgs={selectedInterClubOrgs}
+                      allProcessedEvents={interClubData?.allProcessedEvents || []}
+                      substantiveMeetings={interClubData?.substantiveMeetings || []}
+                      projectMeetings={interClubData?.projectMeetings || []}
+                      summaryStats={interClubData?.summaryStats || {}}
+                      byOrgStats={interClubData?.byOrgStats || []}
+                      docDate={new Date()}
+                      onExportExcel={handleExportInterClubToExcel}
+                      onPrint={handlePrint}
                     />
                   )}
 
