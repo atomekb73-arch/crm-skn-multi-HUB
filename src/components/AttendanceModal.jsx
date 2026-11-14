@@ -504,6 +504,7 @@ export default function AttendanceModal({
 }) {
   
   const { supervisors, weights } = useSettings();
+  const { currentOrg, getStorageKey } = useOrg();
   const [localThreshold, setLocalThreshold] = useState(minDurationThreshold);
   const [aliasesMap, setAliasesMap] = useState(() => getAliasesFromStorage());
   const [linkingParticipantId, setLinkingParticipantId] = useState(null);
@@ -511,7 +512,7 @@ export default function AttendanceModal({
   const [manualIndexInput, setManualIndexInput] = useState('');
   const [manualNameInput, setManualNameInput] = useState('');
   const [localParticipants, setLocalParticipants] = useState(() =>
-    resolveInitialParticipants(meeting, members, participants, minDurationThreshold, supervisors, (k) => k, getAliasesFromStorage())
+    resolveInitialParticipants(meeting, members, participants, minDurationThreshold, supervisors, getStorageKey, getAliasesFromStorage())
   );
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'member', 'supervisor', 'speaker', 'guest', 'short_time', 'unmatched'
@@ -1006,7 +1007,6 @@ export default function AttendanceModal({
   const [addJoinTime, setAddJoinTime] = useState('18:00');
   const [addRole, setAddRole] = useState('guest');
 
-  const { currentOrg, getStorageKey } = useOrg();
   const [saveError, setSaveError] = useState(null);
   const prevMeetingKeyRef = React.useRef(null);
   const wasOpenRef = React.useRef(false);

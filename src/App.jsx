@@ -545,6 +545,8 @@ export default function App() {
     if (!silentMeetings) {
       setLoadingMeetings(true);
     }
+    let effectiveSheetAttendanceMap = sheetAttendanceMap;
+    let meetingMetadataMap = {};
     try {
       const { startDate, endDate, yearPrefix } = getRangeForYear(yr, cStart, cEnd);
       const effectiveSubId = currentOrg?.subcalendarId || subId || DEFAULT_SUBCALENDAR_ID || '14518766';
@@ -618,7 +620,7 @@ export default function App() {
         });
 
       // Zastosuj frekwencję z bazy Supabase jako Jedyne Źródło Prawdy (SSOT)
-      let effectiveSheetAttendanceMap = sheetAttendanceMap;
+      effectiveSheetAttendanceMap = sheetAttendanceMap;
       if (!effectiveSheetAttendanceMap && typeof window !== 'undefined' && window.localStorage) {
         try {
           const rawEw = localStorage.getItem(getOrgKey(currentOrg.id, 'crm_ewidencja'));
@@ -643,7 +645,7 @@ export default function App() {
       }
 
       // ── Wczytaj metadane spotkań (meeting_metadata: frekwencja z gośćmi + współorganizacja) ──
-      let meetingMetadataMap = {};
+      meetingMetadataMap = {};
       try {
         const rawMeta = localStorage.getItem(getOrgKey(targetOrgId, 'crm_meeting_metadata'));
         if (rawMeta) {

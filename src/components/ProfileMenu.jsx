@@ -125,17 +125,7 @@ export default function ProfileMenu({ onOpenSettings }) {
     }
   };
 
-  if (!user) {
-    return (
-      <button
-        onClick={() => switchDemoAccount(DEMO_ACCOUNTS[0])}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition cursor-pointer"
-      >
-        <User size={13} />
-        <span>Zaloguj przez Google</span>
-      </button>
-    );
-  }
+  if (!user) return null;
 
   const roleConfig = ROLES[user.role] || ROLES.VIEWER;
   const initials = user.name
