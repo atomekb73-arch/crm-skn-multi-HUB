@@ -1246,10 +1246,13 @@ export async function fetchGlobalAccessMatrix(actorEmail) {
   // A) organization_settings
   (orgSettingsRes?.data || []).forEach(row => {
     const settings = row.settings && typeof row.settings === 'object' ? row.settings : {};
-    if (Array.isArray(settings.rbac_deleted_users)) {
-      settings.rbac_deleted_users.forEach(em => {
-        const clean = String(em || '').trim().toLowerCase();
-        if (clean && clean !== GLOBAL_SUPERADMIN_EMAIL) deletedEmails.add(clean);
+    if (settings.rbac_deleted_users) {
+      const delEntries = Array.isArray(settings.rbac_deleted_users)
+        ? settings.rbac_deleted_users
+        : Object.values(settings.rbac_deleted_users);
+      delEntries.forEach(item => {
+        const em = String(typeof item === 'string' ? item : item?.email || '').trim().toLowerCase();
+        if (em && em !== GLOBAL_SUPERADMIN_EMAIL && (item?.deleted !== false)) deletedEmails.add(em);
       });
     }
   });
@@ -1258,15 +1261,18 @@ export async function fetchGlobalAccessMatrix(actorEmail) {
     const orgId = normalizeOrgId(row.organization_id);
     const settings = row.settings && typeof row.settings === 'object' ? row.settings : {};
 
-    if (Array.isArray(settings.revoked_access)) {
-      settings.revoked_access.forEach(item => {
+    if (settings.revoked_access) {
+      const revEntries = Array.isArray(settings.revoked_access)
+        ? settings.revoked_access
+        : Object.values(settings.revoked_access);
+      revEntries.forEach(item => {
         const em = String(typeof item === 'string' ? item : item?.email || '').trim().toLowerCase();
         if (!em || item?.active === true || deletedEmails.has(em)) return;
         ensureSet(orgRevokedMap, orgId).add(em);
         upsertAssignment({
           orgId,
           email: em,
-          name: item?.memberName || '',
+          name: item?.memberName || item?.name || '',
           role: item?.previousRole || '',
           roleLabel: item?.previousRole || 'Dostęp cofnięty',
           sourceKey: 'revoked_access',

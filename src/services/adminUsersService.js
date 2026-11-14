@@ -420,10 +420,13 @@ export async function fetchRbacUsers() {
     // A) Zarząd koła (domyślnie rola Admin, chyba że nadpisano w rejestrze RBAC)
     const board = Array.isArray(s.board) ? s.board : [];
     for (const b of board) {
-      const email = String(b?.email || '').trim().toLowerCase();
+      const email = String(b?.memberEmail || b?.email || '').trim().toLowerCase();
       if (!email || deletedEmails.has(email)) continue;
-      const isRevoked = b.accessRevoked === true || b.active === false || revSet.has(email);
-      const u = ensureUser(email, b.name, 'admin');
+      const isPastTenure = b?.isActive === false || (b?.endDate && String(b.endDate).trim() !== '' && b?.endDate < new Date().toISOString().slice(0, 10));
+      if (isPastTenure) continue;
+      const bName = b?.memberName || b?.fullName || b?.name || '';
+      const isRevoked = b.accessRevoked === true || revSet.has(email);
+      const u = ensureUser(email, bName, 'admin');
       if (!u) continue;
       if (!registryByEmail.has(email) && !u.isProtected) {
         u.role = 'admin';
@@ -436,10 +439,12 @@ export async function fetchRbacUsers() {
     // B) Opiekunowie koła (domyślnie rola User)
     const supervisors = Array.isArray(s.supervisors) ? s.supervisors : [];
     for (const sup of supervisors) {
-      const email = String(sup?.email || '').trim().toLowerCase();
+      const email = String(sup?.email || sup?.memberEmail || '').trim().toLowerCase();
       if (!email || deletedEmails.has(email)) continue;
-      const isRevoked = sup.accessRevoked === true || sup.active === false || revSet.has(email);
-      const u = ensureUser(email, sup.name, 'user');
+      if (sup?.isActive === false) continue;
+      const supName = sup?.name || sup?.fullName || sup?.memberName || '';
+      const isRevoked = sup.accessRevoked === true || revSet.has(email);
+      const u = ensureUser(email, supName, 'user');
       if (!u) continue;
       if (!isRevoked) {
         addClubToUser(u, orgId);

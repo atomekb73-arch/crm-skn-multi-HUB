@@ -328,7 +328,99 @@ async function listUsers(client, hasServiceRole) {
     }
   }
 
-  // 2. Uzupełnij o aktywnych użytkowników z club_memberships oraz organization_settings
+  // 2. Uzupełnij o użytkowników z organization_settings (board, supervisors, access_users, rbac_users_registry)
+  const { data: orgSettingsRows } = await client
+    .from('organization_settings')
+    .select('organization_id, settings');
+
+  const revokedByOrg = new Map();
+  const deletedEmails = new Set();
+
+  for (const row of orgSettingsRows || []) {
+    const orgId = normalizeOrgId(row.organization_id);
+    const s = row.settings && typeof row.settings === 'object' ? row.settings : {};
+    if (s.rbac_deleted_users) {
+      for (const [em, del] of Object.entries(s.rbac_deleted_users)) {
+        if (del?.deleted) deletedEmails.add(em.toLowerCase().trim());
+      }
+    }
+    const revSet = new Set();
+    if (s.revoked_access) {
+      for (const [em, rev] of Object.entries(s.revoked_access)) {
+        if (rev?.active === false) revSet.add(em.toLowerCase().trim());
+      }
+    }
+    revokedByOrg.set(orgId, revSet);
+  }
+
+  const ensureApiUser = (rawEmail, fallbackName = '', defaultRole = 'user') => {
+    const email = String(rawEmail || '').trim().toLowerCase();
+    if (!email || deletedEmails.has(email)) return null;
+    const isProtected = email === GLOBAL_SUPERADMIN_EMAIL;
+    if (!usersMap.has(email)) {
+      usersMap.set(email, {
+        id: `crm-${email}`,
+        authUserId: null,
+        email,
+        name: isProtected ? 'Tomasz Bratkowski (Superadmin)' : (fallbackName || email.split('@')[0]),
+        role: isProtected ? 'superadmin' : normalizeRbacRole(defaultRole, email),
+        mustChangePassword: false,
+        isActive: true,
+        clubs: isProtected ? ['*'] : [],
+        isProtected,
+        createdAt: null,
+        updatedAt: null,
+        lastLoginAt: null,
+        source: 'organization_settings',
+      });
+    } else if (fallbackName) {
+      const existing = usersMap.get(email);
+      if (!existing.name || existing.name === existing.email.split('@')[0]) {
+        existing.name = fallbackName;
+      }
+    }
+    return usersMap.get(email);
+  };
+
+  const addClubToApiUser = (userObj, clubId) => {
+    if (!userObj || userObj.isProtected) return;
+    const norm = normalizeOrgId(clubId);
+    if (!norm || norm === 'test' || norm === '*' || !PRODUCTION_CLUB_IDS.includes(norm)) return;
+    if (revokedByOrg.get(norm)?.has(userObj.email)) return;
+    if (!userObj.clubs.includes(norm)) userObj.clubs.push(norm);
+  };
+
+  for (const row of orgSettingsRows || []) {
+    const orgId = normalizeOrgId(row.organization_id);
+    if (!orgId || orgId === 'test' || !PRODUCTION_CLUB_IDS.includes(orgId)) continue;
+    const s = row.settings && typeof row.settings === 'object' ? row.settings : {};
+    const revSet = revokedByOrg.get(orgId) || new Set();
+
+    for (const b of Array.isArray(s.board) ? s.board : []) {
+      const email = String(b?.memberEmail || b?.email || '').trim().toLowerCase();
+      if (!email || deletedEmails.has(email) || b?.isActive === false) continue;
+      const bName = b?.memberName || b?.fullName || b?.name || '';
+      const u = ensureApiUser(email, bName, 'admin');
+      if (u && !b.accessRevoked && !revSet.has(email)) addClubToApiUser(u, orgId);
+    }
+
+    for (const sup of Array.isArray(s.supervisors) ? s.supervisors : []) {
+      const email = String(sup?.email || sup?.memberEmail || '').trim().toLowerCase();
+      if (!email || deletedEmails.has(email) || sup?.isActive === false) continue;
+      const supName = sup?.name || sup?.fullName || sup?.memberName || '';
+      const u = ensureApiUser(email, supName, 'user');
+      if (u && !sup.accessRevoked && !revSet.has(email)) addClubToApiUser(u, orgId);
+    }
+
+    for (const au of Array.isArray(s.access_users) ? s.access_users : []) {
+      const email = String(au?.email || '').trim().toLowerCase();
+      if (!email || deletedEmails.has(email) || au?.active === false) continue;
+      const u = ensureApiUser(email, au.name, au.rbacRole || au.role_code || 'user');
+      if (u && !revSet.has(email)) addClubToApiUser(u, orgId);
+    }
+  }
+
+  // 3. Uzupełnij o aktywnych użytkowników z club_memberships
   const { data: memberships } = await client
     .from('club_memberships')
     .select('id, club_id, email, member_name, role, active, updated_at');
