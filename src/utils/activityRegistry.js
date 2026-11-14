@@ -2,6 +2,7 @@
 import { getMeetingStatusInfo } from './meetingTypes.js';
 import { ACTIVITY_WEIGHTS, ACTIVITY_WEIGHTS_METADATA, getActivityWeight } from './activityWeights.js';
 import { normalizeStudentIndex } from './helpers.js';
+import { getMeetingAttendanceStorageKeys } from './storage.js';
 
 export { normalizeStudentIndex };
 
@@ -74,9 +75,10 @@ export function getOfficialMemberRecord(memberOrIndex) {
  * 1. Punkty startowe z oficjalnej bazy (OFFICIAL_MEMBERS_MASTER_REGISTRY)
  * 2. Punkty przypisane w sesji (z local storage - crm_attendance_*)
  */
-export function calculateTotalMemberPoints(member, meetings = [], weights = {}) {
+export function calculateTotalMemberPoints(member, meetings = [], weights = {}, orgId = null) {
   if (!member) return 0;
   const cleanIdx = normalizeStudentIndex(member.index || member.nrIndeksu);
+  const cleanOrgId = orgId || member?.organization_id || (typeof window !== 'undefined' ? localStorage.getItem('crm_active_org_id') : 'skn_seksuologii');
   let pts = 0;
 
   // 1. Sprawdź czy jest wpis w oficjalnym rejestrze
@@ -85,33 +87,36 @@ export function calculateTotalMemberPoints(member, meetings = [], weights = {}) 
     pts = official.points;
   }
 
-  // 2. Dodaj punkty z nowo przypisanych w sesji aktywności ze spotkań (localStorage)
+  // 2. Dodaj punkty z nowo przypisanych w sesji aktywności ze spotkań (localStorage z pełną izolacją per koło)
   if (typeof window !== 'undefined') {
     meetings.forEach(m => {
       const statusInfo = getMeetingStatusInfo(m);
       if (statusInfo.isUpcoming && !statusInfo.isCompleted) return;
-      const meetingKey = `crm_attendance_${m.id || m.date}`;
-      try {
-        const savedRaw = localStorage.getItem(meetingKey);
-        if (savedRaw) {
-          const savedData = JSON.parse(savedRaw);
-          const attendees = savedData.attendees || [];
-          const matched = attendees.find(att => {
-            const attIdx = normalizeStudentIndex(att.member?.index || att.index);
-            if (cleanIdx && attIdx === cleanIdx) return true;
-            if (member.fullName && att.rawName && att.rawName.toLowerCase().includes(member.lastName?.toLowerCase() || '')) return true;
-            return false;
-          });
-
-          if (matched) {
-            const activities = Array.isArray(matched.activities) ? matched.activities : [];
-            activities.forEach(actId => {
-              const w = getActivityWeight(actId, weights, 0);
-              pts += w;
+      const keys = getMeetingAttendanceStorageKeys(cleanOrgId, m);
+      for (const meetingKey of keys) {
+        try {
+          const savedRaw = localStorage.getItem(meetingKey);
+          if (savedRaw) {
+            const savedData = JSON.parse(savedRaw);
+            const attendees = savedData.attendees || [];
+            const matched = attendees.find(att => {
+              const attIdx = normalizeStudentIndex(att.member?.index || att.index);
+              if (cleanIdx && attIdx === cleanIdx) return true;
+              if (member.fullName && att.rawName && att.rawName.toLowerCase().includes(member.lastName?.toLowerCase() || '')) return true;
+              return false;
             });
+
+            if (matched) {
+              const activities = Array.isArray(matched.activities) ? matched.activities : [];
+              activities.forEach(actId => {
+                const w = getActivityWeight(actId, weights, 0);
+                pts += w;
+              });
+              break; // znaleziono dane w pierwszym pasującym kluczu
+            }
           }
-        }
-      } catch {}
+        } catch {}
+      }
     });
   }
 

@@ -529,15 +529,11 @@ export async function syncAllPointsToGAS({ boardTenures = [] }) {
 export async function deleteMeetingAttendanceFromSupabase(kodSpotkania, dateOrStart = null, orgId = null) {
   const rawCode = String(kodSpotkania || '').replace(/\s+/g, ' ').trim();
   const cleanCode = rawCode.replace(/^\[.*?\]\s*/, '').trim();
-  const cleanOrg = orgId ? normalizeOrg(orgId) : (typeof window !== 'undefined' ? localStorage.getItem('crm_active_org_id') : null);
+  const cleanOrg = normalizeOrg(orgId || (typeof window !== 'undefined' ? localStorage.getItem('crm_active_org_id') : null) || 'skn_seksuologii');
 
   if (rawCode) {
-    let q1 = supabase.from('attendance').delete().eq('meeting_code', rawCode);
-    let q2 = supabase.from('attendance').delete().ilike('meeting_code', `%${cleanCode}%`);
-    if (cleanOrg) {
-      q1 = q1.eq('organization_id', cleanOrg);
-      q2 = q2.eq('organization_id', cleanOrg);
-    }
+    let q1 = supabase.from('attendance').delete().eq('organization_id', cleanOrg).eq('meeting_code', rawCode);
+    let q2 = supabase.from('attendance').delete().eq('organization_id', cleanOrg).ilike('meeting_code', `%${cleanCode}%`);
     await q1;
     await q2;
   }
@@ -546,13 +542,15 @@ export async function deleteMeetingAttendanceFromSupabase(kodSpotkania, dateOrSt
 
 export const deleteMeetingAttendanceFromGAS = deleteMeetingAttendanceFromSupabase;
 
-export async function claimGuestAttendance(nazwiskoGoscia, nowyNrIndeksu) {
+export async function claimGuestAttendance(nazwiskoGoscia, nowyNrIndeksu, orgId = null) {
   const guestName = String(nazwiskoGoscia || '').trim();
   const newIdx = String(nowyNrIndeksu || '').trim();
+  const cleanOrg = normalizeOrg(orgId || (typeof window !== 'undefined' ? localStorage.getItem('crm_active_org_id') : null) || 'skn_seksuologii');
   if (guestName && newIdx) {
     await supabase
       .from('attendance')
       .update({ index_number: newIdx, role: 'Członek koła' })
+      .eq('organization_id', cleanOrg)
       .eq('index_number', guestName);
   }
   return { status: 'success' };
@@ -949,12 +947,12 @@ export async function fetchMeetingAttendanceFromSupabase(meetingCode, sheetId = 
     members = sheetId;
   }
   if (!meetingCode) return { ok: false, error: 'Brak kodu spotkania' };
-  const cleanOrg = orgId ? normalizeOrg(orgId) : (typeof window !== 'undefined' ? localStorage.getItem('crm_active_org_id') : null);
+  const cleanOrg = normalizeOrg(orgId || (typeof window !== 'undefined' ? (localStorage.getItem('crm_skn_current_org_id') || localStorage.getItem('crm_active_org_id')) : null) || 'skn_seksuologii');
 
   let activeMembersList = Array.isArray(members) && members.length > 0 ? members : [];
   if (activeMembersList.length === 0 && typeof window !== 'undefined' && window.localStorage) {
     try {
-      const cached = localStorage.getItem('crm_members');
+      const cached = localStorage.getItem(`crm_skn_${cleanOrg}_members`) || localStorage.getItem('crm_members');
       if (cached) activeMembersList = JSON.parse(cached);
     } catch {}
   }
@@ -965,9 +963,7 @@ export async function fetchMeetingAttendanceFromSupabase(meetingCode, sheetId = 
   try {
     // Jeśli lista członków nadal jest pusta, pobierz ją równolegle z members w Supabase
     if (activeMembersList.length === 0) {
-      let qMem = supabase.from('members').select('*');
-      if (cleanOrg) qMem = qMem.eq('organization_id', cleanOrg);
-      const { data: dbMems } = await qMem;
+      const { data: dbMems } = await supabase.from('members').select('*').eq('organization_id', cleanOrg);
       if (Array.isArray(dbMems)) {
         activeMembersList = dbMems.map(m => ({
           ...m,
@@ -978,9 +974,7 @@ export async function fetchMeetingAttendanceFromSupabase(meetingCode, sheetId = 
       }
     }
 
-    let attQuery = supabase.from('attendance').select('*');
-    if (cleanOrg) attQuery = attQuery.eq('organization_id', cleanOrg);
-    const { data: attRows, error } = await attQuery;
+    const { data: attRows, error } = await supabase.from('attendance').select('*').eq('organization_id', cleanOrg);
 
     if (error) throw error;
 
@@ -1087,11 +1081,13 @@ export const fetchMeetingSheetAttendance = fetchMeetingAttendanceFromSupabase;
 
 export const MAIL_REGISTRY_TAB = 'Dziennik_Korespondencji (Supabase)';
 
-export async function fetchMailRegistryFromSheet() {
+export async function fetchMailRegistryFromSheet(orgId = null) {
+  const cleanOrg = normalizeOrg(orgId || (typeof window !== 'undefined' ? (localStorage.getItem('crm_skn_current_org_id') || localStorage.getItem('crm_active_org_id')) : null) || 'skn_seksuologii');
   try {
     const { data, error } = await supabase
       .from('attendance')
       .select('*')
+      .eq('organization_id', cleanOrg)
       .like('meeting_code', '[KORESPONDENCJA]%');
 
     if (error) throw error;
@@ -1202,10 +1198,8 @@ export async function batchRegisterCorrespondenceToGAS(entries = [], orgId, onPr
 
 export async function updateCorrespondenceStatusInGAS(id, status, orgId = null) {
   const code = `[KORESPONDENCJA] ${String(id).trim()}`;
-  const cleanOrg = orgId ? normalizeOrg(orgId) : (typeof window !== 'undefined' ? localStorage.getItem('crm_active_org_id') : null);
-  let q = supabase.from('attendance').select('*').eq('meeting_code', code);
-  if (cleanOrg) q = q.eq('organization_id', cleanOrg);
-  const { data } = await q.limit(1);
+  const cleanOrg = normalizeOrg(orgId || (typeof window !== 'undefined' ? (localStorage.getItem('crm_skn_current_org_id') || localStorage.getItem('crm_active_org_id')) : null) || 'skn_seksuologii');
+  const { data } = await supabase.from('attendance').select('*').eq('organization_id', cleanOrg).eq('meeting_code', code).limit(1);
   if (data && data[0]) {
     let parsed = {};
     try { parsed = JSON.parse(data[0].activity_description || '{}'); } catch {}
@@ -1220,10 +1214,8 @@ export async function updateCorrespondenceStatusInGAS(id, status, orgId = null) 
 
 export async function deleteCorrespondenceFromGAS(id, orgId = null) {
   const code = `[KORESPONDENCJA] ${String(id).trim()}`;
-  const cleanOrg = orgId ? normalizeOrg(orgId) : (typeof window !== 'undefined' ? localStorage.getItem('crm_active_org_id') : null);
-  let q = supabase.from('attendance').delete().eq('meeting_code', code);
-  if (cleanOrg) q = q.eq('organization_id', cleanOrg);
-  await q;
+  const cleanOrg = normalizeOrg(orgId || (typeof window !== 'undefined' ? (localStorage.getItem('crm_skn_current_org_id') || localStorage.getItem('crm_active_org_id')) : null) || 'skn_seksuologii');
+  await supabase.from('attendance').delete().eq('organization_id', cleanOrg).eq('meeting_code', code);
   return { status: 'success' };
 }
 
@@ -1260,10 +1252,8 @@ export async function batchRegisterDocumentActsToGAS(documents = [], orgId, onPr
 
 export async function deleteDocumentActFromGAS(codeOrId, orgId = null) {
   const code = `[DOKUMENT] ${String(codeOrId).trim()}`;
-  const cleanOrg = orgId ? normalizeOrg(orgId) : (typeof window !== 'undefined' ? localStorage.getItem('crm_active_org_id') : null);
-  let q = supabase.from('attendance').delete().eq('meeting_code', code);
-  if (cleanOrg) q = q.eq('organization_id', cleanOrg);
-  await q;
+  const cleanOrg = normalizeOrg(orgId || (typeof window !== 'undefined' ? (localStorage.getItem('crm_skn_current_org_id') || localStorage.getItem('crm_active_org_id')) : null) || 'skn_seksuologii');
+  await supabase.from('attendance').delete().eq('organization_id', cleanOrg).eq('meeting_code', code);
   return { status: 'success' };
 }
 

@@ -38,6 +38,7 @@ import { getTenantTheme } from './theme/tenantTheme';
 import { useSettings } from './context/SettingsContext';
 import { useAcademicYear } from './context/AcademicYearContext';
 import { fetchTeamupEvents, fetchTeamupSubcalendars, DEFAULT_SUBCALENDAR_ID, getCachedTeamupEvents, getCachedTeamupSubcalendars } from './services/teamupService';
+import { fetchMeetingMetadata } from './services/meetingMetadataService';
 import { useCachedData, useCachedFetch, readSWRData, writeSWRData, CACHE_KEYS } from './hooks/useCachedData';
 import { materials, initialMembers, initialMeetings } from './data/mockData';
 import { getRecordKey, getAcademicYearFromDate } from './utils/helpers';
@@ -629,6 +630,17 @@ export default function App() {
         } catch {}
       }
 
+      // ── Wczytaj metadane spotkań (meeting_metadata: frekwencja z gośćmi + współorganizacja) ──
+      let meetingMetadataMap = {};
+      try {
+        const rawMeta = localStorage.getItem(getOrgKey(targetOrgId, 'crm_meeting_metadata'));
+        if (rawMeta) {
+          meetingMetadataMap = JSON.parse(rawMeta);
+        } else {
+          meetingMetadataMap = await fetchMeetingMetadata(targetOrgId);
+        }
+      } catch {}
+
       const syncedMeetings = finalMeetings.map(m => {
         if (effectiveSheetAttendanceMap) {
           const rawCode = String(m.code || m.id || '').toUpperCase().trim();
@@ -670,6 +682,18 @@ export default function App() {
           const attendeesList = uniqueRecords.map(p => p.index || p.nrIndeksu || p.fullName);
           const count = attendeesList.length;
           const acad = getAcademicYearFromDate(m.date || m.start_dt);
+          const metaKey1 = String(m.id || '').trim();
+          const metaKey2 = String(m.code || '').trim();
+          const metaKey3 = cleanCode ? String(cleanCode).trim() : '';
+          const meta = meetingMetadataMap[metaKey1] || meetingMetadataMap[metaKey2] || (metaKey3 ? meetingMetadataMap[metaKey3] : null) || null;
+
+          const effectiveTotalParticipants = meta?.total_participants !== undefined && meta?.total_participants !== null && Number(meta?.total_participants) > 0
+            ? Number(meta.total_participants)
+            : count;
+          const effectiveCoOrganizers = Array.isArray(meta?.co_organizers) && meta.co_organizers.length > 0
+            ? meta.co_organizers
+            : (Array.isArray(m.coOrganizers) ? m.coOrganizers : []);
+
           return {
             ...m,
             academicYear: m.academicYear || acad.full,
@@ -678,17 +702,36 @@ export default function App() {
             attendees: attendeesList,
             attendeesCount: count,
             attendanceCount: count,
+            totalParticipants: effectiveTotalParticipants,
+            total_participants: effectiveTotalParticipants,
+            coOrganizers: effectiveCoOrganizers,
+            co_organizers: effectiveCoOrganizers,
+            meetingMetadata: meta || null,
             participantRecords: uniqueRecords,
             status: count > 0 ? `Zakończone (${count})` : (m.isUpcoming ? 'Zaplanowane' : 'Nierozliczone'),
           };
         }
         const merged = mergeMeetingWithLocalStorage(m);
         const acad = getAcademicYearFromDate(merged.date || merged.start_dt);
+        const meta = meetingMetadataMap[String(merged.id || '')] || meetingMetadataMap[String(merged.code || '')] || null;
+        const count = merged.attendees?.length || merged.attendanceCount || 0;
+        const effectiveTotalParticipants = meta?.total_participants !== undefined && meta?.total_participants !== null && Number(meta?.total_participants) > 0
+          ? Number(meta.total_participants)
+          : count;
+        const effectiveCoOrganizers = Array.isArray(meta?.co_organizers) && meta.co_organizers.length > 0
+          ? meta.co_organizers
+          : (Array.isArray(merged.coOrganizers) ? merged.coOrganizers : []);
+
         return {
           ...merged,
           academicYear: merged.academicYear || acad.full,
           academicYearShort: merged.academicYearShort || acad.short,
           academicYearCode: `[${acad.short}]`,
+          totalParticipants: effectiveTotalParticipants,
+          total_participants: effectiveTotalParticipants,
+          coOrganizers: effectiveCoOrganizers,
+          co_organizers: effectiveCoOrganizers,
+          meetingMetadata: meta || null,
         };
       });
 
@@ -763,6 +806,18 @@ export default function App() {
           const attendeesList = uniqueRecords.map(p => p.index || p.nrIndeksu || p.fullName);
           const count = attendeesList.length;
           const acad = getAcademicYearFromDate(m.date || m.start_dt);
+          const metaKey1 = String(m.id || '').trim();
+          const metaKey2 = String(m.code || '').trim();
+          const metaKey3 = cleanCode ? String(cleanCode).trim() : '';
+          const meta = meetingMetadataMap[metaKey1] || meetingMetadataMap[metaKey2] || (metaKey3 ? meetingMetadataMap[metaKey3] : null) || null;
+
+          const effectiveTotalParticipants = meta?.total_participants !== undefined && meta?.total_participants !== null && Number(meta?.total_participants) > 0
+            ? Number(meta.total_participants)
+            : count;
+          const effectiveCoOrganizers = Array.isArray(meta?.co_organizers) && meta.co_organizers.length > 0
+            ? meta.co_organizers
+            : (Array.isArray(m.coOrganizers) ? m.coOrganizers : []);
+
           return {
             ...m,
             academicYear: m.academicYear || acad.full,
@@ -771,17 +826,36 @@ export default function App() {
             attendees: attendeesList,
             attendeesCount: count,
             attendanceCount: count,
+            totalParticipants: effectiveTotalParticipants,
+            total_participants: effectiveTotalParticipants,
+            coOrganizers: effectiveCoOrganizers,
+            co_organizers: effectiveCoOrganizers,
+            meetingMetadata: meta || null,
             participantRecords: uniqueRecords,
             status: count > 0 ? `Zakończone (${count})` : (m.isUpcoming ? 'Zaplanowane' : 'Nierozliczone'),
           };
         }
         const merged = mergeMeetingWithLocalStorage(m);
         const acad = getAcademicYearFromDate(merged.date || merged.start_dt);
+        const meta = meetingMetadataMap[String(merged.id || '')] || meetingMetadataMap[String(merged.code || '')] || null;
+        const count = merged.attendees?.length || merged.attendanceCount || 0;
+        const effectiveTotalParticipants = meta?.total_participants !== undefined && meta?.total_participants !== null && Number(meta?.total_participants) > 0
+          ? Number(meta.total_participants)
+          : count;
+        const effectiveCoOrganizers = Array.isArray(meta?.co_organizers) && meta.co_organizers.length > 0
+          ? meta.co_organizers
+          : (Array.isArray(merged.coOrganizers) ? merged.coOrganizers : []);
+
         return {
           ...merged,
           academicYear: merged.academicYear || acad.full,
           academicYearShort: merged.academicYearShort || acad.short,
           academicYearCode: `[${acad.short}]`,
+          totalParticipants: effectiveTotalParticipants,
+          total_participants: effectiveTotalParticipants,
+          coOrganizers: effectiveCoOrganizers,
+          co_organizers: effectiveCoOrganizers,
+          meetingMetadata: meta || null,
         };
       });
 
@@ -838,7 +912,7 @@ export default function App() {
         Array.isArray(cacheEntry.attData) &&
         (cacheNow - cacheEntry.timestamp) < 5 * 60 * 1000;
 
-      let dbMembers, mError, qData, qError, attData, attError, subcals, preFetchedEvents;
+      let dbMembers, mError, qData, qError, attData, attError, subcals, preFetchedEvents, metaResult;
 
       if (canUseMemoryCache) {
         dbMembers = cacheEntry.dbMembers;
@@ -855,17 +929,19 @@ export default function App() {
           bypassCache: false,
         }).catch(() => undefined);
       } else {
-        // ── Supabase Single Source of Truth: pobranie members, quarantine_submissions oraz attendance dla wybranej organizacji ──
+        // ── Supabase Single Source of Truth: pobranie members, quarantine_submissions, attendance oraz meeting_metadata ──
         [
           { data: dbMembers, error: mError },
           { data: qData, error: qError },
           { data: attData, error: attError },
+          metaResult,
           subcals,
           preFetchedEvents
         ] = await Promise.all([
           fetchAllTenantRows('members', orgId, { orderBy: 'full_name', ascending: true }),
           fetchAllTenantRows('quarantine_submissions', orgId, { orderBy: 'created_at', ascending: false }),
           fetchAllTenantRows('attendance', orgId),
+          fetchAllTenantRows('meeting_metadata', orgId).catch(() => ({ data: [] })),
           fetchTeamupSubcalendars(effectiveCalId, effectiveToken, effectiveSubId).catch(() => []),
           fetchTeamupEvents({
             startDate,
@@ -877,6 +953,16 @@ export default function App() {
             bypassCache,
           }).catch(() => undefined),
         ]);
+
+        if (metaResult?.data && Array.isArray(metaResult.data) && typeof window !== 'undefined' && window.localStorage) {
+          try {
+            const map = {};
+            metaResult.data.forEach(row => {
+              if (row.meeting_key) map[row.meeting_key] = row;
+            });
+            localStorage.setItem(getOrgKey(orgId, 'crm_meeting_metadata'), JSON.stringify(map));
+          } catch {}
+        }
 
         if (!mError && !qError && !attError && activeOrgIdRef.current === orgId) {
           supabaseDataCacheRef.current = {

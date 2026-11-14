@@ -2,6 +2,7 @@ import { getAcademicScope, isEwidencjaInAcademicScope } from './academicScope.js
 import { isMemberAttendedIndexed, buildAttendanceIndex, precompileMeetings } from './attendanceIndexer.js';
 import { getMeetingStatusInfo } from './meetingTypes.js';
 import { isCertificateEligible } from './helpers.js';
+import { getOrgKey } from './storage.js';
 
 /**
  * Silnik dynamicznego wyliczania obecności i frekwencji członka
@@ -165,9 +166,9 @@ export function calculateMemberAttendance(member, allMeetings = [], activeScope 
     let activeEwidencja = Array.isArray(ewidencjaList) ? ewidencjaList : null;
     if (!activeEwidencja && typeof window !== 'undefined' && window.localStorage) {
       try {
-        const orgId = options?.organization_id || options?.orgId || member?.organization_id;
-        const orgKey = orgId ? `${orgId}_crm_ewidencja` : null;
-        const raw = (orgKey ? localStorage.getItem(orgKey) : null) || (orgId ? localStorage.getItem(`crm_ewidencja_${orgId}`) : null);
+        const orgId = options?.organization_id || options?.orgId || member?.organization_id || (typeof window !== 'undefined' ? localStorage.getItem('crm_active_org_id') : 'skn_seksuologii');
+        const orgKey = orgId ? getOrgKey(orgId, 'crm_ewidencja') : null;
+        const raw = (orgKey ? localStorage.getItem(orgKey) : null) || (orgId ? localStorage.getItem(`${orgId}_crm_ewidencja`) : null) || (orgId ? localStorage.getItem(`crm_ewidencja_${orgId}`) : null);
         if (raw) {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) activeEwidencja = parsed;

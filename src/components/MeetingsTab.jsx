@@ -48,6 +48,12 @@ import { matchMemberExact, matchSupervisorExact, resolveParticipantFromSavedInde
 import { useAuth } from '../context/AuthContext';
 import { useOrg } from '../context/OrgContext';
 import { getMeetingAttendanceStorageKeys } from '../utils/storage';
+import { WSKZ_ORGANIZATIONS } from '../config/wskzRegistry';
+import {
+  saveMeetingMetadataToSupabase,
+  fetchMeetingMetadata,
+  getNormalizedMeetingKey,
+} from '../services/meetingMetadataService';
 import { ACADEMIC_YEARS, getAcademicYearKey, getAcademicYearOptions } from '../utils/academicYear';
 import { getAcademicYearFromDate } from '../utils/helpers';
 import AttendanceModal from './AttendanceModal';
@@ -291,6 +297,33 @@ export default function MeetingsTab({
   const [isClearingAttendance, setIsClearingAttendance] = useState(false);
   const [showClearConfirmModal, setShowClearConfirmModal] = useState(false);
 
+  // ── Meeting Metadata (Frekwencja z gośćmi + Współorganizacja) ─────────────
+  const [meetingMetadataMap, setMeetingMetadataMap] = useState(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const raw = localStorage.getItem(getStorageKey('crm_meeting_metadata'));
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
+    return {};
+  });
+
+  useEffect(() => {
+    let isCancelled = false;
+    const orgId = currentOrg?.id || 'skn_seksuologii';
+    fetchMeetingMetadata(orgId).then(map => {
+      if (!isCancelled && map && typeof map === 'object') {
+        setMeetingMetadataMap(map);
+      }
+    });
+    return () => { isCancelled = true; };
+  }, [currentOrg?.id]);
+
+  const availableCoOrganizers = useMemo(() => {
+    const curId = currentOrg?.id || 'skn_seksuologii';
+    return WSKZ_ORGANIZATIONS.filter(org => org.orgId !== curId);
+  }, [currentOrg?.id]);
+
   // ── Resizable Sidebar state (12.5% to 25% of window width, default: 18vw) ──
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -418,6 +451,8 @@ export default function MeetingsTab({
     time: '18:00 - 19:30',
     speaker: '',
     defaultType: 'mandatory',
+    totalParticipants: '',
+    coOrganizers: [],
   });
 
   const computedNewMeetingDays = useMemo(() => {
@@ -620,6 +655,8 @@ export default function MeetingsTab({
       time: '18:00 - 19:30',
       speaker: '',
       defaultType: 'mandatory',
+      totalParticipants: '',
+      coOrganizers: [],
     });
     setIsAddModalOpen(true);
   };
@@ -641,6 +678,15 @@ export default function MeetingsTab({
     const speaker = meeting.speaker || meeting.who || '';
     const defaultType = meeting.type || meeting.meetingType || meeting.category || (customTypes && (meeting.id && customTypes[meeting.id] || meeting.code && customTypes[meeting.code])) || 'mandatory';
 
+    const mKey = getNormalizedMeetingKey(meeting);
+    const meta = meetingMetadataMap[mKey] || (meeting.code ? meetingMetadataMap[String(meeting.code).trim()] : null) || meeting.meetingMetadata;
+    const totalParticipants = meta?.total_participants !== undefined && meta?.total_participants !== null && Number(meta?.total_participants) > 0
+      ? meta.total_participants
+      : (meeting.totalParticipants || meeting.attendeesCount || '');
+    const coOrganizers = Array.isArray(meta?.co_organizers) && meta.co_organizers.length > 0
+      ? meta.co_organizers
+      : (Array.isArray(meeting.coOrganizers) ? meeting.coOrganizers : []);
+
     setMeetingToEdit(meeting);
     setNewMeetingForm({
       code: cleanCodeOnly,
@@ -652,9 +698,11 @@ export default function MeetingsTab({
       time,
       speaker,
       defaultType,
+      totalParticipants,
+      coOrganizers,
     });
     setIsAddModalOpen(true);
-  }, [customTypes]);
+  }, [customTypes, meetingMetadataMap]);
 
   const teamupSuggestionsForDate = useMemo(() => {
     if (!newMeetingForm.date) return [];
@@ -777,6 +825,26 @@ export default function MeetingsTab({
         } catch {}
       }
 
+      // Synchronizacja metadanych spotkania z Supabase (meeting_metadata)
+      const totalParticipantsNum = Number(newMeetingForm.totalParticipants) > 0 ? Number(newMeetingForm.totalParticipants) : 0;
+      const coOrganizersList = Array.isArray(newMeetingForm.coOrganizers) ? newMeetingForm.coOrganizers : [];
+      const metaItem = {
+        organization_id: orgId,
+        meeting_key: targetId,
+        title: updatedMeeting.title,
+        meeting_date: startDateVal,
+        meeting_type: newMeetingForm.defaultType,
+        total_participants: totalParticipantsNum,
+        co_organizers: coOrganizersList,
+        custom_payload: { eventMode: updatedMeeting.eventMode, speaker: updatedMeeting.speaker },
+      };
+      saveMeetingMetadataToSupabase(metaItem);
+      setMeetingMetadataMap(prev => ({
+        ...prev,
+        [targetId]: metaItem,
+        ...(cleanCode ? { [cleanCode]: metaItem } : {}),
+      }));
+
       setSelectedMeeting(updatedMeeting);
       setIsAddModalOpen(false);
       setMeetingToEdit(null);
@@ -819,6 +887,26 @@ export default function MeetingsTab({
           localStorage.setItem(getStorageKey('crm_meeting_types'), JSON.stringify(newCustomTypes));
         } catch {}
       }
+
+      // Synchronizacja metadanych nowego spotkania z Supabase (meeting_metadata)
+      const totalParticipantsNum = Number(newMeetingForm.totalParticipants) > 0 ? Number(newMeetingForm.totalParticipants) : 0;
+      const coOrganizersList = Array.isArray(newMeetingForm.coOrganizers) ? newMeetingForm.coOrganizers : [];
+      const newMetaItem = {
+        organization_id: orgId,
+        meeting_key: newMeetingId,
+        title: newMeeting.title,
+        meeting_date: startDateVal,
+        meeting_type: newMeetingForm.defaultType,
+        total_participants: totalParticipantsNum,
+        co_organizers: coOrganizersList,
+        custom_payload: { eventMode: newMeeting.eventMode, speaker: newMeeting.speaker },
+      };
+      saveMeetingMetadataToSupabase(newMetaItem);
+      setMeetingMetadataMap(prev => ({
+        ...prev,
+        [newMeetingId]: newMetaItem,
+        ...(cleanCode ? { [cleanCode]: newMetaItem } : {}),
+      }));
 
       setIsAddModalOpen(false);
       handleSelectMeeting(newMeeting);
@@ -915,6 +1003,30 @@ export default function MeetingsTab({
     });
     setMeetingOverrides(updatedOverrides);
     setSelectedMeeting(prev => prev ? ({ ...prev, countsInFrequency: include, includeInFrequency: include }) : null);
+  };
+
+  const handleUpdateMeetingMetadata = async (patch) => {
+    const activeOrgId = currentOrg?.id || 'skn_seksuologii';
+    const meet = currentSelectedMeeting || selectedMeeting;
+    if (!meet) return;
+    const meetKey = getNormalizedMeetingKey(meet);
+    const existing = (meetingMetadataMap && meetingMetadataMap[meetKey]) || {};
+    const updated = {
+      ...existing,
+      ...patch,
+      organization_id: activeOrgId,
+      meeting_key: meetKey,
+      title: meet.title || existing.title || '',
+      meeting_date: meet.date || existing.meeting_date || null,
+      meeting_type: meet.type || existing.meeting_type || 'mandatory',
+    };
+    setMeetingMetadataMap(prev => ({ ...prev, [meetKey]: updated }));
+    try {
+      await saveMeetingMetadataToSupabase(updated);
+      showToast('Zaktualizowano metadane spotkania', 'success');
+    } catch (e) {
+      console.warn('Błąd zapisu metadanych:', e);
+    }
   };
 
   const handleConfirmMoveToTrash = () => {
@@ -2380,6 +2492,88 @@ export default function MeetingsTab({
               </div>
             </div>
 
+              {/* ── Metadane frekwencji i współorganizacji (dla Władz Uczelni) ── */}
+              {(() => {
+                const meet = currentSelectedMeeting || selectedMeeting;
+                const meetKey = getNormalizedMeetingKey(meet);
+                const meta = (meetingMetadataMap && meetingMetadataMap[meetKey]) || {};
+                const verifiedMembersCount = selectedMeetingSavedAttendance?.confirmedCount ?? (selectedMeetingSavedAttendance?.confirmedIndexes?.length || 0);
+                const currentTotal = meta.total_participants !== undefined && meta.total_participants !== null && meta.total_participants > 0
+                  ? meta.total_participants
+                  : (verifiedMembersCount || '');
+                const currentCoOrgs = Array.isArray(meta.co_organizers) ? meta.co_organizers : [];
+
+                return (
+                  <div className="bg-slate-50/80 rounded-xl p-3.5 border border-slate-200/90 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Users size={14} className="text-indigo-600" />
+                        <span className="text-xs font-bold text-slate-800">Frekwencja z gośćmi & Współorganizatorzy</span>
+                      </div>
+                      <span className="text-[10px] font-semibold text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
+                        Zestawienia WSKZ
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Łączna liczba uczestników (z gośćmi)
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder={verifiedMembersCount ? `Podpowiedź: ${verifiedMembersCount}` : 'np. 35'}
+                            value={currentTotal}
+                            onChange={(e) => {
+                              const val = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
+                              handleUpdateMeetingMetadata({ total_participants: isNaN(val) ? 0 : val });
+                            }}
+                            className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                          />
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-1">
+                          Podpowiedź: {verifiedMembersCount} zweryfikowanych członków koła. Wpisz pełną frekwencję (np. z pokoju Google Meet).
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Koła współorganizujące (wydarzenie wspólne)
+                        </label>
+                        <div className="max-h-28 overflow-y-auto rounded-lg border border-slate-200 bg-white p-1.5 space-y-1">
+                          {availableCoOrganizers.map(org => {
+                            const isSelected = currentCoOrgs.includes(org.orgId);
+                            return (
+                              <label
+                                key={org.orgId}
+                                className={`flex items-center gap-1.5 px-2 py-1 rounded text-[11px] cursor-pointer transition ${
+                                  isSelected ? 'bg-indigo-50 font-bold text-indigo-900' : 'hover:bg-slate-50 text-slate-700'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={(e) => {
+                                    const next = e.target.checked
+                                      ? [...currentCoOrgs, org.orgId]
+                                      : currentCoOrgs.filter(id => id !== org.orgId);
+                                    handleUpdateMeetingMetadata({ co_organizers: next });
+                                  }}
+                                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5"
+                                />
+                                <span className="truncate">{org.shortName || org.name}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* ── Attendance Duration Threshold Regulator ── */}
               <div className="bg-gradient-to-br from-indigo-50/70 to-purple-50/50 rounded-xl p-3.5 border border-indigo-100 space-y-2.5">
                 <div className="flex items-center justify-between">
@@ -2875,6 +3069,29 @@ export default function MeetingsTab({
               localStorage.setItem(k, JSON.stringify(finalPayload));
             } catch {}
           });
+
+          // Automatyczna synchronizacja metadanych frekwencji do Supabase (meeting_metadata)
+          const meetKey = getNormalizedMeetingKey(targetMeeting || { id: meetingId });
+          const currentMeta = (meetingMetadataMap && meetingMetadataMap[meetKey]) || {};
+          const confirmedCount = Array.isArray(confirmedIndexes) ? confirmedIndexes.length : 0;
+          const totalHeadcount = currentMeta.total_participants && currentMeta.total_participants > confirmedCount
+            ? currentMeta.total_participants
+            : confirmedCount;
+
+          saveMeetingMetadataToSupabase({
+            organization_id: activeOrgId,
+            meeting_key: meetKey,
+            title: targetMeeting?.title || '',
+            meeting_date: targetMeeting?.date || null,
+            meeting_type: targetMeeting?.type || 'mandatory',
+            total_participants: totalHeadcount,
+            co_organizers: currentMeta.co_organizers || [],
+            custom_payload: currentMeta.custom_payload || {}
+          }).then(savedMeta => {
+            if (savedMeta) {
+              setMeetingMetadataMap(prev => ({ ...prev, [meetKey]: savedMeta }));
+            }
+          }).catch(err => console.warn('Błąd zapisu meeting_metadata:', err));
 
           setParsedParticipants(updatedParticipants);
           setCustomMeetings(prev => prev.map(m => (m.id === meetingId || m.code === meetingId || m.date === meetingId) ? { ...m, isNewlyCreated: false } : m));
@@ -3408,6 +3625,67 @@ export default function MeetingsTab({
                     <option value="workshop_external">Warsztat / Szkolenie</option>
                   </optgroup>
                 </select>
+              </div>
+
+              {/* ── Łączna liczba uczestników (z gośćmi) ── */}
+              <div>
+                <label htmlFor="new-meeting-total-participants" className="block text-[11px] font-bold text-slate-700 uppercase tracking-wide mb-1">
+                  Łączna liczba uczestników (z gośćmi)
+                </label>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <input
+                    id="new-meeting-total-participants"
+                    name="newMeetingTotalParticipants"
+                    type="number"
+                    min="0"
+                    value={newMeetingForm.totalParticipants}
+                    onChange={(e) => setNewMeetingForm(prev => ({ ...prev, totalParticipants: e.target.value }))}
+                    placeholder="np. 45"
+                    className="w-full sm:w-36 px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-900"
+                  />
+                  <span className="text-[11px] text-slate-500">
+                    Pełna frekwencja z pokoju Google Meet (w tym osoby i goście spoza koła).
+                  </span>
+                </div>
+              </div>
+
+              {/* ── Koła współorganizujące (wydarzenie wspólne) ── */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wide mb-1">
+                  Koła współorganizujące (wydarzenie wspólne)
+                </label>
+                <p className="text-[11px] text-slate-500 mb-2">
+                  Wybierz inne koła naukowe WSKZ, które współorganizują to wydarzenie:
+                </p>
+                <div className="flex flex-wrap gap-1.5 p-2 bg-slate-50 border border-slate-200 rounded-xl max-h-40 overflow-y-auto">
+                  {availableCoOrganizers.map(org => {
+                    const isSelected = Array.isArray(newMeetingForm.coOrganizers) && newMeetingForm.coOrganizers.includes(org.orgId);
+                    return (
+                      <button
+                        key={org.orgId}
+                        type="button"
+                        onClick={() => {
+                          setNewMeetingForm(prev => {
+                            const cur = Array.isArray(prev.coOrganizers) ? prev.coOrganizers : [];
+                            const next = cur.includes(org.orgId)
+                              ? cur.filter(id => id !== org.orgId)
+                              : [...cur, org.orgId];
+                            return { ...prev, coOrganizers: next };
+                          });
+                        }}
+                        className={`text-[10px] font-bold px-2 py-1 rounded-lg border transition cursor-pointer flex items-center gap-1 ${
+                          isSelected
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                            : 'bg-white text-slate-700 hover:bg-slate-100 border-slate-200'
+                        }`}
+                      >
+                        <span className="opacity-75">{org.number}</span>
+                        <span>{org.name}</span>
+                        {isSelected && <Check size={11} className="shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
