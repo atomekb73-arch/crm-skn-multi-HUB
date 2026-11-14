@@ -3029,7 +3029,7 @@ export default function App() {
           {/* Row 1 on Mobile & Tablets (< 1280px): Logo & Multi-Tenant Organization Switcher */}
           <div className="flex items-center justify-between xl:justify-start gap-2 sm:gap-3 min-w-0 w-full xl:w-auto relative">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 xl:flex-none">
-              <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center shadow-md text-white font-bold text-[9.5px] sm:text-[10px] tracking-normal leading-none whitespace-nowrap select-none px-1 shrink-0 transition-all duration-300 ${
+              <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center shadow-md text-white font-bold text-[11px] sm:text-[11.5px] tracking-normal leading-none whitespace-nowrap select-none px-1 shrink-0 transition-all duration-300 ${
                 theme?.headerBadgeGradient || 'bg-gradient-to-br from-purple-700 via-violet-700 to-indigo-800 shadow-purple-500/25'
               }`}>
                 <span className="inline-block text-center leading-none">
@@ -3094,7 +3094,7 @@ export default function App() {
                               }`}
                             >
                               <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                                <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-[10px] text-white shrink-0 shadow-2xs ${
+                                <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-[11.5px] leading-none select-none tracking-tight text-white shrink-0 shadow-2xs ${
                                   orgTheme.headerBadgeGradient || 'bg-gradient-to-br from-indigo-600 to-violet-700'
                                 }`}>
                                   {orgTheme.badgeText || (org.id === 'uzaleznienia' ? 'UZAL' : org.id === 'psychoonkologia' ? 'ONKO' : 'SEKS')}
