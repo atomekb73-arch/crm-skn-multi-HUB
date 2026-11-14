@@ -413,10 +413,13 @@ export function isMeetingEligibleForDenominator(meeting, customTypes = {}, ewide
     }
 
     // 3. Weryfikacja słów kluczowych (dla surowych wpisów z Teamup / kalendarza)
-    const text = `${meeting.title || ''} ${meeting.name || ''} ${meeting.charakter || ''}`.toLowerCase();
+    const text = `${meeting.title || ''} ${meeting.name || ''} ${meeting.charakter || ''} ${meeting.description || ''}`.toLowerCase();
     const isExcluded = 
       text.includes('nieobowiązkowe') ||
       text.includes('nieobowiazkowe') ||
+      text.includes('otwart') ||
+      text.includes('otwarta') ||
+      text.includes('otwarte') ||
       text.includes('projektow') ||
       text.includes('techniczn') ||
       text.includes('wewnętrzne') ||
@@ -453,11 +456,52 @@ export function isMeetingEligibleForDenominator(meeting, customTypes = {}, ewide
   }
 }
 
+// ─── STAWKI PUNKTOWE ZA KADENCJE W ZARZĄDZIE (SSOT) ──────────────────────────
+export const BOARD_ROLE_RATES = {
+  'Przewodniczący / Przewodnicząca': 3,
+  'Wiceprzewodniczący / Wiceprzewodnicząca': 3,
+  'Sekretarz Koła': 3,
+  'Członek / Członkini Zarządu': 3,
+  'Członek Zarządu': 3,
+  'Członkini Zarządu': 3,
+  'Skarbnik': 3,
+  'Koordynator ds. Badań': 5,
+  'Lider IT / Koordynator CRM': 5,
+  'Koordynator IT / Systemów': 5,
+  'Koordynator IT': 5,
+  'Moderator Social Media / Grup': 5,
+  'Przewodniczący': 3,
+  'Przewodnicząca': 3,
+  'Wiceprzewodniczący': 3,
+  'Wiceprzewodnicząca': 3,
+};
+
+export function getBoardRoleMonthlyRate(roleName) {
+  if (!roleName) return 3;
+  if (BOARD_ROLE_RATES[roleName]) return BOARD_ROLE_RATES[roleName];
+  const r = String(roleName).toLowerCase();
+  if (r.includes('badań') || r.includes('badan')) return 5;
+  if (r.includes('it') || r.includes('system') || r.includes('crm') || r.includes('social')) return 5;
+  return 3;
+}
+
 /**
  * Główna, jednolita funkcja kalkulacji frekwencji i statystyk studenta (Single Source of Truth)
  * Używana identycznie w tabeli głównej (ManagementTab) oraz modalu profilu (EditMemberModal)
  */
 export function calculateMemberStats(memberOrIndex, ewidencja = null, meetings = [], customTypesOrTenures = {}, settingsOrDorobek = {}, extraSettings = {}) {
+  // Obsługa wywołania z obiektem opcji: calculateMemberStats(member, { academicYear, ewidencja, meetings, ... })
+  if (ewidencja && typeof ewidencja === 'object' && !Array.isArray(ewidencja) && (ewidencja.academicYear || ewidencja.ewidencja || ewidencja.meetings || ewidencja.scope || ewidencja.boardTenures)) {
+    const opts = ewidencja;
+    return calculateMemberStats(
+      memberOrIndex,
+      opts.ewidencja || [],
+      opts.meetings || [],
+      opts.customTypes || opts.customMeetingTypes || {},
+      opts
+    );
+  }
+
   // Rozpoznanie elastycznych sygnatur wywołania:
   // a) calculateMemberStats(m, ewidencja, meetings, customTypes, settings)
   // b) calculateMemberStats(m, ewidencja, meetings, boardTenures, dorobek, settings)
@@ -825,7 +869,7 @@ export function calculateMemberStats(memberOrIndex, ewidencja = null, meetings =
   let finalPresentMandatory = presentMandatory;
 
   if (calcMode === 'DYNAMIC_MANDATORY') {
-    finalPresentMandatory = baseDenominator > 0 ? Math.min(baseDenominator, Math.max(presentMandatory, studentAttendance.length)) : totalAttended;
+    finalPresentMandatory = baseDenominator > 0 ? Math.min(baseDenominator, presentMandatory) : totalAttended;
     attendedRelevant = finalPresentMandatory;
   } else {
     finalPresentMandatory = totalAttended;
@@ -1020,26 +1064,12 @@ export function calculateMemberStats(memberOrIndex, ewidencja = null, meetings =
   }
 
   // 3. Punkty z kadencji zarządu (skn_board_tenures) – ściśle dla aktualnego koła naukowego
-  const BOARD_ROLE_MONTHLY_WEIGHTS = {
-    'Przewodniczący / Przewodnicząca': 3,
-    'Wiceprzewodniczący / Wiceprzewodnicząca': 3,
-    'Sekretarz Koła': 3,
-    'Członek / Członkini Zarządu': 3,
-    'Członek Zarządu': 3,
-    'Członkini Zarządu': 3,
-    'Skarbnik': 3,
-    'Koordynator ds. Badań': 4,
-    'Lider IT / Koordynator CRM': 5,
-    'Moderator Social Media / Grup': 5,
-    'Przewodniczący': 3,
-    'Przewodnicząca': 3,
-    'Wiceprzewodniczący': 3,
-    'Wiceprzewodnicząca': 3,
-  };
-
   let activeTenures = explicitBoardTenures || settings?.boardTenures || null;
   if (!activeTenures) {
-    const parsedTenures = getCachedStorageJson(`skn_board_tenures_${cleanOrg}`);
+    const parsedTenures =
+      getCachedStorageJson(getOrgKey(cleanOrg, 'skn_board_tenures')) ||
+      getCachedStorageJson(`skn_board_tenures_${cleanOrg}`) ||
+      getCachedStorageJson('skn_board_tenures');
     if (Array.isArray(parsedTenures)) activeTenures = parsedTenures;
   }
 
@@ -1051,28 +1081,21 @@ export function calculateMemberStats(memberOrIndex, ewidencja = null, meetings =
         return;
       }
 
-      const tIdx = String(t.memberIndex || t.index || '').replace(/\D/g, '').replace(/^0+/, '').trim();
-      const tEmail = String(t.memberEmail || t.email || '').trim().toLowerCase();
-      const tName = String(t.memberName || t.name || '').trim().toLowerCase();
+      const tIdx = String(t.memberIndex || t.studentIndex || t.nrIndeksu || t.index || '').replace(/\D/g, '').replace(/^0+/, '').trim();
+      const tEmail = String(t.memberEmail || t.studentEmail || t.email || '').trim().toLowerCase();
+      const tName = String(t.memberName || t.studentName || t.fullName || t.name || '').trim().toLowerCase();
+      const tNameNorm = tName.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const mNameNorm = rawFullName ? rawFullName.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : '';
 
       let isMatch = false;
       if (cleanIdxDigits && tIdx && cleanIdxDigits === tIdx) isMatch = true;
       else if (rawEmail && tEmail && rawEmail === tEmail) isMatch = true;
-      else if (rawFullName && tName && (rawFullName === tName || tName.includes(rawFullName) || rawFullName.includes(tName))) isMatch = true;
+      else if (rawFullName && tName && (rawFullName === tName || rawFullName.includes(tName) || tName.includes(rawFullName) || (mNameNorm && tNameNorm && (mNameNorm === tNameNorm || mNameNorm.includes(tNameNorm) || tNameNorm.includes(mNameNorm))))) isMatch = true;
       else if (rawAliases && (rawAliases.includes(tName) || (tName && rawAliases.includes(tName.split(' ')[0])))) isMatch = true;
-      
-      // Aliasy i dopasowania ról zarządowych TYLKO dla właściwego koła:
-      if (cleanOrg === 'skn_seksuologii') {
-        if (tName && cleanIdxDigits === '11654' && (tName.includes('rodak') || tEmail.includes('gabriel.creart'))) isMatch = true;
-        if (tName && (tName.includes('rodak') && (rawFullName.includes('rodak') || rawAliases.includes('rodak') || rawEmail.includes('gabriel.creart')))) isMatch = true;
-        if (tName && (tName.includes('czepir') && (rawFullName.includes('czepir') || cleanIdxDigits === '26535' || rawEmail.includes('czepir')))) isMatch = true;
-        if (tName && (tName.includes('bratkow') && (rawFullName.includes('bratkow') || cleanIdxDigits === '15998' || rawEmail.includes('bratkow') || rawEmail.includes('15998')))) isMatch = true;
-      } else if (cleanOrg === 'uzaleznienia') {
-        if (tName && (tName.includes('czepir') && (rawFullName.includes('czepir') || cleanIdxDigits === '26535' || rawEmail.includes('czepir')))) isMatch = true;
-      }
 
       if (isMatch) {
-        const ptsPerMonth = BOARD_ROLE_MONTHLY_WEIGHTS[t.roleName] || 3;
+        const role = t.roleName || t.role || t.rola;
+        const ptsPerMonth = getBoardRoleMonthlyRate(role);
         const months = getTenureMonthsInScope(t, activeScope);
         if (months > 0) {
           tenurePoints += months * ptsPerMonth;
@@ -1103,17 +1126,29 @@ export function calculateMemberStats(memberOrIndex, ewidencja = null, meetings =
   return {
     freq: isNaN(freq) ? 0 : freq,
     percentage: isNaN(freq) ? 0 : freq,
+    attendanceRate: isNaN(freq) ? 0 : freq,
     attendedCount: totalAttended,
     present: totalAttended,
+    totalAttended,
+    totalAttendedAll: totalAttended,
     absent: absentCount,
+    missedCount: absentCount,
     presentMandatory: finalPresentMandatory,
+    mandatoryAttended: finalPresentMandatory,
+    attendedMandatoryCount: finalPresentMandatory,
     mandatoryTotal: baseDenominator,
     baseDenominator,
+    totalMandatory: baseDenominator,
+    totalCount: baseDenominator,
     optionalBonus,
-    totalAttended,
+    bonusAttended: optionalBonus,
+    attendedBonusCount: optionalBonus,
+    bonusCount: optionalBonus,
     attendedRecords: studentAttendance,
     isCertEligible,
     canGetCertificate: isCertEligible,
+    canCert: isCertEligible,
+    canIssueCertificate: isCertEligible,
     displayRatio,
     displayPercentage,
     badge,
@@ -1123,10 +1158,13 @@ export function calculateMemberStats(memberOrIndex, ewidencja = null, meetings =
     // Punkty v9.4 (Points & Merit)
     points: totalPoints,
     totalPoints,
+    totalMemberPoints: totalPoints,
     punkty: totalPoints,
     meetingPoints,
+    calculatedPoints: meetingPoints,
     meritPoints,
     tenurePoints,
+    boardPoints: tenurePoints,
   };
 }
 
@@ -1144,3 +1182,8 @@ export function calculateCategorizedFrequency(
 ) {
   return calculateMemberStats(memberOrIndex, ewidencja, meetings, customTypes, settings);
 }
+
+/**
+ * Alias SSOT: calculateMemberYearStats
+ */
+export const calculateMemberYearStats = calculateMemberStats;

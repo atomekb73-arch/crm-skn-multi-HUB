@@ -1,4 +1,4 @@
-import { calculateMemberStats } from './meetingTypes.js';
+import { calculateMemberStats, getBoardRoleMonthlyRate } from './meetingTypes.js';
 import { ACTIVITY_WEIGHTS } from './activityWeights.js';
 
 /**
@@ -25,9 +25,7 @@ export function calculateBoardTenurePoints(tenure) {
   const months = Math.max(1, Math.round(diffTime / (1000 * 60 * 60 * 24 * 30.4375)));
 
   const roleName = String(tenure.roleName || tenure.role || '');
-  let ptsPerMonth = 3;
-  if (roleName.includes('Badań')) ptsPerMonth = 4;
-  else if (roleName.includes('IT') || roleName.includes('Social') || roleName.includes('CRM')) ptsPerMonth = 5;
+  const ptsPerMonth = getBoardRoleMonthlyRate(roleName);
 
   return months * ptsPerMonth;
 }

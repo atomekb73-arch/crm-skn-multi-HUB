@@ -37,7 +37,7 @@ import { formatPhone, formatEmail, splitEmails, maskSingleEmail } from '../utils
 import { VectorRingIndicator } from './VectorIcons';
 import { calcFrequency, getFrequencyBadge, getCertificateStatus, getRecordKey } from '../utils/helpers';
 import { calculateCurrentStudyYear } from '../utils/academicYear';
-import { getMeetingType, calculateCategorizedFrequency, calculateMemberStats, isMeetingEligibleForDenominator, MEETING_TYPES, hasMeetingAttendanceLogs, getMeetingStatusInfo } from '../utils/meetingTypes';
+import { getMeetingType, calculateCategorizedFrequency, calculateMemberStats, calculateMemberYearStats, isMeetingEligibleForDenominator, MEETING_TYPES, hasMeetingAttendanceLogs, getMeetingStatusInfo, BOARD_ROLE_RATES, getBoardRoleMonthlyRate } from '../utils/meetingTypes';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { useOrg } from '../context/OrgContext';
@@ -52,6 +52,7 @@ import EditMemberModal from './EditMemberModal';
 import CertificateModal from './CertificateModal';
 import { exportArrayToXlsx } from '../utils/exportToExcel';
 import { getActivityWeight, ACTIVITY_WEIGHTS } from '../utils/activityWeights';
+import { deduplicateBoard } from '../services/settingsService';
 
 export default function ManagementTab({
   members = [],
@@ -166,102 +167,40 @@ export default function ManagementTab({
     }
   }, [getStorageKey]);
 
-  // 1. Zindeksowane punkty zarządu z rejestru kadencji (O(1)) z ograniczeniem do aktywnego roku i organizacji
-  const boardPointsMap = useMemo(() => {
-    const map = new Map();
+  // 1. Zdeduplikowany rejestr kadencji zarządu (SSOT) dla aktywnego koła
+  const boardTenuresList = useMemo(() => {
     try {
       const orgId = currentOrg?.id || 'skn_seksuologii';
       const storageKey = getStorageKey ? getStorageKey('skn_board_tenures') : `skn_board_tenures_${orgId}`;
       const rawTenures =
         localStorage.getItem(storageKey) ||
-        localStorage.getItem(`skn_board_tenures_${orgId}`);
+        localStorage.getItem(`skn_board_tenures_${orgId}`) ||
+        localStorage.getItem('skn_board_tenures');
       const tenures = rawTenures ? JSON.parse(rawTenures) : [];
-
-      const zarzadMonthly = getActivityWeight('ZARZAD_MIES', weights, 3);
-      const badaniaMonthly = getActivityWeight('BADANIA', weights, 5);
-      const itMonthly = getActivityWeight('IT_SYSTEMY', weights, 5);
-      const smMonthly = getActivityWeight('SM_MODER_MIES', weights, 5);
-
-      const BOARD_ROLE_RATES = {
-        'Przewodniczący / Przewodnicząca': zarzadMonthly,
-        'Wiceprzewodniczący / Wiceprzewodnicząca': zarzadMonthly,
-        'Sekretarz Koła': zarzadMonthly,
-        'Członek / Członkini Zarządu': zarzadMonthly,
-        'Członek Zarządu': zarzadMonthly,
-        'Członkini Zarządu': zarzadMonthly,
-        'Skarbnik': zarzadMonthly,
-        'Koordynator ds. Badań': badaniaMonthly,
-        'Lider IT / Koordynator CRM': itMonthly,
-        'Moderator Social Media / Grup': smMonthly,
-        'Przewodniczący': zarzadMonthly,
-        'Przewodnicząca': zarzadMonthly,
-        'Wiceprzewodniczący': zarzadMonthly,
-        'Wiceprzewodnicząca': zarzadMonthly,
-      };
-
-      if (Array.isArray(tenures)) {
-        tenures.forEach(entry => {
-          if (!entry) return;
-          if (entry.organization_id && entry.organization_id !== orgId) return;
-          const rawIdx = String(entry.nrIndeksu || entry.studentIndex || entry.memberIndex || entry.index || '').trim();
-          const cleanIdx = rawIdx.replace(/\D/g, '').replace(/^0+/, '').trim();
-          const studentEmail = String(entry.email || entry.memberEmail || '').trim().toLowerCase();
-          const studentName = String(entry.memberName || entry.fullName || entry.name || '').trim().toLowerCase();
-
-          // Oblicz liczbę miesięcy pełnienia funkcji w wybranym roku akademickim (SSOT)
-          const monthsInScope = getTenureMonthsInScope(entry, currentScope);
-          if (monthsInScope <= 0) {
-            return;
-          }
-
-          const rate = BOARD_ROLE_RATES[entry.roleName || entry.role] || zarzadMonthly;
-          const pts = monthsInScope * rate;
-
-          if (pts > 0) {
-            if (cleanIdx) {
-              map.set(cleanIdx, (map.get(cleanIdx) || 0) + pts);
-              map.set(`idx_${cleanIdx}`, (map.get(`idx_${cleanIdx}`) || 0) + pts);
-            }
-            if (rawIdx && rawIdx !== cleanIdx) {
-              map.set(rawIdx, (map.get(rawIdx) || 0) + pts);
-              map.set(`idx_${rawIdx}`, (map.get(`idx_${rawIdx}`) || 0) + pts);
-            }
-            if (studentEmail) {
-              map.set(studentEmail, (map.get(studentEmail) || 0) + pts);
-            }
-            if (studentName) {
-              map.set(`name_${studentName}`, (map.get(`name_${studentName}`) || 0) + pts);
-            }
-            // Aliasy i dopasowania specjalne dla kluczowych członków Zarządu Koła (SSOT)
-            if (orgId === 'skn_seksuologii') {
-              if (studentName.includes('rodak') || studentEmail.includes('gabriel.creart') || cleanIdx === '11654') {
-                map.set('name_gabriel rodak', (map.get('name_gabriel rodak') || 0) + pts);
-                map.set('name_michał rodak', (map.get('name_michał rodak') || 0) + pts);
-                map.set('name_michal rodak', (map.get('name_michal rodak') || 0) + pts);
-                map.set('gabriel.creart@gmail.com', (map.get('gabriel.creart@gmail.com') || 0) + pts);
-                map.set('11654', (map.get('11654') || 0) + pts);
-              }
-              if (studentName.includes('bratkow') || cleanIdx === '15998') {
-                map.set('name_tomasz bratkowski', (map.get('name_tomasz bratkowski') || 0) + pts);
-                map.set('atomekb73@gmail.com', (map.get('atomekb73@gmail.com') || 0) + pts);
-                map.set('15998@student.wskz.pl', (map.get('15998@student.wskz.pl') || 0) + pts);
-                map.set('15998', (map.get('15998') || 0) + pts);
-              }
-            }
-            if (studentName.includes('czepir') || cleanIdx === '26535') {
-              map.set('name_magda czepirska', (map.get('name_magda czepirska') || 0) + pts);
-              map.set('name_magdalena czepirska', (map.get('name_magdalena czepirska') || 0) + pts);
-              map.set('m.czepirek@gmail.com', (map.get('m.czepirek@gmail.com') || 0) + pts);
-              map.set('26535', (map.get('26535') || 0) + pts);
-            }
-          }
-        });
-      }
+      return deduplicateBoard(Array.isArray(tenures) ? tenures : [], orgId);
     } catch (err) {
-      console.error('Błąd indeksowania punktów zarządu:', err);
+      console.error('Błąd odczytu kadencji zarządu:', err);
+      return [];
     }
-    return map;
-  }, [weights, currentScope, currentOrg?.id, getStorageKey]);
+  }, [currentOrg?.id, getStorageKey]);
+
+  // Surowa lista ewidencji obecności dla aktywnego koła
+  const ewidencjaList = useMemo(() => {
+    try {
+      const orgId = currentOrg?.id || 'skn_seksuologii';
+      const ewKey = getStorageKey ? getStorageKey('crm_ewidencja') : `crm_ewidencja_${orgId}`;
+      const raw =
+        localStorage.getItem(ewKey) ||
+        localStorage.getItem(`crm_ewidencja_${orgId}`) ||
+        localStorage.getItem('crm_ewidencja');
+      const parsed = raw ? JSON.parse(raw) : [];
+      return (Array.isArray(parsed) ? parsed : []).filter(
+        e => !e?.organization_id || e.organization_id === orgId
+      );
+    } catch {
+      return [];
+    }
+  }, [currentOrg?.id, getStorageKey]);
 
   // 1. Jednorazowy odczyt ewidencji ze Storage dla aktywnego widoku, organizacji i roku akademickiego
   const attendanceIndex = useMemo(() => {
@@ -517,176 +456,27 @@ export default function ManagementTab({
         return;
       }
 
-      const rawIdx = String(member.nrIndeksu || member.index || member.cleanIndex || '').trim();
-      const cleanIdx = rawIdx.replace(/\D/g, '').replace(/^0+/, '').trim();
-      const studentEmail = String(member.email || '').trim().toLowerCase();
-      const memberFullName = String(member.fullName || member.name || `${member.firstName || ''} ${member.lastName || ''}`).trim().toLowerCase();
-
-      const attendedSetByIndex = attendanceIndex.indexByStudentIndex.get(cleanIdx) ||
-                                 attendanceIndex.indexByStudentIndex.get(rawIdx);
-      const attendedSetByEmail = attendanceIndex.indexByEmail.get(studentEmail);
-
-      let calculatedPoints = 0;
-
-      // Pomocnik kalkulacji pojedynczego spotkania dla studenta
-      const evaluateMeeting = (m) => {
-        const mKeys = m._keys || [
-          String(m.id || ''),
-          String(m.code || ''),
-          String(m.date || (m.start_dt ? m.start_dt.split('T')[0] : '') || m.data || '')
-        ].filter(Boolean);
-
-        let wasPresent = mKeys.some(k =>
-          (attendedSetByIndex && attendedSetByIndex.has(k)) ||
-          (attendedSetByEmail && attendedSetByEmail.has(k))
-        );
-
-        if (!wasPresent && m._attendeesIndex) {
-          if (cleanIdx && m._attendeesIndex.indexes.has(cleanIdx)) wasPresent = true;
-          else if (rawIdx && m._attendeesIndex.indexes.has(rawIdx)) wasPresent = true;
-          else if (studentEmail && m._attendeesIndex.emails.has(studentEmail)) wasPresent = true;
+      // Wyliczenie parametrów studenta przez Jedno Źródło Prawdy (SSOT)
+      const statsObj = calculateMemberYearStats(
+        member,
+        ewidencjaList,
+        meetings,
+        customMeetingTypes,
+        {
+          ...attendanceConfig,
+          academicYear,
+          startDate: currentScope?.startDate,
+          endDate: currentScope?.endDate,
+          scope: currentScope,
+          boardTenures: boardTenuresList,
+          orgId: currentOrg?.id,
+          organization_id: currentOrg?.id,
         }
+      );
 
-        // Sprawdź w zindeksowanych logach uczestników
-        let studentLog = null;
-        for (let k of mKeys) {
-          const logMap = meetingLogsMap.get(k);
-          if (logMap) {
-            studentLog = (cleanIdx ? logMap.get(cleanIdx) : null) ||
-                         (rawIdx ? logMap.get(rawIdx) : null) ||
-                         (studentEmail ? logMap.get(studentEmail) : null) ||
-                         (memberFullName ? logMap.get(`name_${memberFullName}`) : null);
-            if (studentLog) break;
-          }
-        }
-
-        if (studentLog && studentLog.isApproved !== false) {
-          wasPresent = true;
-        }
-
-        if (!wasPresent) {
-          return { attended: false, points: 0 };
-        }
-
-        // Oblicz punkty bazowe za obecność (online vs stacjo vs konferencja)
-        const loc = String(m.location || '').toLowerCase();
-        const notes = String(m.notes || m.description || '').toLowerCase();
-        const isStacjoMtg = /sala|kampus|budynek|stacjon/.test(loc) || /sala|kampus|budynek|stacjon/.test(notes);
-
-        let isOnline = true;
-        if (studentLog?.isOnline !== undefined) {
-          isOnline = Boolean(studentLog.isOnline);
-        } else if (studentLog?.trybUdzialu) {
-          isOnline = String(studentLog.trybUdzialu).toUpperCase() !== 'STACJONARNY';
-        } else {
-          isOnline = !isStacjoMtg;
-        }
-
-        const isConference = m.type === 'conference_passive' || m.charakter === 'conference_passive' || String(m.title || '').toLowerCase().includes('konferencj');
-        const days = Math.max(1, studentLog?.daysAttended || 1);
-
-        let baseMtgPts = 0;
-        if (isConference) {
-          baseMtgPts = (isOnline ? getWeight('CONF_BIERNA_ONLINE', 2) : getWeight('KONF_BIER', 3)) * days;
-        } else {
-          baseMtgPts = isOnline ? onlineWeight : stacjoWeight;
-        }
-
-        // Dodatkowe formy zaangażowania (np. PREZENTACJA = +5 pkt, DYSKUSJA = +1 pkt, POSTER = +3 pkt)
-        let extraActsPts = 0;
-        if (studentLog?.activities && Array.isArray(studentLog.activities)) {
-          studentLog.activities.forEach(actCode => {
-            const upperCode = String(actCode).trim().toUpperCase();
-            if (upperCode !== 'OB_ONLINE' && upperCode !== 'OB_STACJO') {
-              extraActsPts += getWeight(upperCode, 0);
-            }
-          });
-        }
-
-        let meetingTotalPts = baseMtgPts + extraActsPts;
-        const expPts = studentLog?.explicitPoints || studentLog?.punkty;
-        if (expPts && Number(expPts) > meetingTotalPts) {
-          meetingTotalPts = Number(expPts);
-        }
-
-        return { attended: true, points: meetingTotalPts };
-      };
-
-      // Zlicz obecności na spotkaniach obowiązkowych (baza) oraz nalicz punkty
-      let mandatoryAttended = 0;
-      for (let j = 0; j < totalMandatory; j++) {
-        const res = evaluateMeeting(mandatoryScopeMeetings[j]);
-        if (res.attended) {
-          mandatoryAttended++;
-          calculatedPoints += res.points;
-        }
-      }
-
-      // Zlicz obecności na spotkaniach bonusowych / warsztatowych oraz nalicz punkty
-      let bonusAttended = 0;
-      for (let j = 0; j < totalBonus; j++) {
-        const res = evaluateMeeting(bonusScopeMeetings[j]);
-        if (res.attended) {
-          bonusAttended++;
-          calculatedPoints += res.points;
-        }
-      }
-
-      const totalAttendedAll = mandatoryAttended + bonusAttended;
-      const missedMandatoryCount = Math.max(0, totalMandatory - mandatoryAttended);
-      const attendanceRate = totalMandatory > 0
-        ? Math.min(100, Math.round((mandatoryAttended / totalMandatory) * 100))
-        : 100;
-
-      // Zaświadczenie: min 70% frekwencji z bazy obowiązkowej oraz min 3 dowolne zaliczone spotkania
-      const canCert = (totalMandatory === 0 || attendanceRate >= 70) && totalAttendedAll >= 3;
-
-      // Punkty za pełnienie funkcji w Zarządzie Koła
-      const memberAliases = String(member.aliasy || member.aliases || '').trim().toLowerCase();
-      const boardPoints = boardPointsMap.get(cleanIdx) ||
-                          boardPointsMap.get(rawIdx) ||
-                          boardPointsMap.get(studentEmail) ||
-                          boardPointsMap.get(`name_${memberFullName}`) ||
-                          (memberAliases ? boardPointsMap.get(`name_${memberAliases}`) : 0) ||
-                          (isSknSeks && (memberFullName.includes('rodak') || memberAliases.includes('rodak') || studentEmail.includes('gabriel.creart') || cleanIdx === '11654') ? (boardPointsMap.get('11654') || 0) : 0) ||
-                          (memberFullName.includes('czepir') || cleanIdx === '26535' ? (boardPointsMap.get('26535') || 0) : 0) ||
-                          (isSknSeks && (memberFullName.includes('bratkow') || cleanIdx === '15998') ? (boardPointsMap.get('15998') || 0) : 0) ||
-                          0;
-
-      // Suma łączna za aktywny rok akademicki: punkty ze spotkań + punkty z zarządu w tym roku
-      // (SSOT: nie pobieramy zbiorczego dożywotniego total_points z profilu)
-      const meetingPoints = calculatedPoints;
-      const totalMemberPoints = meetingPoints + boardPoints;
-
-      const statsObj = {
-        attendedCount: totalAttendedAll,
-        attendedMandatoryCount: mandatoryAttended,
-        attendedBonusCount: bonusAttended,
-        bonusCount: bonusAttended,
-        totalAttendedAll,
-        missedCount: missedMandatoryCount,
-        totalCount: totalMandatory,
-        totalMandatory,
-        attendanceRate,
-        canCert,
-        canIssueCertificate: canCert,
-        label: bonusAttended > 0
-          ? `${totalAttendedAll} / ${missedMandatoryCount} (+${bonusAttended})`
-          : `${totalAttendedAll} / ${missedMandatoryCount}`,
-        freq: attendanceRate,
-        present: totalAttendedAll,
-        absent: missedMandatoryCount,
-        presentMandatory: mandatoryAttended,
-        mandatoryTotal: totalMandatory,
-        mandatoryAttended,
-        bonusAttended,
-        totalAttended: totalAttendedAll,
-        calculatedPoints,
-        meetingPoints,
-        boardPoints,
-        totalMemberPoints,
-        points: totalMemberPoints,
-      };
+      statsObj.label = (statsObj.bonusAttended || statsObj.attendedBonusCount || 0) > 0
+        ? `${statsObj.totalAttendedAll} / ${statsObj.missedCount} (+${statsObj.bonusAttended || statsObj.attendedBonusCount})`
+        : `${statsObj.totalAttendedAll} / ${statsObj.missedCount}`;
 
       if (member.id) statsMap.set(member.id, statsObj);
       if (member.memberKey) statsMap.set(member.memberKey, statsObj);
@@ -696,7 +486,7 @@ export default function ManagementTab({
     });
 
     return statsMap;
-  }, [members, currentOrg?.id, mandatoryScopeMeetings, bonusScopeMeetings, attendanceIndex, weights, boardPointsMap, getStorageKey]);
+  }, [members, currentOrg?.id, meetings, ewidencjaList, boardTenuresList, customMeetingTypes, attendanceConfig, academicYear, currentScope]);
 
   const getMemberFreqData = (m) => {
     if (!m) {

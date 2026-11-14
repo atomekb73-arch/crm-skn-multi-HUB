@@ -33,6 +33,8 @@ import { VectorRingIndicator } from './VectorIcons';
 import {
   calculateCategorizedFrequency,
   calculateMemberStats,
+  calculateMemberYearStats,
+  getBoardRoleMonthlyRate,
   getMeetingType,
   MEETING_TYPES,
   isMeetingEligibleForDenominator,
@@ -41,7 +43,7 @@ import { getEngagementScaleLevel, useSettings } from '../context/SettingsContext
 import { useOrg } from '../context/OrgContext';
 import { useAcademicYear } from '../context/AcademicYearContext';
 import { calculateMemberSemesterProgress, STUDY_CYCLES } from '../utils/academicYear';
-import { getTenureMonthsInScope } from '../utils/academicScope';
+import { getTenureMonthsInScope, isMeetingInAcademicScope, getAcademicScope } from '../utils/academicScope';
 import { getOrgKey, getMeetingAttendanceStorageKeys } from '../utils/storage';
 import { supabase, isValidUUID } from '../supabaseClient';
 
@@ -56,7 +58,7 @@ export default function EditMemberModal({
 }) {
   const { currentOrg, getStorageKey } = useOrg();
   const { attendanceConfig } = useSettings();
-  const { academicYear, currentScope } = useAcademicYear();
+  const { academicYear, currentScope, academicYearOptions = [] } = useAcademicYear();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [index, setIndex] = useState('');
@@ -70,6 +72,7 @@ export default function EditMemberModal({
   const [status, setStatus] = useState('active');
   const [mailingConsent, setMailingConsent] = useState(false);
   const [attendanceFilter, setAttendanceFilter] = useState('all'); // 'all' | 'attended' | 'absent'
+  const [meetingYearFilter, setMeetingYearFilter] = useState('current'); // 'current' | 'all' | academic year ID
 
   // Shallow Fetching: szczegółowe dane dociągane na żądanie przy otwarciu modala (/api/member-details?id=...)
   const [memberDetails, setMemberDetails] = useState(null);
@@ -272,20 +275,16 @@ export default function EditMemberModal({
     return rawTenures.filter(t => {
       if (!t) return false;
       if (t.organization_id && t.organization_id !== orgId) return false;
-      const tIdx = String(t.memberIndex || t.index || '').replace(/\D/g, '').replace(/^0+/, '').trim();
-      const tEmail = String(t.memberEmail || t.email || '').trim().toLowerCase();
-      const tName = String(t.memberName || t.name || '').trim().toLowerCase();
+      const tIdx = String(t.memberIndex || t.studentIndex || t.nrIndeksu || t.index || '').replace(/\D/g, '').replace(/^0+/, '').trim();
+      const tEmail = String(t.memberEmail || t.studentEmail || t.email || '').trim().toLowerCase();
+      const tName = String(t.memberName || t.studentName || t.fullName || t.name || '').trim().toLowerCase();
+      const tNameNorm = tName.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const mNameNorm = cleanMemberName.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
       if (cleanMemberIdx && tIdx && cleanMemberIdx === tIdx) return true;
       if (cleanMemberEmail && tEmail && cleanMemberEmail === tEmail) return true;
-      if (cleanMemberName && tName && (cleanMemberName === tName || tName.includes(cleanMemberName) || cleanMemberName.includes(tName))) return true;
+      if (cleanMemberName && tName && (cleanMemberName === tName || cleanMemberName.includes(tName) || tName.includes(cleanMemberName) || (mNameNorm && tNameNorm && (mNameNorm === tNameNorm || mNameNorm.includes(tNameNorm) || tNameNorm.includes(mNameNorm))))) return true;
       if (cleanMemberAliases && tName && (cleanMemberAliases.includes(tName) || tName.includes(cleanMemberAliases))) return true;
-      if (isSknSeks) {
-        if (tName && cleanMemberIdx === '11654' && (tName.includes('rodak') || tEmail.includes('gabriel.creart'))) return true;
-        if (tName && (tName.includes('rodak') && (cleanMemberName.includes('rodak') || cleanMemberAliases.includes('rodak') || cleanMemberEmail.includes('gabriel.creart')))) return true;
-        if (tName && (tName.includes('bratkow') && (cleanMemberName.includes('bratkow') || cleanMemberIdx === '15998' || cleanMemberEmail.includes('bratkow') || cleanMemberEmail.includes('15998')))) return true;
-      }
-      if (tName && (tName.includes('czepir') && (cleanMemberName.includes('czepir') || cleanMemberIdx === '26535' || cleanMemberEmail.includes('czepir')))) return true;
       return false;
     }).map(t => {
       // Oblicz punkty w wybranym roku akademickim (SSOT)
@@ -300,7 +299,8 @@ export default function EditMemberModal({
         lifetimeMonths = Math.max(1, Math.round(diffTime / (1000 * 60 * 60 * 24 * 30.4375)));
       }
 
-      const ptsPerMonth = t.roleName?.includes('Badań') ? 4 : t.roleName?.includes('IT') || t.roleName?.includes('Social') ? 5 : 3;
+      const role = t.roleName || t.role || t.rola;
+      const ptsPerMonth = getBoardRoleMonthlyRate(role);
       const calculatedPoints = monthsInScope * ptsPerMonth;
       const lifetimePoints = lifetimeMonths * ptsPerMonth;
 
@@ -325,14 +325,16 @@ export default function EditMemberModal({
     let rawTenures = [];
     const orgId = currentOrg?.id || member?.organization_id || 'skn_seksuologii';
     try {
-      const saved = localStorage.getItem(`skn_board_tenures_${orgId}`);
+      const saved =
+        localStorage.getItem(`skn_board_tenures_${orgId}`) ||
+        localStorage.getItem('skn_board_tenures');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) rawTenures = parsed;
       }
     } catch {}
 
-    return calculateMemberStats(
+    return calculateMemberYearStats(
       member,
       ewidencjaList,
       meetings,
@@ -358,13 +360,21 @@ export default function EditMemberModal({
 
     // De-duplicate meetings by code or id
     const seenCodes = new Set();
-    const uniqueMeetings = (meetings || []).filter(m => {
+    let uniqueMeetings = (meetings || []).filter(m => {
       if (!m) return false;
       const mCode = String(m.code || m.id || m.date || '').trim();
       if (!mCode || seenCodes.has(mCode)) return false;
       seenCodes.add(mCode);
       return true;
     });
+
+    // Filtrowanie według wybranego roku akademickiego
+    if (meetingYearFilter !== 'all') {
+      const targetScope = meetingYearFilter === 'current' ? currentScope : getAcademicScope(meetingYearFilter);
+      if (targetScope) {
+        uniqueMeetings = uniqueMeetings.filter(m => isMeetingInAcademicScope(m, targetScope));
+      }
+    }
 
     return uniqueMeetings.map(m => {
       const typeId = getMeetingType(m, customMeetingTypes);
@@ -495,7 +505,7 @@ export default function EditMemberModal({
       if (diff !== 0) return diff;
       return String(a.code || '').localeCompare(String(b.code || ''));
     });
-  }, [member, meetings, customMeetingTypes, studentAttendanceRecords, ewidencjaList]);
+  }, [member, meetings, customMeetingTypes, studentAttendanceRecords, ewidencjaList, meetingYearFilter, currentScope]);
 
   // Filtered meetings list based on selector
   const filteredAuditedMeetings = useMemo(() => {
@@ -1226,14 +1236,30 @@ export default function EditMemberModal({
 
             {/* ── Scalable Timeline Grid (Elastyczna siatka kafelków spotkań) ── */}
             <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 space-y-2">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-1.5">
                 <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                   <CalendarDays size={13} className="text-indigo-600" />
-                  <span>Oś czasu spotkań w roku ({auditedMeetings.length}):</span>
+                  <span>Oś czasu spotkań ({auditedMeetings.length}):</span>
                 </span>
-                <div className="flex items-center gap-1.5 text-[9px] text-slate-500">
-                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> Obecny</span>
-                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-300 inline-block" /> Nieobecny</span>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={meetingYearFilter}
+                    onChange={(e) => setMeetingYearFilter(e.target.value)}
+                    className="text-[10px] font-bold bg-slate-50 border border-slate-200 rounded-lg px-2 py-0.5 text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                    title="Filtruj spotkania na osi czasu według roku akademickiego"
+                  >
+                    <option value="current">Rok {academicYear} (aktywny)</option>
+                    <option value="all">Wszystkie lata</option>
+                    {academicYearOptions
+                      .filter(opt => opt.id !== academicYear)
+                      .map(opt => (
+                        <option key={opt.id} value={opt.id}>{opt.label || opt.id}</option>
+                      ))}
+                  </select>
+                  <div className="flex items-center gap-1.5 text-[9px] text-slate-500">
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> Obecny</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-300 inline-block" /> Nieobecny</span>
+                  </div>
                 </div>
               </div>
 

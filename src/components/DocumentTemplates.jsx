@@ -1236,6 +1236,19 @@ export function MembersRegistryTemplate({
     return (Array.isArray(raw) ? raw : []).filter(e => isEwidencjaInAcademicScope(e, scope, scopedMeetings));
   }, [scope, scopedMeetings, resolvedOrg?.id, orgId]);
 
+  // Pobranie rejestru zarządu dla aktywnej organizacji
+  const scopedTenures = useMemo(() => {
+    let raw = [];
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const tKey = getOrgKey(resolvedOrg?.id || orgId, 'skn_board_tenures');
+        const s = localStorage.getItem(tKey) || localStorage.getItem(`skn_board_tenures_${resolvedOrg?.id || orgId}`) || localStorage.getItem('skn_board_tenures');
+        if (s) raw = JSON.parse(s);
+      } catch {}
+    }
+    return Array.isArray(raw) ? raw : [];
+  }, [resolvedOrg?.id, orgId]);
+
   // Zlicz zrealizowane spotkania
   const conductedMeetingsCount = useMemo(() => {
     return scopedMeetings.filter(m => {
@@ -1332,6 +1345,8 @@ export function MembersRegistryTemplate({
         ...attendanceConfig,
         academicYear,
         scope,
+        boardTenures: scopedTenures,
+        orgId: resolvedOrg?.id || orgId,
       });
 
       const name = m?.fullName || `${m?.firstName || ''} ${m?.lastName || ''}`.trim() || '—';

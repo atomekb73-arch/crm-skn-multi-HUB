@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
   Printer,
@@ -25,6 +25,9 @@ import { useAcademicYear } from '../context/AcademicYearContext';
 import { useOrg } from '../context/OrgContext';
 import { getCurrentAcademicYear } from '../utils/academicYear';
 import { getStoredSupervisors } from '../utils/specialRoles';
+import { calculateMemberYearStats } from '../utils/meetingTypes';
+import { getAcademicScope } from '../utils/academicScope';
+import { deduplicateBoard } from '../services/settingsService';
 
 export default function CertificateModal({
   isOpen,
@@ -68,6 +71,53 @@ export default function CertificateModal({
       setSelectedAcademicYear(academicYearCtx.academicYear);
     }
   }, [propAcademicYear, academicYearCtx?.academicYear, isOpen]);
+
+  // Dynamiczne przeliczanie statystyk studenta według wybranego roku akademickiego (SSOT)
+  const activeStats = useMemo(() => {
+    if (!member) return null;
+    const orgId = currentOrg?.id || member?.organization_id || 'skn_seksuologii';
+
+    let rawTenures = [];
+    try {
+      const saved =
+        localStorage.getItem(`skn_board_tenures_${orgId}`) ||
+        localStorage.getItem('skn_board_tenures');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) rawTenures = deduplicateBoard(parsed, orgId);
+      }
+    } catch {}
+
+    let ewidencja = [];
+    try {
+      const savedEw =
+        localStorage.getItem(`crm_ewidencja_${orgId}`) ||
+        localStorage.getItem('crm_ewidencja');
+      if (savedEw) {
+        const parsedEw = JSON.parse(savedEw);
+        if (Array.isArray(parsedEw)) {
+          ewidencja = parsedEw.filter(e => !e?.organization_id || e.organization_id === orgId);
+        }
+      }
+    } catch {}
+
+    const scope = getAcademicScope(selectedAcademicYear);
+    return calculateMemberYearStats(
+      member,
+      ewidencja,
+      meetings,
+      {},
+      {
+        academicYear: selectedAcademicYear,
+        startDate: scope?.startDate,
+        endDate: scope?.endDate,
+        scope,
+        boardTenures: rawTenures,
+        orgId,
+        organization_id: orgId,
+      }
+    );
+  }, [member, selectedAcademicYear, currentOrg?.id, meetings]);
 
   if (!isOpen) return null;
 
@@ -286,8 +336,8 @@ export default function CertificateModal({
             {docType === 'membership' && (
               <MembershipCertificateTemplate
                 member={member || (allMembers && allMembers[0]) || { fullName: 'Imię i Nazwisko Studenta', index: '00000', field: 'Psychologia' }}
-                freqData={freqData || { freq: 100, present: 12, absent: 0 }}
-                points={typeof points === 'number' ? points : 0}
+                freqData={activeStats || freqData || { freq: 100, present: 12, absent: 0 }}
+                points={activeStats ? activeStats.totalPoints : (typeof points === 'number' ? points : 0)}
                 supervisors={supervisors}
                 academicYear={academicYear}
                 org={currentOrg}

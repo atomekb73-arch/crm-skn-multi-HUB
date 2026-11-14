@@ -69,7 +69,8 @@ import {
 import { getStoredSupervisors } from '../utils/specialRoles';
 import { getOfficialMemberRecord, getMemberStats } from '../utils/activityRegistry';
 import { CANONICAL_MEETINGS_2025_2026, filterLegitimateMeetings, getCanonicalMeetingsForOrg } from '../utils/canonicalMeetings';
-import { getMeetingType, calculateMemberStats, isMeetingEligibleForDenominator } from '../utils/meetingTypes';
+import { getMeetingType, calculateMemberStats, calculateMemberYearStats, isMeetingEligibleForDenominator } from '../utils/meetingTypes';
+import { deduplicateBoard } from '../services/settingsService';
 import {
   getIssuedDocumentsRegistry,
   addIssuedDocument,
@@ -571,27 +572,41 @@ export default function ReportsTab({
     if (!Array.isArray(members) || members.length === 0) return map;
 
     let scopedEwidencja = [];
+    let rawTenures = [];
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
         const ewKey = getStorageKey ? getStorageKey('crm_ewidencja') : 'crm_ewidencja';
-        const raw = localStorage.getItem(ewKey);
+        const raw = localStorage.getItem(ewKey) || localStorage.getItem(`crm_ewidencja_${currentOrg?.id}`);
         if (raw) {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) {
-            scopedEwidencja = parsed.filter(e => isEwidencjaInAcademicScope(e, scope, orgMeetings));
+            scopedEwidencja = parsed.filter(e => (!e?.organization_id || e.organization_id === currentOrg?.id) && isEwidencjaInAcademicScope(e, scope, orgMeetings));
           }
+        }
+      } catch {}
+
+      try {
+        const orgId = currentOrg?.id || 'skn_seksuologii';
+        const tenKey = getStorageKey ? getStorageKey('skn_board_tenures') : `skn_board_tenures_${orgId}`;
+        const rawT = localStorage.getItem(tenKey) || localStorage.getItem(`skn_board_tenures_${orgId}`) || localStorage.getItem('skn_board_tenures');
+        if (rawT) {
+          const parsed = JSON.parse(rawT);
+          if (Array.isArray(parsed)) rawTenures = deduplicateBoard(parsed, orgId);
         }
       } catch {}
     }
 
     members.forEach(m => {
       if (!m) return;
-      const stats = calculateMemberStats(m, scopedEwidencja, orgMeetings, customMeetingTypes || {}, {
+      const stats = calculateMemberYearStats(m, scopedEwidencja, orgMeetings, customMeetingTypes || {}, {
         ...attendanceConfig,
         academicYear,
         scope,
         startDate: scope?.startDate,
         endDate: scope?.endDate,
+        boardTenures: rawTenures,
+        orgId: currentOrg?.id,
+        organization_id: currentOrg?.id,
       });
 
       const rawIdx = String(m.index || m.indexNumber || m.nrIndeksu || m.cleanIndex || '').trim();
@@ -605,7 +620,7 @@ export default function ReportsTab({
     });
 
     return map;
-  }, [members, orgMeetings, scope, academicYear, customMeetingTypes, attendanceConfig]);
+  }, [members, orgMeetings, scope, academicYear, customMeetingTypes, attendanceConfig, currentOrg?.id, getStorageKey]);
 
   const getMemberFreqData = useCallback((m) => {
     if (!m) {
@@ -633,7 +648,13 @@ export default function ReportsTab({
       (rawIdx && memberStatsMap.get(rawIdx)) ||
       (cleanIdx && memberStatsMap.get(cleanIdx)) ||
       (email && memberStatsMap.get(email)) ||
-      calculateMemberStats(m, null, orgMeetings, customMeetingTypes || {}, { ...attendanceConfig, academicYear, scope });
+      calculateMemberYearStats(m, null, orgMeetings, customMeetingTypes || {}, {
+        ...attendanceConfig,
+        academicYear,
+        scope,
+        orgId: currentOrg?.id,
+        organization_id: currentOrg?.id,
+      });
   }, [memberStatsMap, currentOrg?.id, orgMeetings, customMeetingTypes, attendanceConfig, academicYear, scope]);
 
   const getMemberPoints = useCallback((m) => {

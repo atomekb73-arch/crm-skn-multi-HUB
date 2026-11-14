@@ -105,7 +105,7 @@ const BOARD_ROLE_WEIGHTS = {
   'Członek Zarządu': { code: 'ZARZAD_MIES', defaultPtsPerMonth: 3 },
   'Członkini Zarządu': { code: 'ZARZAD_MIES', defaultPtsPerMonth: 3 },
   'Skarbnik': { code: 'ZARZAD_MIES', defaultPtsPerMonth: 3 },
-  'Koordynator ds. Badań': { code: 'BADANIA', defaultPtsPerMonth: 4 },
+  'Koordynator ds. Badań': { code: 'BADANIA', defaultPtsPerMonth: 5 },
   'Lider IT / Koordynator CRM': { code: 'IT_SYSTEMY', defaultPtsPerMonth: 5 },
   'Moderator Social Media / Grup': { code: 'SM_MODER_MIES', defaultPtsPerMonth: 5 },
   // Wsteczna kompatybilność
