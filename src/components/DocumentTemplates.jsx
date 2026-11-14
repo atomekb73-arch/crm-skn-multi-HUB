@@ -185,14 +185,14 @@ export function DocumentStandardHeader({
       {/* 2. Kompaktowy pasek metadanych: Jednostka / Koło oraz Sygnatura / Data */}
       <div className="flex items-start justify-between gap-3 text-left">
         <div className="text-left space-y-0.5 min-w-0">
-          <p className="text-[8.5px] font-bold tracking-wider text-slate-600 uppercase font-sans truncate">
+          <p className="text-[8.5px] font-normal tracking-wider text-slate-600 uppercase font-sans truncate">
             {orgUnit.toUpperCase()}
           </p>
-          <p className="text-[9px] font-extrabold tracking-tight text-indigo-950 uppercase font-sans truncate">
+          <p className="text-[9px] font-medium tracking-tight text-indigo-950 uppercase font-sans truncate">
             {orgName.toUpperCase()}
           </p>
           {subtitle && (
-            <p className="text-[8px] font-medium text-slate-500 italic mt-0.5 font-sans truncate">
+            <p className="text-[8px] font-normal text-slate-500 italic mt-0.5 font-sans truncate">
               {subtitle}
             </p>
           )}
@@ -203,8 +203,8 @@ export function DocumentStandardHeader({
         ) : (
           <div className="text-right shrink-0 space-y-0.5">
             {docNumber && (
-              <div className="inline-flex items-center gap-1 font-mono text-[8.5px] font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 whitespace-nowrap shadow-2xs">
-                {docLabel && <span className="text-slate-500 font-sans uppercase text-[7.5px] tracking-wider">{docLabel}:</span>}
+              <div className="inline-flex items-center gap-1 font-mono text-[8.5px] font-medium text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 whitespace-nowrap shadow-2xs">
+                {docLabel && <span className="text-slate-500 font-sans uppercase text-[7.5px] tracking-wider font-normal">{docLabel}:</span>}
                 <span>{docNumber}</span>
               </div>
             )}
@@ -385,9 +385,9 @@ export function DocumentSignaturesBlock({
           <div className="h-8 sm:h-9 w-full border-b border-dashed border-slate-300 mb-1.5 flex items-end justify-center pb-0.5">
             <span className="text-[8.5px] text-slate-400 font-serif italic">[Podpis elektroniczny]</span>
           </div>
-          <span className="text-[11px] font-bold text-slate-800 leading-tight">{chairpersonTitle}</span>
+          <span className="text-[11px] font-medium text-slate-800 leading-tight">{chairpersonTitle}</span>
           {resolvedSub && (
-            <span className="text-[9.5px] text-slate-500 leading-tight mt-0.5">{resolvedSub}</span>
+            <span className="text-[9.5px] text-slate-500 font-normal leading-tight mt-0.5">{resolvedSub}</span>
           )}
         </div>
 
@@ -397,13 +397,13 @@ export function DocumentSignaturesBlock({
             <div className="h-8 sm:h-9 w-full border-b border-dashed border-slate-300 mb-1.5 flex items-end justify-center pb-0.5">
               <span className="text-[8.5px] text-slate-400 font-serif italic">[Podpis elektroniczny]</span>
             </div>
-            <span className="text-[11px] font-bold text-slate-800 leading-tight">
+            <span className="text-[11px] font-medium text-slate-800 leading-tight">
               {formatSupervisorName(sup)}
             </span>
-            <span className="text-[9.5px] text-slate-600 font-medium leading-tight mt-0.5">
+            <span className="text-[9.5px] text-slate-600 font-normal leading-tight mt-0.5">
               {formatSupervisorRole(sup)}
             </span>
-            <span className="text-[8.5px] text-slate-400 leading-tight">
+            <span className="text-[8.5px] text-slate-400 font-normal leading-tight">
               {formatSupervisorAffiliation(sup, orgUnit)}
             </span>
           </div>
@@ -482,25 +482,25 @@ export function MembershipCertificateTemplate({
 
         {/* Tytuł Zaświadczenia (Główny, dominujący element wizualny) */}
         <div className="text-center my-1.5 sm:my-2">
-          <span className="inline-block text-[9px] font-bold uppercase tracking-widest text-indigo-700 bg-indigo-50 px-3 py-0.5 rounded-full border border-indigo-200">
+          <span className="inline-block text-[9px] font-medium uppercase tracking-widest text-indigo-700 bg-indigo-50 px-3 py-0.5 rounded-full border border-indigo-200">
             Oficjalne Zaświadczenie Akademickie
           </span>
-          <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1 uppercase [text-wrap:balance]">
+          <h2 className="text-xl sm:text-2xl font-normal text-slate-900 tracking-wide mt-1 uppercase [text-wrap:balance]">
             Zaświadczenie o&nbsp;Członkostwie i&nbsp;Frekwencji
           </h2>
-          <p className="text-[10px] text-slate-500 font-medium tracking-wide mt-0.5">
+          <p className="text-[10px] text-slate-500 font-normal tracking-wide mt-0.5">
             Rok akademicki {academicYear} &bull; Oficjalny Rejestr Działalności Studenckiej
           </p>
         </div>
 
         {/* Formuła Wstępna */}
-        <p className="text-[11px] sm:text-[11.5px] leading-relaxed text-slate-800 text-justify [text-justify:inter-word] [text-wrap:pretty] indent-4">
+        <p className="text-[11px] sm:text-[11.5px] leading-relaxed text-slate-700 text-justify [text-justify:inter-word] [text-wrap:pretty] indent-4 font-normal">
           Niniejszym zaświadcza się, że Pan/Pani{' '}
-          <strong className="text-slate-950 font-bold border-b border-slate-400 pb-0.5 px-1">{studentName}</strong>,{' '}
-          legitymujący/a się numerem indeksu: <strong className="font-mono text-slate-950 font-bold">{indexNumber}</strong>,{' '}
-          będący/a studentem/ką kierunku: <strong>{fieldName}</strong> ({yearLabel}), w&nbsp;roku akademickim{' '}
-          <strong>{academicYear}</strong> brał/a aktywny udział w&nbsp;działalności naukowo-badawczej i&nbsp;spotkaniach Koła:{' '}
-          <strong className="text-slate-950">{orgName}</strong> przy&nbsp;{orgUnit}.
+          <strong className="text-slate-800 font-semibold border-b border-slate-300 pb-0.5 px-1">{studentName}</strong>,{' '}
+          legitymujący/a się numerem indeksu: <strong className="font-mono text-slate-800 font-semibold">{indexNumber}</strong>,{' '}
+          będący/a studentem/ką kierunku: <strong className="font-semibold text-slate-800">{fieldName}</strong> ({yearLabel}), w&nbsp;roku akademickim{' '}
+          <strong className="font-semibold text-slate-800">{academicYear}</strong> brał/a aktywny udział w&nbsp;działalności naukowo-badawczej i&nbsp;spotkaniach Koła:{' '}
+          <strong className="text-slate-800 font-semibold">{orgName}</strong> przy&nbsp;{orgUnit}.
         </p>
       </div>
 
@@ -511,11 +511,11 @@ export function MembershipCertificateTemplate({
             <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-amber-100 text-amber-700 mb-2">
               <AlertTriangle className="w-5 h-5" />
             </div>
-            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-tight">
+            <h3 className="text-xs font-semibold text-slate-900 uppercase tracking-tight">
               Brak zarejestrowanej działalności w roku {academicYear}
             </h3>
-            <p className="text-[10.5px] text-slate-600 mt-1 max-w-md mx-auto leading-relaxed">
-              Dla roku akademickiego <strong>{academicYear}</strong> nie zarejestrowano spotkań ani obecności studenta <strong>{studentName}</strong>. Wystawienie oficjalnego zaświadczenia z zerowymi wartościami zostało wstrzymane.
+            <p className="text-[10.5px] text-slate-600 mt-1 max-w-md mx-auto leading-relaxed font-normal">
+              Dla roku akademickiego <strong className="font-semibold text-slate-800">{academicYear}</strong> nie zarejestrowano spotkań ani obecności studenta <strong className="font-semibold text-slate-800">{studentName}</strong>. Wystawienie oficjalnego zaświadczenia z zerowymi wartościami zostało wstrzymane.
             </p>
             <div className="mt-2 inline-block bg-white px-2.5 py-1 rounded-md border border-amber-200 text-[9px] text-slate-500 font-mono">
               Status: {isFutureYear ? 'Okres planowany' : (isPastYear ? 'Brak wpisów archiwalnych' : 'Brak danych w roku bieżącym')}
@@ -530,24 +530,24 @@ export function MembershipCertificateTemplate({
             >
               {showFreqSection && (
                 <div className="p-1.5 border-r border-slate-200 min-w-0">
-                  <span className="text-[9px] uppercase font-bold text-slate-500 tracking-wider block truncate">Łączna Frekwencja</span>
-                  <span className="text-xl sm:text-2xl font-bold text-emerald-700 font-mono leading-none my-1 block">{safeFreq}%</span>
+                  <span className="text-[9px] uppercase font-medium text-slate-500 tracking-wider block truncate">Łączna Frekwencja</span>
+                  <span className="text-xl sm:text-2xl font-normal text-emerald-700 font-mono leading-none my-1 block">{safeFreq}%</span>
                   <span className="text-[9px] text-slate-500 block truncate">{safePresent} / {totalMeetings} spotkań</span>
                 </div>
               )}
               {showPointsSection && (
                 <div className="p-1.5 border-r border-slate-200 min-w-0">
-                  <span className="text-[9px] uppercase font-bold text-slate-500 tracking-wider block truncate">Punkty Aktywności</span>
-                  <span className="text-xl sm:text-2xl font-bold text-purple-700 font-mono leading-none my-1 block">{safePoints} pkt</span>
+                  <span className="text-[9px] uppercase font-medium text-slate-500 tracking-wider block truncate">Punkty Aktywności</span>
+                  <span className="text-xl sm:text-2xl font-normal text-purple-700 font-mono leading-none my-1 block">{safePoints} pkt</span>
                   <span className="text-[9px] text-slate-500 block truncate">Wykaz aktywności</span>
                 </div>
               )}
               <div className="p-1.5 min-w-0 flex flex-col justify-center">
-                <span className="text-[9px] uppercase font-bold text-slate-500 tracking-wider block truncate">Ocena Aktywności</span>
-                <span className="text-xs font-bold text-indigo-950 block leading-tight mt-0.5 truncate">
+                <span className="text-[9px] uppercase font-medium text-slate-500 tracking-wider block truncate">Ocena Aktywności</span>
+                <span className="text-xs font-normal text-indigo-950 block leading-tight mt-0.5 truncate">
                   {safeFreq >= 90 ? 'Lider Koła' : safeFreq >= 75 ? 'Bardzo Aktywny' : (safeFreq >= 50 ? 'Aktywny Członek' : (isPastYear ? 'Brak zaliczenia' : 'W trakcie realizacji'))}
                 </span>
-                <span className={`text-[8.5px] font-semibold flex items-center justify-center gap-0.5 mt-0.5 ${
+                <span className={`text-[8.5px] font-medium flex items-center justify-center gap-0.5 mt-0.5 ${
                   safeFreq >= 50 ? 'text-emerald-600' : (isPastYear ? 'text-rose-600' : 'text-slate-500')
                 }`}>
                   {safeFreq >= 50 ? (
@@ -562,8 +562,8 @@ export function MembershipCertificateTemplate({
             </div>
 
             {/* ── Wyszczególnienie aktywności merytorycznej ── */}
-            <div className="text-[10.5px] sm:text-[11px] text-slate-700 space-y-2 bg-indigo-50/40 p-3.5 sm:p-4 rounded-xl border border-indigo-100/90 shadow-2xs">
-              <p className="font-bold text-indigo-950 flex items-center gap-1.5 text-[11px] uppercase tracking-wide">
+            <div className="text-[10.5px] sm:text-[11px] text-slate-700 space-y-2 bg-indigo-50/40 p-3.5 sm:p-4 rounded-xl border border-indigo-100/90 shadow-2xs font-normal">
+              <p className="font-medium text-indigo-950 flex items-center gap-1.5 text-[11px] uppercase tracking-wide">
                 <Sparkles size={12} className="text-indigo-600 shrink-0" />
                 Wyszczególnienie aktywności merytorycznej:
               </p>
@@ -661,25 +661,25 @@ export function SpeakerDiplomaTemplate({
         </div>
 
         <div>
-          <span className="text-[9.5px] uppercase tracking-widest font-bold text-amber-800 bg-amber-100/70 px-3.5 py-0.5 rounded-full border border-amber-300">
+          <span className="text-[9.5px] uppercase tracking-widest font-medium text-amber-800 bg-amber-100/70 px-3.5 py-0.5 rounded-full border border-amber-300">
             Certyfikat Wystąpienia Naukowego
           </span>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 uppercase mt-2">
+          <h1 className="text-2xl sm:text-3xl font-normal tracking-wide text-slate-900 uppercase mt-2">
             Dyplom Prelegenta
           </h1>
           <p className="text-[10px] text-slate-400 font-mono mt-0.5">Nr {docNumber}</p>
         </div>
 
         <div className="space-y-1 py-1">
-          <p className="text-[10.5px] text-slate-600 uppercase tracking-widest font-medium">Niniejszy certyfikat otrzymuje</p>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-indigo-950 font-sans tracking-tight border-b-2 border-amber-400 inline-block pb-1 px-5">
+          <p className="text-[10.5px] text-slate-600 uppercase tracking-widest font-normal">Niniejszy certyfikat otrzymuje</p>
+          <h2 className="text-xl sm:text-2xl font-medium text-indigo-950 font-sans tracking-wide border-b-2 border-amber-400 inline-block pb-1 px-5">
             {studentName}
           </h2>
           <p className="text-[10px] text-slate-500 font-mono">Nr Indeksu: {indexNumber}</p>
         </div>
 
-        <div className="max-w-lg mx-auto bg-amber-50/60 p-3.5 sm:p-4 rounded-2xl border border-amber-200/90 text-center space-y-1.5 shadow-2xs">
-          <p className="text-[10px] text-amber-900 font-bold uppercase tracking-wider">
+        <div className="max-w-lg mx-auto bg-amber-50/60 p-3.5 sm:p-4 rounded-2xl border border-amber-200/90 text-center space-y-1.5 shadow-2xs font-normal">
+          <p className="text-[10px] text-amber-900 font-medium uppercase tracking-wider">
             Za przygotowanie i wygłoszenie referatu naukowego pt.:
           </p>
           {isEditing ? (
@@ -687,14 +687,14 @@ export function SpeakerDiplomaTemplate({
               rows={2}
               value={presentationTopic}
               onChange={(e) => onUpdateTopic(e.target.value)}
-              className="w-full p-2 bg-white border border-amber-400 rounded-lg text-xs font-bold text-slate-900 italic text-center focus:outline-none"
+              className="w-full p-2 bg-white border border-amber-400 rounded-lg text-xs font-medium text-slate-900 italic text-center focus:outline-none"
             />
           ) : (
-            <p className="text-sm sm:text-base font-bold text-slate-900 italic px-2 leading-snug">
+            <p className="text-sm sm:text-base font-medium text-slate-900 italic px-2 leading-snug">
               „{presentationTopic}”
             </p>
           )}
-          <p className="text-[10px] text-slate-500 mt-1 font-medium">
+          <p className="text-[10px] text-slate-500 mt-1 font-normal">
             w ramach oficjalnego seminarium naukowego {orgName} ({academicYear})
           </p>
         </div>
@@ -772,28 +772,28 @@ export function BoardCertificateTemplate({
 
         {/* Tytuł Zaświadczenia z estetycznym podziałem (Główny, dominujący element) */}
         <div className="text-center my-1.5 sm:my-2">
-          <span className="inline-block text-[9px] font-bold uppercase tracking-widest text-indigo-700 bg-indigo-50 px-3 py-0.5 rounded-full border border-indigo-200">
+          <span className="inline-block text-[9px] font-medium uppercase tracking-widest text-indigo-700 bg-indigo-50 px-3 py-0.5 rounded-full border border-indigo-200">
             Uchwała Walnego Zebrania Członków
           </span>
           <div className="mt-1">
-            <span className="text-[10.5px] font-bold text-slate-500 uppercase tracking-widest block">
+            <span className="text-[10.5px] font-normal text-slate-500 uppercase tracking-widest block">
               Zaświadczenie o:
             </span>
-            <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase [text-wrap:balance]">
+            <h2 className="text-xl sm:text-2xl font-normal text-slate-900 tracking-wide uppercase [text-wrap:balance]">
               Pełnieniu Funkcji w&nbsp;Zarządzie Koła
             </h2>
           </div>
-          <p className="text-[10px] text-slate-500 font-medium tracking-wide mt-0.5">
+          <p className="text-[10px] text-slate-500 font-normal tracking-wide mt-0.5">
             Kadencja Zarządu Koła &bull; Rok Akademicki {academicYear}
           </p>
         </div>
 
         {/* Formuła Wstępna */}
-        <p className="text-[11px] sm:text-[11.5px] leading-relaxed text-slate-800 text-justify [text-justify:inter-word] [text-wrap:pretty] indent-4">
+        <p className="text-[11px] sm:text-[11.5px] leading-relaxed text-slate-700 text-justify [text-justify:inter-word] [text-wrap:pretty] indent-4 font-normal">
           Niniejszym zaświadcza się, że Pan/Pani{' '}
-          <strong className="text-slate-950 font-bold border-b border-slate-400 pb-0.5 px-1">{studentName}</strong>,{' '}
-          numer indeksu: <strong className="font-mono text-slate-950 font-bold">{indexNumber}</strong>,{' '}
-          student/ka kierunku: <strong>{fieldName}</strong>, w&nbsp;roku akademickim <strong>{academicYear}</strong>{' '}
+          <strong className="text-slate-800 font-semibold border-b border-slate-300 pb-0.5 px-1">{studentName}</strong>,{' '}
+          numer indeksu: <strong className="font-mono text-slate-800 font-semibold">{indexNumber}</strong>,{' '}
+          student/ka kierunku: <strong className="font-semibold text-slate-800">{fieldName}</strong>, w&nbsp;roku akademickim <strong className="font-semibold text-slate-800">{academicYear}</strong>{' '}
           pełnił/a z&nbsp;wyboru funkcję w&nbsp;Zarządzie Koła Naukowego:
         </p>
       </div>
@@ -801,21 +801,21 @@ export function BoardCertificateTemplate({
       {/* ── STREFA 2 (ŚRODKOWA): Boks Funkcji w Zarządzie i Zakres Obowiązków ── */}
       <div className="relative z-10 flex-grow flex flex-col justify-center my-2 sm:my-3.5 space-y-3 sm:space-y-3.5">
         {/* Boks Oficjalnej Funkcji w Zarządzie */}
-        <div className="p-3.5 sm:p-4 rounded-xl bg-indigo-50/70 border border-indigo-200 text-center shadow-2xs space-y-1">
-          <span className="text-[9px] font-bold uppercase text-indigo-700 tracking-widest block">
+        <div className="p-3.5 sm:p-4 rounded-xl bg-indigo-50/70 border border-indigo-200 text-center shadow-2xs space-y-1 font-normal">
+          <span className="text-[9px] font-medium uppercase text-indigo-700 tracking-widest block">
             Oficjalna Funkcja w&nbsp;Zarządzie Koła Naukowego
           </span>
-          <span className="text-lg sm:text-xl font-extrabold text-indigo-950 block tracking-tight">
+          <span className="text-lg sm:text-xl font-normal text-indigo-950 block tracking-wide">
             {formattedRole}
           </span>
-          <span className="text-[10.5px] text-slate-600 font-medium block">
+          <span className="text-[10.5px] text-slate-600 font-normal block">
             {orgName} &bull; w&nbsp;okresie kadencji: {termDates}
           </span>
         </div>
 
         {/* Zakres Obowiązków Statutowych */}
-        <div className="p-3.5 sm:p-4 rounded-xl bg-slate-50/90 border border-slate-200 text-[10.5px] sm:text-[11px] space-y-2 shadow-2xs">
-          <p className="font-bold text-slate-900 text-[11px] uppercase tracking-wide">
+        <div className="p-3.5 sm:p-4 rounded-xl bg-slate-50/90 border border-slate-200 text-[10.5px] sm:text-[11px] space-y-2 shadow-2xs font-normal">
+          <p className="font-medium text-slate-900 text-[11px] uppercase tracking-wide">
             Zakres zrealizowanych obowiązków statutowych:
           </p>
           {isEditing ? (
@@ -970,26 +970,26 @@ export function MeetingsSummaryTableTemplate({
 
       {/* ── Tytuł Sprawozdania z nowym standardem wizualnym (optymalny oddech i interlinia) ── */}
       <div className="mt-6 mb-7 sm:mb-8 text-center">
-        <span className="inline-block text-[9.5px] font-bold uppercase tracking-widest text-indigo-700 bg-indigo-50 px-3.5 py-1 rounded-full border border-indigo-200/80 mb-3 sm:mb-3.5">
+        <span className="inline-block text-[9.5px] font-medium uppercase tracking-widest text-indigo-700 bg-indigo-50 px-3.5 py-1 rounded-full border border-indigo-200/80 mb-3 sm:mb-3.5">
           Oficjalna Ewidencja Działalności Akademickiej
         </span>
-        <h2 className="text-xl font-black text-slate-950 uppercase tracking-tight">
+        <h2 className="text-xl font-normal text-slate-950 uppercase tracking-wide">
           ZBIORCZA TABELA ZREALIZOWANYCH SPOTKAŃ
         </h2>
         <div className="mt-2.5 sm:mt-3 space-y-1">
-          <h3 className="text-sm font-bold text-indigo-950 uppercase tracking-wide">
+          <h3 className="text-sm font-medium text-indigo-950 uppercase tracking-wide">
             {formatOrgFullName(orgName)}
           </h3>
-          <p className="text-xs font-semibold text-slate-700 tracking-tight">
+          <p className="text-xs font-normal text-slate-600">
             Rejestr aktywności i spotkań naukowych
           </p>
         </div>
-        <div className="mt-3.5 space-y-1 text-xs text-slate-600 font-medium">
+        <div className="mt-3.5 space-y-1 text-xs text-slate-600 font-normal">
           <p>
             Rok Akademicki {academicYear} &bull; {orgUnit}
           </p>
           <p className="text-[11px] text-slate-500">
-            <strong>Opieka naukowa:</strong> {activeSupervisors.map(s => formatSupervisorName(s)).join(' • ')}
+            <span className="font-medium">Opieka naukowa:</span> {activeSupervisors.map(s => formatSupervisorName(s)).join(' • ')}
           </p>
         </div>
       </div>
@@ -997,18 +997,18 @@ export function MeetingsSummaryTableTemplate({
       {/* ── KPI Podsumowanie ── */}
       <div className="metric-box-container w-full grid grid-cols-1 sm:grid-cols-3 md:grid-cols-3 gap-2.5 sm:gap-3 mb-6 text-center text-xs box-border">
         <div className="p-2.5 bg-slate-50/90 rounded-lg border border-slate-200">
-          <span className="text-[9.5px] uppercase font-bold text-slate-500 tracking-wider block">Zrealizowane spotkania</span>
-          <span className="text-base font-bold text-indigo-950 font-mono mt-0.5 block">{meetingsList.length}</span>
+          <span className="text-[9.5px] uppercase font-medium text-slate-500 tracking-wider block">Zrealizowane spotkania</span>
+          <span className="text-base font-normal text-indigo-950 font-mono mt-0.5 block">{meetingsList.length}</span>
           <span className="text-[9px] text-slate-400 block mt-0.5">z listą obecności</span>
         </div>
         <div className="p-2.5 bg-slate-50/90 rounded-lg border border-slate-200">
-          <span className="text-[9.5px] uppercase font-bold text-slate-500 tracking-wider block">Łączna liczba osobodni</span>
-          <span className="text-base font-bold text-emerald-700 font-mono mt-0.5 block">{totalAttendees} os.</span>
+          <span className="text-[9.5px] uppercase font-medium text-slate-500 tracking-wider block">Łączna liczba osobodni</span>
+          <span className="text-base font-normal text-emerald-700 font-mono mt-0.5 block">{totalAttendees} os.</span>
           <span className="text-[9px] text-slate-400 block mt-0.5">łączna frekwencja</span>
         </div>
         <div className="p-2.5 bg-slate-50/90 rounded-lg border border-slate-200">
-          <span className="text-[9.5px] uppercase font-bold text-slate-500 tracking-wider block">Średnia uczestników / spotkanie</span>
-          <span className="text-base font-bold text-slate-900 font-mono mt-0.5 block">{avgAttendees} os.</span>
+          <span className="text-[9.5px] uppercase font-medium text-slate-500 tracking-wider block">Średnia uczestników / spotkanie</span>
+          <span className="text-base font-normal text-slate-900 font-mono mt-0.5 block">{avgAttendees} os.</span>
           <span className="text-[9px] text-slate-400 block mt-0.5">na zrealizowane zebranie</span>
         </div>
       </div>
@@ -1016,7 +1016,7 @@ export function MeetingsSummaryTableTemplate({
       {/* ── Tabela Spotkań ze zoptymalizowanymi kolumnami ── */}
       <div className="border border-slate-200 rounded-lg overflow-hidden text-[9.5px] flex-1 min-h-[300px] flex flex-col mb-4 print:overflow-visible">
         <table className="w-full text-left border-collapse" style={{ tableLayout: 'fixed', width: '100%' }}>
-          <thead className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200" style={{ display: 'table-header-group' }}>
+          <thead className="bg-slate-100 text-slate-700 font-medium border-b border-slate-200" style={{ display: 'table-header-group' }}>
             <tr className="hidden print:table-row bg-white border-b border-slate-300">
               <th colSpan={10} className="p-0 pb-1 text-left font-normal">
                 <div className="flex items-center justify-between text-[8px] text-slate-600 font-sans pb-1 mb-1 border-b border-slate-200">
@@ -1395,26 +1395,26 @@ export function MembersRegistryTemplate({
 
       {/* ── Tytuł Ewidencji z nowym standardem wizualnym (optymalny oddech i interlinia) ── */}
       <div className="mt-6 mb-7 sm:mb-8 text-center">
-        <span className="inline-block text-[9.5px] font-bold uppercase tracking-widest text-indigo-700 bg-indigo-50 px-3.5 py-1 rounded-full border border-indigo-200/80 mb-3 sm:mb-3.5">
+        <span className="inline-block text-[9.5px] font-medium uppercase tracking-widest text-indigo-700 bg-indigo-50 px-3.5 py-1 rounded-full border border-indigo-200/80 mb-3 sm:mb-3.5">
           Oficjalna Ewidencja Działalności Akademickiej
         </span>
-        <h2 className="text-xl font-black text-slate-950 uppercase tracking-tight">
+        <h2 className="text-xl font-normal text-slate-950 uppercase tracking-wide">
           OFICJALNA EWIDENCJA CZŁONKÓW
         </h2>
         <div className="mt-2.5 sm:mt-3 space-y-1">
-          <h3 className="text-sm font-bold text-indigo-950 uppercase tracking-wide">
+          <h3 className="text-sm font-medium text-indigo-950 uppercase tracking-wide">
             {formatOrgFullName(orgName)}
           </h3>
-          <p className="text-xs font-semibold text-slate-700 tracking-tight">
+          <p className="text-xs font-normal text-slate-600">
             Oficjalna ewidencja członków
           </p>
         </div>
-        <div className="mt-3.5 space-y-1 text-xs text-slate-600 font-medium">
+        <div className="mt-3.5 space-y-1 text-xs text-slate-600 font-normal">
           <p>
-            Rok Akademicki {academicYear} &bull; {orgUnit} &bull; Zarejestrowanych aktywnych studentów: <strong>{activeMembers.length}</strong>
+            Rok Akademicki {academicYear} &bull; {orgUnit} &bull; Zarejestrowanych aktywnych studentów: <span className="font-medium">{activeMembers.length}</span>
           </p>
           <p className="text-[11px] text-slate-500">
-            <strong>Opieka naukowa:</strong> {activeSupervisors.map(s => formatSupervisorName(s)).join(' • ')}
+            <span className="font-medium">Opieka naukowa:</span> {activeSupervisors.map(s => formatSupervisorName(s)).join(' • ')}
           </p>
         </div>
       </div>
@@ -1424,11 +1424,11 @@ export function MembersRegistryTemplate({
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-100 text-amber-700 mb-3">
             <AlertTriangle className="w-6 h-6" />
           </div>
-          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-tight">
+          <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-tight">
             Brak danych archiwalnych / rejestru spotkań
           </h3>
-          <p className="text-xs text-slate-600 mt-1.5 max-w-lg mx-auto">
-            Dla roku akademickiego <strong>{academicYear}</strong> nie zarejestrowano spotkań naukowych ani wpisów w ewidencji obecności członków Koła <strong>{orgName}</strong>.
+          <p className="text-xs text-slate-600 mt-1.5 max-w-lg mx-auto font-normal">
+            Dla roku akademickiego <strong className="font-semibold text-slate-800">{academicYear}</strong> nie zarejestrowano spotkań naukowych ani wpisów w ewidencji obecności członków Koła <strong className="font-semibold text-slate-800">{orgName}</strong>.
           </p>
           <div className="mt-3.5 inline-block bg-white px-3 py-1.5 rounded-lg border border-amber-200 text-[10.5px] text-slate-500 font-mono">
             Status okresu: {isFutureYear ? 'Okres planowany (przyszły)' : (isPastYear ? 'Archiwalny okres bez zarejestrowanej działalności' : 'Bieżący okres przed rozpoczęciem zebrań')}
@@ -1438,13 +1438,13 @@ export function MembersRegistryTemplate({
         /* ── Tabela członków ze zoptymalizowanymi kolumnami dopasowanymi w 100% do A4 ── */
         <div className="w-full max-w-full border border-slate-200 rounded-lg overflow-hidden text-[10px] flex-1 min-h-[300px] flex flex-col mb-4 print:border-slate-300 print:rounded-none print:overflow-visible box-border">
           <table className="w-full text-left border-collapse print:text-[9.5px]" style={{ tableLayout: 'fixed', width: '100%', pageBreakInside: 'auto', breakInside: 'auto' }}>
-            <thead className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200" style={{ display: 'table-header-group' }}>
+            <thead className="bg-slate-100 text-slate-700 font-medium border-b border-slate-200" style={{ display: 'table-header-group' }}>
               <tr className="hidden print:table-row bg-white border-b border-slate-300">
                 <th colSpan={10} className="p-0 pb-1 text-left font-normal">
                   <div className="flex items-center justify-between text-[8px] text-slate-600 font-sans pb-1 mb-1 border-b border-slate-200">
                     <div className="flex items-center gap-2">
                       <img src="/wskz-header.png" alt="" className="h-[7mm] object-contain object-left block m-0 p-0" />
-                      <span className="font-bold text-slate-800 uppercase tracking-tight">{orgName}</span>
+                      <span className="font-medium text-slate-800 uppercase tracking-tight">{orgName}</span>
                     </div>
                     <div className="font-mono text-slate-500">
                       Ewidencja Członków &bull; {docNumber}
@@ -1483,7 +1483,7 @@ export function MembersRegistryTemplate({
                       </td>
                     )}
                     {showFreq && (
-                      <td className="py-1.5 px-1 text-center font-mono font-bold text-[9.5px] whitespace-nowrap align-top">
+                      <td className="py-1.5 px-1 text-center font-mono font-medium text-[9.5px] whitespace-nowrap align-top">
                         <span className={row.freq >= 50 ? 'text-emerald-700' : (row.isZeroActivity && isPastYear ? 'text-slate-400' : 'text-slate-600')}>
                           {row.isZeroActivity && isPastYear ? '—' : `${row.freq}%`}
                         </span>
@@ -1624,26 +1624,26 @@ export function ResearchConferencesRegistryTemplate({
 
       {/* ── Tytuł Wykazu z nowym standardem wizualnym (optymalny oddech i interlinia) ── */}
       <div className="mt-6 mb-7 sm:mb-8 text-center">
-        <span className="inline-block text-[9.5px] font-bold uppercase tracking-widest text-indigo-700 bg-indigo-50 px-3.5 py-1 rounded-full border border-indigo-200/80 mb-3 sm:mb-3.5">
+        <span className="inline-block text-[9.5px] font-medium uppercase tracking-widest text-indigo-700 bg-indigo-50 px-3.5 py-1 rounded-full border border-indigo-200/80 mb-3 sm:mb-3.5">
           Oficjalna Ewidencja Działalności Akademickiej
         </span>
-        <h2 className="text-xl font-black text-slate-950 uppercase tracking-tight">
+        <h2 className="text-xl font-normal text-slate-950 uppercase tracking-wide">
           WYKAZ KONFERENCJI, BADAŃ I PUBLIKACJI NAUKOWYCH
         </h2>
         <div className="mt-2.5 sm:mt-3 space-y-1">
-          <h3 className="text-sm font-bold text-indigo-950 uppercase tracking-wide">
+          <h3 className="text-sm font-medium text-indigo-950 uppercase tracking-wide">
             {formatOrgFullName(orgName)}
           </h3>
-          <p className="text-xs font-semibold text-slate-700 tracking-tight">
+          <p className="text-xs font-normal text-slate-600">
             Wykaz konferencji, badań i publikacji naukowych
           </p>
         </div>
-        <div className="mt-3.5 space-y-1 text-xs text-slate-600 font-medium">
+        <div className="mt-3.5 space-y-1 text-xs text-slate-600 font-normal">
           <p>
             Rok Akademicki {academicYear} &bull; {orgUnit}
           </p>
           <p className="text-[11px] text-slate-500">
-            <strong>Opieka naukowa:</strong> {activeSupervisors.map(s => formatSupervisorName(s)).join(' • ')}
+            <span className="font-medium">Opieka naukowa:</span> {activeSupervisors.map(s => formatSupervisorName(s)).join(' • ')}
           </p>
         </div>
       </div>
@@ -1651,13 +1651,13 @@ export function ResearchConferencesRegistryTemplate({
       {/* Tabela projektów */}
       <div className="border border-slate-200 rounded-lg overflow-hidden text-[9.5px] flex-1 min-h-[340px] flex flex-col mb-4 print:overflow-visible">
         <table className="w-full text-left border-collapse" style={{ tableLayout: 'fixed', width: '100%' }}>
-          <thead className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200" style={{ display: 'table-header-group' }}>
+          <thead className="bg-slate-100 text-slate-700 font-medium border-b border-slate-200" style={{ display: 'table-header-group' }}>
             <tr className="hidden print:table-row bg-white border-b border-slate-300">
               <th colSpan={10} className="p-0 pb-1 text-left font-normal">
                 <div className="flex items-center justify-between text-[8px] text-slate-600 font-sans pb-1 mb-1 border-b border-slate-200">
                   <div className="flex items-center gap-2">
                     <img src="/wskz-header.png" alt="" className="h-[7mm] object-contain object-left block m-0 p-0" />
-                    <span className="font-bold text-slate-800 uppercase tracking-tight">{orgName}</span>
+                    <span className="font-medium text-slate-800 uppercase tracking-tight">{orgName}</span>
                   </div>
                   <div className="font-mono text-slate-500">
                     Ewidencja Badań i Konferencji &bull; {docNumber}
@@ -1680,7 +1680,7 @@ export function ResearchConferencesRegistryTemplate({
               <tr>
                 <td colSpan={10} className="py-12 px-6 text-center text-slate-400 italic bg-slate-50/50">
                   <div className="max-w-md mx-auto space-y-1">
-                    <p className="font-semibold text-slate-600 text-xs">Brak zarejestrowanych osiągnięć badawczych i konferencji</p>
+                    <p className="font-medium text-slate-600 text-xs">Brak zarejestrowanych osiągnięć badawczych i konferencji</p>
                     <p className="text-[10.5px] text-slate-400">Kliknij „➕ Dodaj projekt/aktywność”, aby wprowadzić pozycję dorobku naukowego koła.</p>
                   </div>
                 </td>
@@ -1690,7 +1690,7 @@ export function ResearchConferencesRegistryTemplate({
               <tr key={i} className="hover:bg-slate-50 break-inside-avoid align-top" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                 {showLp && <td className="py-2.5 px-2 text-center text-slate-400 font-mono align-top">{i + 1}</td>}
                 {showCategory && (
-                  <td className="py-2.5 px-2 font-semibold text-indigo-900 align-top">
+                  <td className="py-2.5 px-2 font-medium text-indigo-900 align-top">
                     {isEditing ? (
                       <input
                         type="text"
@@ -1704,7 +1704,7 @@ export function ResearchConferencesRegistryTemplate({
                   </td>
                 )}
                 {showTitle && (
-                  <td className="py-2.5 px-2.5 font-bold text-slate-950 align-top">
+                  <td className="py-2.5 px-2.5 font-medium text-slate-950 align-top">
                     {isEditing ? (
                       <input
                         type="text"
@@ -1746,7 +1746,7 @@ export function ResearchConferencesRegistryTemplate({
                   </td>
                 )}
                 {showPoints && (
-                  <td className="py-2.5 px-1.5 text-center font-mono font-bold text-purple-700 align-top">
+                  <td className="py-2.5 px-1.5 text-center font-mono font-medium text-purple-700 align-top">
                     {isEditing ? (
                       <input
                         type="number"
