@@ -12,6 +12,7 @@ import {
 import { ACTIVITY_WEIGHTS, getActivityWeight } from './activityWeights.js';
 import { isCertificateEligible } from './helpers.js';
 import { getOrgKey, getMeetingAttendanceStorageKeys } from './storage.js';
+import { deduplicateDorobek } from './dorobek.js';
 
 // ─── Szybki bufor odczytów localStorage (eliminuje tysiące synchronicznych JSON.parse w pętlach) ───
 const _storageJsonCache = new Map();
@@ -1038,7 +1039,8 @@ export function calculateMemberStats(memberOrIndex, ewidencja = null, meetings =
 
   if (activeDorobek) {
     if (Array.isArray(activeDorobek)) {
-      activeDorobek.forEach(item => {
+      const dedupedDorobek = deduplicateDorobek(activeDorobek, cleanOrg);
+      dedupedDorobek.forEach(item => {
         if (!item) return;
         if (item.organization_id && item.organization_id !== cleanOrg) return;
         // Weryfikacja czy data lub rok akademicki publikacji/badania przypada na activeScope

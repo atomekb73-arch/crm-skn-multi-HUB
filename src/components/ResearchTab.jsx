@@ -28,11 +28,13 @@ import {
   FileText,
   Check,
   Filter,
+  AlertTriangle,
 } from 'lucide-react';
 import { VectorRingIndicator } from './VectorIcons';
 import { useOrg } from '../context/OrgContext';
 import { useAcademicYear } from '../context/AcademicYearContext';
-import { saveResearchToGAS, saveResearchItemToGAS, fetchResearchFromDB } from '../services/googleSheets';
+import { saveResearchToGAS, fetchResearchFromDB } from '../services/googleSheets';
+import { deduplicateDorobek, generateDorobekUuid, getDorobekBusinessKey } from '../utils/dorobek';
 import { initialMembers as seedMembers } from '../data/seedMembers';
 
 const isProjectLike = (type) =>
@@ -81,14 +83,14 @@ export default function ResearchTab({ members = [] }) {
     return [];
   }, [members, getStorageKey, currentOrgCleanId]);
 
-  // State for achievements / research items (strict tenant isolation - no cross-org leak)
+  // State for achievements / research items (strict tenant isolation + SSOT deduplication)
   const [items, setItems] = useState(() => {
     try {
       const saved = localStorage.getItem(researchStorageKey);
       if (saved !== null) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.filter(i => !i.organization_id || i.organization_id === currentOrgCleanId);
+          return deduplicateDorobek(parsed, currentOrgCleanId);
         }
       }
     } catch (e) {
@@ -102,18 +104,28 @@ export default function ResearchTab({ members = [] }) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncSuccess, setSyncSuccess] = useState(false);
 
-  // Sync state & strictly fetch research items filtered by organization_id from Supabase
+  const syncLocalResearchCaches = (dedupedList) => {
+    try {
+      const json = JSON.stringify(dedupedList);
+      localStorage.setItem(researchStorageKey, json);
+      localStorage.setItem(`crm_dorobek_${currentOrgCleanId}`, json);
+      localStorage.removeItem('crm_dorobek');
+    } catch (e) {
+      console.warn('Błąd zapisu lokalnej pamięci podręcznej dorobku:', e);
+    }
+  };
+
+  // Sync state & strictly fetch research items filtered by organization_id from Supabase (SSOT: Supabase -> localStorage, nigdy odwrotnie)
   useEffect(() => {
     let isCancelled = false;
 
-    // 1. Natychmiastowy odczyt z izolowanego klucza w localStorage
+    // 1. Natychmiastowy odczyt z izolowanego klucza w localStorage (tylko tymczasowy podgląd przed odpowiedzią chmury)
     try {
       const saved = localStorage.getItem(researchStorageKey);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          const filtered = parsed.filter(i => !i.organization_id || i.organization_id === currentOrgCleanId);
-          setItems(filtered);
+          setItems(deduplicateDorobek(parsed, currentOrgCleanId));
         } else {
           setItems([]);
         }
@@ -124,16 +136,15 @@ export default function ResearchTab({ members = [] }) {
       setItems([]);
     }
 
-    // 2. Twarde pobranie z Supabase z warunkiem .eq('organization_id', currentOrgCleanId)
+    // 2. Twarde pobranie z Supabase (Jedyne Źródło Prawdy) + nadpisanie lokalnego cache bez wysyłania stanu lokalnego w górę
     async function loadRemoteResearch() {
       setIsLoadingResearch(true);
       try {
         const remoteItems = await fetchResearchFromDB(currentOrgCleanId);
         if (isCancelled) return;
-        setItems(remoteItems);
-        try {
-          localStorage.setItem(researchStorageKey, JSON.stringify(remoteItems));
-        } catch {}
+        const cleanRemote = deduplicateDorobek(remoteItems, currentOrgCleanId);
+        setItems(cleanRemote);
+        syncLocalResearchCaches(cleanRemote);
       } catch (err) {
         console.warn('[ResearchTab] Błąd pobierania dorobku z bazy Supabase:', err);
       } finally {
@@ -148,22 +159,28 @@ export default function ResearchTab({ members = [] }) {
     };
   }, [currentOrgCleanId, researchStorageKey]);
 
-  // Save items to localStorage and sync to Supabase with strict organization_id tagging
-  const saveItems = (newItems) => {
-    const stampedItems = (newItems || []).map(item => ({
-      ...item,
-      organization_id: currentOrgCleanId,
-      orgId: currentOrgCleanId,
-    }));
+  // Save items to localStorage (deduplicated) and optionally sync ONCE to Supabase
+  const saveItems = (newItems, { skipRemote = false } = {}) => {
+    const stampedItems = deduplicateDorobek(
+      (newItems || []).map(item => ({
+        ...item,
+        organization_id: currentOrgCleanId,
+        orgId: currentOrgCleanId,
+      })),
+      currentOrgCleanId
+    );
 
     setItems(stampedItems);
-    try {
-      localStorage.setItem(researchStorageKey, JSON.stringify(stampedItems));
-      localStorage.setItem(`crm_pending_research_sync_${currentOrgCleanId}`, 'true');
-    } catch (e) {
-      console.error('Błąd zapisu dorobku:', e);
+    syncLocalResearchCaches(stampedItems);
+
+    if (skipRemote) {
+      return stampedItems;
     }
-    console.log('[Supabase] Zapisuję dorobek w bazie Supabase dla organizacji:', currentOrgCleanId);
+
+    try {
+      localStorage.setItem(`crm_pending_research_sync_${currentOrgCleanId}`, 'true');
+    } catch {}
+    console.log('[Supabase] Zapisuję zdeduplikowany dorobek w bazie Supabase dla organizacji:', currentOrgCleanId);
     saveResearchToGAS(stampedItems, currentOrgCleanId)
       .then(() => {
         try { localStorage.removeItem(`crm_pending_research_sync_${currentOrgCleanId}`); } catch {}
@@ -171,6 +188,7 @@ export default function ResearchTab({ members = [] }) {
       .catch((err) => {
         console.warn('Cicha synchronizacja dorobku z Supabase nie powiodła się:', err);
       });
+    return stampedItems;
   };
 
   const handleSyncToSheets = async () => {
@@ -469,7 +487,7 @@ export default function ResearchTab({ members = [] }) {
       updatedList = items.map((i) => (i.id === editingItem.id ? itemToSave : i));
     } else {
       itemToSave = {
-        id: `res_${Date.now()}`,
+        id: generateDorobekUuid(),
         organization_id: currentOrgCleanId,
         orgId: currentOrgCleanId,
         createdAt: new Date().toLocaleString('pl-PL'),
@@ -481,13 +499,14 @@ export default function ResearchTab({ members = [] }) {
       updatedList = [itemToSave, ...items];
     }
 
-    // 1. Zapis lokalny (state + localStorage) pod kluczem aktywnego koła
-    saveItems(updatedList);
+    // 1. Zapis lokalny ze sztywną deduplikacją (bez podwójnej wysyłki w tle!)
+    const dedupedList = saveItems(updatedList, { skipRemote: true });
 
-    // 2. Bezpośrednia wysyłka do Supabase dla aktywnej organizacji
+    // 2. Pojedyncza, zserializowana wysyłka upsert do Supabase SSOT dla aktywnej organizacji
     try {
-      console.log('[ResearchTab] Wysyłam żądanie zapisu dorobku do bazy Supabase...', currentOrgCleanId, itemToSave);
-      await saveResearchItemToGAS(itemToSave, updatedList, currentOrgCleanId);
+      console.log('[ResearchTab] Wysyłam pojedynczy upsert dorobku do bazy Supabase...', currentOrgCleanId, itemToSave);
+      await saveResearchToGAS(dedupedList, currentOrgCleanId);
+      try { localStorage.removeItem(`crm_pending_research_sync_${currentOrgCleanId}`); } catch {}
       setIsModalOpen(false);
       showToast('Osiągnięcie zostało pomyślnie zapisane w bazie koła naukowego!');
     } catch (err) {
@@ -499,9 +518,14 @@ export default function ResearchTab({ members = [] }) {
     }
   };
 
-  // Handle Soft Delete -> Move to Trash
+  // Handle Soft Delete -> Move to Trash (usuwa także ewentualne stare kopie tego samego klucza biznesowego)
   const handleSoftDelete = (item) => {
-    const updated = items.filter((i) => i.id !== item.id);
+    const targetBizKey = getDorobekBusinessKey(item, currentOrgCleanId);
+    const updated = items.filter((i) => {
+      if (i.id === item.id) return false;
+      if (targetBizKey && getDorobekBusinessKey(i, currentOrgCleanId) === targetBizKey) return false;
+      return true;
+    });
     const trashEntry = { ...item, deletedAt: new Date().toISOString() };
     const updatedTrash = [trashEntry, ...trashItems.filter(t => t.id !== item.id)];
     saveItems(updated);
@@ -517,7 +541,7 @@ export default function ResearchTab({ members = [] }) {
     const cleanItem = { ...found };
     delete cleanItem.deletedAt;
     const updatedTrash = trashItems.filter(t => t.id !== trashId);
-    const updatedItems = [cleanItem, ...items.filter(i => i.id !== trashId)];
+    const updatedItems = deduplicateDorobek([cleanItem, ...items.filter(i => i.id !== trashId)], currentOrgCleanId);
     saveTrashItems(updatedTrash);
     saveItems(updatedItems);
     showToast(`Przywrócono pozycję: "${cleanItem.title}"`);

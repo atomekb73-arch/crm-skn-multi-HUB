@@ -52,6 +52,7 @@ import { normalizeDiacritics, isFacultySupervisor } from './utils/specialRoles';
 import { uniqueTenures, deduplicateBoard, deduplicateBoardTenures, DEFAULT_BOARD_TENURES_SEKSUOLOGIA, getDefaultBoardTenuresForOrg, GLOBAL_SUPERADMIN_EMAIL } from './services/settingsService';
 import { buildAttendanceIndex, precompileMeetings } from './utils/attendanceIndexer';
 import { calculateMemberAttendance } from './utils/attendanceCalculator';
+import { deduplicateDorobek, deterministicUuidFromSeed } from './utils/dorobek';
 import { isEwidencjaInAcademicScope, isEwidencjaMatchForMeeting } from './utils/academicScope';
 import {
   getOrgKey,
@@ -1111,8 +1112,10 @@ export default function App() {
               if (parsedDor && (parsedDor.title || parsedDor.opis || parsedDor.description)) {
                 supabaseDorobek.push({
                   ...parsedDor,
+                  id: parsedDor.id || deterministicUuidFromSeed(`${orgId}::${row.id}`),
                   supabaseId: row.id,
                   organization_id: orgId,
+                  orgId: orgId,
                   date: parsedDor.date || row.meeting_date,
                   nrIndeksu: parsedDor.nrIndeksu || row.index_number,
                   points: Number(parsedDor.points ?? row.points ?? 0),
@@ -1273,10 +1276,11 @@ export default function App() {
           localStorage.removeItem('crm_members');
           localStorage.removeItem('crm_czlonkowie');
 
+          const cleanDorobek = deduplicateDorobek(supabaseDorobek, orgId);
           const dorobekKey = `crm_dorobek_${orgId}`;
           const resKey = getOrgKey(orgId, 'research');
-          localStorage.setItem(dorobekKey, JSON.stringify(supabaseDorobek));
-          localStorage.setItem(resKey, JSON.stringify(supabaseDorobek));
+          localStorage.setItem(dorobekKey, JSON.stringify(cleanDorobek));
+          localStorage.setItem(resKey, JSON.stringify(cleanDorobek));
 
           let dedupedTenures = deduplicateBoard(supabaseBoardTenures, orgId);
           if (dedupedTenures.length === 0) {

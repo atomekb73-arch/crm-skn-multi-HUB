@@ -4,6 +4,12 @@ import { isFacultySupervisor } from '../utils/specialRoles.js';
 import { readSWRData, writeSWRData, CACHE_KEYS } from '../hooks/useCachedData.js';
 import { getAcademicYearFromDate } from '../utils/helpers.js';
 import { supabase, getSupabaseForOrg, fetchAllTenantRows } from '../supabaseClient.js';
+import {
+  deduplicateDorobek,
+  deterministicUuidFromSeed,
+  getDorobekBusinessKey,
+  getDorobekRowUuid,
+} from '../utils/dorobek.js';
 
 function normalizeOrg(orgId) {
   const fallbackOrg = typeof window !== 'undefined' && window.localStorage
@@ -110,7 +116,7 @@ export async function fetchGasData(orgId = 'skn_seksuologii') {
     }));
 
     const ewidencja = [];
-    const dorobek = [];
+    const rawDorobek = [];
     const korespondencja = [];
     const seenEwidencjaKeys = new Set();
 
@@ -119,15 +125,22 @@ export async function fetchGasData(orgId = 'skn_seksuologii') {
       if (code.startsWith('[DOROBEK]')) {
         try {
           const parsed = JSON.parse(row.activity_description || '{}');
-          dorobek.push({
-            data: parsed.date || row.meeting_date,
-            nrIndeksu: parsed.nrIndeksu || row.index_number,
-            kategoria: parsed.category || parsed.type || row.role || 'Project',
-            opis: parsed.description || parsed.title || '',
-            punkty: Number(parsed.points ?? row.points ?? 0),
-            dataWpisu: parsed.dataWpisu || row.meeting_date,
-            ...parsed
-          });
+          if (!parsed.organization_id || normalizeOrg(parsed.organization_id) === cleanOrg) {
+            rawDorobek.push({
+              ...parsed,
+              id: parsed.id || deterministicUuidFromSeed(`${cleanOrg}::${row.id}`),
+              organization_id: cleanOrg,
+              orgId: cleanOrg,
+              data: parsed.data || row.meeting_date,
+              date: parsed.date || row.meeting_date,
+              nrIndeksu: parsed.nrIndeksu || row.index_number,
+              kategoria: parsed.kategoria || parsed.category || parsed.type || row.role || 'Project',
+              opis: parsed.opis || parsed.description || parsed.title || '',
+              punkty: Number(parsed.punkty ?? parsed.points ?? row.points ?? 0),
+              points: Number(parsed.points ?? parsed.punkty ?? row.points ?? 0),
+              dataWpisu: parsed.dataWpisu || row.meeting_date,
+            });
+          }
         } catch {}
       } else if (code.startsWith('[KORESPONDENCJA]')) {
         try {
@@ -198,6 +211,8 @@ export async function fetchGasData(orgId = 'skn_seksuologii') {
       status: q.decision_status === 'Oczekuje' ? 'pending' : 'archived',
       isArchived: q.decision_status !== 'Oczekuje'
     }));
+
+    const dorobek = deduplicateDorobek(rawDorobek, cleanOrg);
 
     return {
       status: 'success',
@@ -487,13 +502,18 @@ export function formatResearchItem(item) {
   };
 }
 
+// Kolejka serializująca zapisy dorobku per organizacja (brak wyścigów delete/upsert/insert)
+const _researchSaveLockByOrg = new Map();
+
 /**
  * Pobiera listę dorobku naukowego bezwzględnie przefiltrowaną po organization_id
+ * oraz poddaną twardej deduplikacji SSOT (po `id` oraz kluczu biznesowym).
  */
 export async function fetchResearchFromDB(orgId = null) {
   const cleanOrg = normalizeOrg(orgId || (typeof window !== 'undefined' ? localStorage.getItem('crm_active_org_id') : null) || 'skn_seksuologii');
+  const client = getSupabaseForOrg(cleanOrg);
   try {
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from('attendance')
       .select('*')
       .eq('organization_id', cleanOrg)
@@ -505,17 +525,17 @@ export async function fetchResearchFromDB(orgId = null) {
       return [];
     }
 
-    const items = [];
+    const rawItems = [];
     (data || []).forEach(row => {
       try {
         const parsed = JSON.parse(row.activity_description || '{}');
         // Rygorystyczna izolacja: jeśli rekord ma zapisany organization_id, musi zgadzać się z cleanOrg
-        if (!parsed.organization_id || parsed.organization_id === cleanOrg) {
-          items.push({
-            id: parsed.id || `res_${row.id}`,
+        if (!parsed.organization_id || normalizeOrg(parsed.organization_id) === cleanOrg) {
+          rawItems.push({
+            ...parsed,
+            id: parsed.id || deterministicUuidFromSeed(`${cleanOrg}::${row.id}`),
             organization_id: cleanOrg,
             orgId: cleanOrg,
-            ...parsed,
             date: parsed.date || row.meeting_date,
             nrIndeksu: parsed.nrIndeksu || row.index_number,
             points: Number(parsed.points ?? row.points ?? 0),
@@ -526,7 +546,7 @@ export async function fetchResearchFromDB(orgId = null) {
       }
     });
 
-    return items;
+    return deduplicateDorobek(rawItems, cleanOrg);
   } catch (err) {
     console.error('[fetchResearchFromDB] Wyjątek podczas pobierania dorobku:', err);
     return [];
@@ -535,44 +555,109 @@ export async function fetchResearchFromDB(orgId = null) {
 
 /**
  * Zapisuje i synchronizuje listę dorobku naukowego bezpośrednio w bazie Supabase (`attendance` z prefiksem `[DOROBEK]`).
+ * Serializuje operacje per koło, wykonuje deduplikację SSOT oraz idempotentny `upsert` po deterministycznym UUID `id`.
  */
 export async function saveResearchToGAS(researchList, orgId = null) {
   const cleanOrg = normalizeOrg(orgId || (typeof window !== 'undefined' ? localStorage.getItem('crm_active_org_id') : null) || 'skn_seksuologii');
-  const list = Array.isArray(researchList) ? researchList : [];
-  
-  // Bezpieczne usuwanie wyłącznie rekordów powiązanych z tym kołem
-  await supabase.from('attendance').delete().eq('organization_id', cleanOrg).like('meeting_code', '[DOROBEK]%');
 
-  const rows = list.map((item, idx) => {
-    const formatted = formatResearchItem(item);
-    const dateStr = String(formatted?.data || new Date().toISOString().slice(0, 10)).split('T')[0];
-    const itemWithOrg = {
-      ...item,
-      organization_id: cleanOrg,
-      orgId: cleanOrg,
-    };
-    return {
-      organization_id: cleanOrg,
-      meeting_code: `[DOROBEK] #${idx + 1}`,
-      meeting_date: dateStr,
-      index_number: formatted?.nrIndeksu || '15998',
-      role: String(item?.type || item?.category || 'Project'),
-      points: Number(item?.points ?? item?.punkty ?? 0) || 0,
-      activity_description: JSON.stringify(itemWithOrg)
-    };
+  const prevLock = _researchSaveLockByOrg.get(cleanOrg) || Promise.resolve();
+  const currentTask = prevLock.catch(() => {}).then(async () => {
+    const client = getSupabaseForOrg(cleanOrg);
+    const dedupedList = deduplicateDorobek(Array.isArray(researchList) ? researchList : [], cleanOrg);
+
+    const rows = dedupedList.map((item, idx) => {
+      const formatted = formatResearchItem(item);
+      const dateStr = String(formatted?.data || new Date().toISOString().slice(0, 10)).split('T')[0];
+      const stableItemId = String(item?.id || '').trim() || deterministicUuidFromSeed(getDorobekBusinessKey(item, cleanOrg) || `dorobek_${idx}`);
+      const itemWithOrg = {
+        ...item,
+        id: stableItemId,
+        organization_id: cleanOrg,
+        orgId: cleanOrg,
+      };
+      const rowUuid = getDorobekRowUuid(cleanOrg, itemWithOrg);
+      return {
+        id: rowUuid,
+        organization_id: cleanOrg,
+        meeting_code: `[DOROBEK] #${idx + 1}`,
+        meeting_date: dateStr,
+        index_number: formatted?.nrIndeksu || '15998',
+        role: String(item?.type || item?.category || 'Project'),
+        points: Number(item?.points ?? item?.punkty ?? 0) || 0,
+        activity_description: JSON.stringify(itemWithOrg)
+      };
+    });
+
+    // Dodatkowa deduplikacja po UUID wiersza przed wysyłką
+    const seenRowIds = new Set();
+    const uniqueRows = [];
+    for (const r of rows) {
+      if (seenRowIds.has(r.id)) continue;
+      seenRowIds.add(r.id);
+      uniqueRows.push(r);
+    }
+
+    if (uniqueRows.length > 0) {
+      const { error: upsertErr } = await client
+        .from('attendance')
+        .upsert(uniqueRows, { onConflict: 'id' });
+      if (upsertErr) {
+        console.error('[saveResearchToGAS -> Supabase] Błąd upsertu dorobku:', upsertErr);
+        throw upsertErr;
+      }
+
+      // Usuń wyłącznie nieaktualne lub historyczne zduplikowane wiersze [DOROBEK]% nienależące do bieżącego zestawu ID
+      const { data: existingRows, error: listErr } = await client
+        .from('attendance')
+        .select('id')
+        .eq('organization_id', cleanOrg)
+        .like('meeting_code', '[DOROBEK]%');
+      if (listErr) {
+        console.warn('[saveResearchToGAS -> Supabase] Nie udało się pobrać listy ID do czyszczenia osieroconych wpisów:', listErr);
+      } else if (Array.isArray(existingRows)) {
+        const activeIds = new Set(uniqueRows.map(r => r.id));
+        const staleIds = existingRows.map(r => r.id).filter(id => id && !activeIds.has(id));
+        if (staleIds.length > 0) {
+          const { error: delErr } = await client
+            .from('attendance')
+            .delete()
+            .eq('organization_id', cleanOrg)
+            .in('id', staleIds);
+          if (delErr) {
+            console.warn('[saveResearchToGAS -> Supabase] Błąd czyszczenia przestarzałych wierszy dorobku:', delErr);
+          }
+        }
+      }
+    } else {
+      const { error: clearErr } = await client
+        .from('attendance')
+        .delete()
+        .eq('organization_id', cleanOrg)
+        .like('meeting_code', '[DOROBEK]%');
+      if (clearErr) {
+        console.error('[saveResearchToGAS -> Supabase] Błąd czyszczenia listy dorobku:', clearErr);
+        throw clearErr;
+      }
+    }
+
+    return { status: 'success', count: uniqueRows.length, items: dedupedList };
   });
 
-  if (rows.length > 0) {
-    const { error } = await supabase.from('attendance').insert(rows);
-    if (error) console.error('[saveResearchToGAS -> Supabase] Błąd zapisu dorobku:', error);
+  _researchSaveLockByOrg.set(cleanOrg, currentTask);
+  try {
+    return await currentTask;
+  } finally {
+    if (_researchSaveLockByOrg.get(cleanOrg) === currentTask) {
+      _researchSaveLockByOrg.delete(cleanOrg);
+    }
   }
-  return { status: 'success', count: rows.length };
 }
 
 export async function saveResearchItemToGAS(item, allResearchList = [], orgId = null) {
   const cleanOrg = normalizeOrg(orgId || item?.organization_id || item?.orgId || (typeof window !== 'undefined' ? localStorage.getItem('crm_active_org_id') : null) || 'skn_seksuologii');
-  const list = Array.isArray(allResearchList) && allResearchList.length > 0 ? allResearchList : (item ? [item] : []);
-  return await saveResearchToGAS(list, cleanOrg);
+  const rawList = Array.isArray(allResearchList) && allResearchList.length > 0 ? allResearchList : (item ? [item] : []);
+  const merged = item ? [item, ...rawList.filter(i => i?.id !== item.id)] : rawList;
+  return await saveResearchToGAS(merged, cleanOrg);
 }
 
 export const syncResearchToGAS = saveResearchToGAS;

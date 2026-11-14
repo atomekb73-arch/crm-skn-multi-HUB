@@ -1,5 +1,6 @@
 import { supabase, getSupabaseForOrg, fetchAllTenantRows } from '../supabaseClient.js';
 import { WSKZ_ORGANIZATIONS } from '../config/wskzRegistry.js';
+import { deduplicateDorobek, getDorobekRowUuid } from '../utils/dorobek.js';
 
 export const GLOBAL_SUPERADMIN_EMAIL = 'atomekb73@gmail.com';
 
@@ -941,11 +942,37 @@ export async function restoreOrgFullSupabaseData(orgId = 'skn_seksuologii', back
     if (!error) results.quarantine = backupPayload.quarantine_submissions.length;
   }
 
-  // 3. Attendance
+  // 3. Attendance (z deduplikacją wpisów [DOROBEK]%)
   if (Array.isArray(backupPayload.attendance) && backupPayload.attendance.length > 0) {
+    const nonDorobekRows = [];
+    const rawDorobekItems = [];
+    for (const a of backupPayload.attendance) {
+      if (String(a?.meeting_code || '').trim().startsWith('[DOROBEK]')) {
+        try {
+          const parsed = JSON.parse(a.activity_description || '{}');
+          rawDorobekItems.push({ row: a, parsed: { ...parsed, organization_id: cleanOrg, date: parsed.date || a.meeting_date } });
+        } catch {
+          nonDorobekRows.push({ ...a, organization_id: cleanOrg });
+        }
+      } else {
+        nonDorobekRows.push({ ...a, organization_id: cleanOrg });
+      }
+    }
+    const dedupedItems = deduplicateDorobek(rawDorobekItems.map(x => x.parsed), cleanOrg);
+    const dedupedDorobekRows = dedupedItems.map((item, idx) => ({
+      id: getDorobekRowUuid(cleanOrg, item),
+      organization_id: cleanOrg,
+      meeting_code: `[DOROBEK] #${idx + 1}`,
+      meeting_date: String(item.date || new Date().toISOString().slice(0, 10)).split('T')[0],
+      index_number: String(item.nrIndeksu || item.studentIndex || '15998'),
+      role: String(item.type || item.category || 'Project'),
+      points: Number(item.points ?? item.punkty ?? 0) || 0,
+      activity_description: JSON.stringify(item),
+    }));
+    const rowsToRestore = [...nonDorobekRows, ...dedupedDorobekRows];
     await supabase.from('attendance').delete().eq('organization_id', cleanOrg);
-    const { error } = await supabase.from('attendance').insert(backupPayload.attendance.map(a => ({ ...a, organization_id: cleanOrg })));
-    if (!error) results.attendance = backupPayload.attendance.length;
+    const { error } = await supabase.from('attendance').insert(rowsToRestore);
+    if (!error) results.attendance = rowsToRestore.length;
   }
 
   // 4. Settings

@@ -9,6 +9,7 @@ import {
   deduplicateSupervisors,
   normalizeOrgId,
 } from '../services/settingsService.js';
+import { deduplicateDorobek } from './dorobek.js';
 
 // ─── Multi-Tenant Workspace Storage Engine ─────────────────────────────────
 // Ensures complete data isolation between different Student Science Clubs (KN).
@@ -747,6 +748,15 @@ export async function restoreOrgSnapshot(orgId, snapshotObjOrKey) {
           let list = typeof val === 'string' ? JSON.parse(val) : val;
           if (Array.isArray(list)) {
             const cleanList = deduplicateSupervisors(list, cleanId);
+            localStorage.setItem(k, JSON.stringify(cleanList));
+            restored++;
+            return;
+          }
+        }
+        if (k && (k.includes('research') || k.includes('dorobek')) && !k.includes('trash')) {
+          let list = typeof val === 'string' ? JSON.parse(val) : val;
+          if (Array.isArray(list)) {
+            const cleanList = deduplicateDorobek(list, cleanId);
             localStorage.setItem(k, JSON.stringify(cleanList));
             restored++;
             return;
