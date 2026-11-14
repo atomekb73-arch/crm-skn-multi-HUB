@@ -440,9 +440,12 @@ export function MembershipCertificateTemplate({
   const safeFreq = typeof safeFreqData?.percentage === 'number'
     ? safeFreqData.percentage
     : (typeof safeFreqData?.freq === 'number' ? safeFreqData.freq : 0);
-  const safePresent = typeof safeFreqData?.attendedCount === 'number'
-    ? safeFreqData.attendedCount
-    : (typeof safeFreqData?.present === 'number' ? safeFreqData.present : 0);
+  const safePresent = typeof safeFreqData?.presentMandatory === 'number'
+    ? safeFreqData.presentMandatory
+    : (typeof safeFreqData?.attendedMandatoryCount === 'number'
+        ? safeFreqData.attendedMandatoryCount
+        : (totalMeetings > 0 ? Math.min(totalMeetings, safeFreqData?.present || 0) : (safeFreqData?.present || 0)));
+  const bonusCount = safeFreqData?.bonusAttended || safeFreqData?.optionalBonus || 0;
   const safePoints = typeof points === 'number' ? points : 0;
 
   const hasDataForYear = totalMeetings > 0 || safePresent > 0 || safePoints > 0;
@@ -532,7 +535,9 @@ export function MembershipCertificateTemplate({
                 <div className="p-1.5 border-r border-slate-200 min-w-0">
                   <span className="text-[9px] uppercase font-medium text-slate-500 tracking-wider block truncate">Łączna Frekwencja</span>
                   <span className="text-xl sm:text-2xl font-normal text-emerald-700 font-mono leading-none my-1 block">{safeFreq}%</span>
-                  <span className="text-[9px] text-slate-500 block truncate">{safePresent} / {totalMeetings} spotkań</span>
+                  <span className="text-[9px] text-slate-500 block truncate">
+                    {safeFreqData?.displayRatio || `${safePresent} / ${totalMeetings}`} spotkań{bonusCount > 0 ? ` (+${bonusCount})` : ''}
+                  </span>
                 </div>
               )}
               {showPointsSection && (
