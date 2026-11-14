@@ -25,6 +25,8 @@ export function purgeLegacyStorageCache() {
       'crm_org_',
       'skn_seks_',
       'skn_psycho_',
+      'crm_skn_test_',
+      'crm_attendance_',
     ];
     const unscopedGlobalKeys = [
       'skn_board_tenures',
@@ -78,6 +80,48 @@ export function getOrgKey(orgId = 'skn_seksuologii', baseKey = '') {
   const cleanBaseKey = String(baseKey || '').trim();
   
   return `crm_skn_${cleanOrgId}_${cleanBaseKey}`;
+}
+
+/**
+ * Generates all isolated localStorage keys for a specific meeting within a given organization.
+ * Ensures 100% isolation between scientific circles even when meeting codes (e.g. M01, M02) are identical.
+ */
+export function getMeetingAttendanceStorageKeys(orgId = 'skn_seksuologii', meeting = {}) {
+  if (!meeting) return [];
+  let cleanOrgId = String(orgId || meeting.organization_id || meeting.orgId || 'skn_seksuologii')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, '_');
+  if (cleanOrgId === 'skn_template' || cleanOrgId === 'default') {
+    cleanOrgId = 'skn_seksuologii';
+  }
+
+  const mId = meeting.id ? String(meeting.id).trim() : '';
+  const rawDate = meeting.date || meeting.meetingDate || (meeting.start_dt ? String(meeting.start_dt).split('T')[0] : '') || meeting.data || '';
+  const mDate = String(rawDate).trim();
+  const mCode = meeting.code || meeting.meetingCode ? String(meeting.code || meeting.meetingCode).trim() : '';
+  const cleanCode = mCode.replace(/^\[.*?\]\s*/, '').trim();
+  const noBracketsCode = mCode.replace(/[\[\]]/g, '').trim();
+
+  const keys = new Set();
+  const addOrgScoped = (suffix) => {
+    if (!suffix) return;
+    keys.add(getOrgKey(cleanOrgId, `crm_attendance_${cleanOrgId}_${suffix}`));
+    keys.add(getOrgKey(cleanOrgId, `crm_attendance_${suffix}`));
+  };
+
+  addOrgScoped(mId);
+  addOrgScoped(mDate);
+  addOrgScoped(mCode);
+  if (noBracketsCode && noBracketsCode !== mCode) {
+    addOrgScoped(noBracketsCode);
+    addOrgScoped(`[${noBracketsCode.replace(/\s+(M\d+)/i, '] $1')}`);
+  }
+  if (cleanCode && cleanCode !== mCode) {
+    addOrgScoped(cleanCode);
+  }
+
+  return Array.from(keys);
 }
 
 /**

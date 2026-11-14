@@ -11,6 +11,7 @@ import {
 } from './academicScope.js';
 import { ACTIVITY_WEIGHTS, getActivityWeight } from './activityWeights.js';
 import { isCertificateEligible } from './helpers.js';
+import { getOrgKey, getMeetingAttendanceStorageKeys } from './storage.js';
 
 // ─── Szybki bufor odczytów localStorage (eliminuje tysiące synchronicznych JSON.parse w pętlach) ───
 const _storageJsonCache = new Map();
@@ -280,40 +281,38 @@ export function hasMeetingAttendanceLogs(meeting, ewidencja = null) {
       return true;
     }
 
-    const mOrg = meeting.organization_id || meeting.orgId || (typeof window !== 'undefined' ? (localStorage.getItem('crm_active_org_id') || 'skn_seksuologii') : 'skn_seksuologii');
+    const mOrg = meeting.organization_id || meeting.orgId || (typeof window !== 'undefined' ? (localStorage.getItem('crm_skn_current_org_id') || localStorage.getItem('crm_active_org_id') || 'skn_seksuologii') : 'skn_seksuologii');
 
     // Sprawdź ewidencja w pamięci lub w localStorage z rygorystyczną izolacją organizacji i lat akademickich
     let activeEwidencja = ewidencja;
     if (!activeEwidencja && typeof window !== 'undefined' && window.localStorage) {
-      activeEwidencja = getCachedStorageJson(`${mOrg}_crm_ewidencja`) || getCachedStorageJson(`crm_ewidencja_${mOrg}`);
+      activeEwidencja =
+        getCachedStorageJson(getOrgKey(mOrg, 'crm_ewidencja')) ||
+        getCachedStorageJson(`${mOrg}_crm_ewidencja`) ||
+        getCachedStorageJson(`crm_ewidencja_${mOrg}`);
     }
 
     if (Array.isArray(activeEwidencja) && activeEwidencja.length > 0) {
-      const hasEwidencja = activeEwidencja.some(e => isEwidencjaMatchForMeeting(e, meeting));
+      const hasEwidencja = activeEwidencja.some(e => (!e.organization_id || e.organization_id === mOrg) && isEwidencjaMatchForMeeting(e, meeting));
       if (hasEwidencja) return true;
     }
 
     // Sprawdź w localStorage czy istnieją zapisane obecności dla tego spotkania z prefiksem organizacji
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
-        const cleanCode = String(meeting.code || '').replace(/^\[.*?\]\s*/, '').trim();
-        const keys = [
-          meeting.id ? `${mOrg}_crm_attendance_${meeting.id}` : null,
-          meeting.date ? `${mOrg}_crm_attendance_${meeting.date}` : null,
-          meeting.code ? `${mOrg}_crm_attendance_${meeting.code}` : null,
-          cleanCode ? `${mOrg}_crm_attendance_${cleanCode}` : null,
-        ].filter(Boolean);
+        const keys = getMeetingAttendanceStorageKeys(mOrg, meeting);
 
         for (const k of keys) {
           const parsed = getCachedStorageJson(k);
           if (parsed) {
             if (parsed.organization_id && parsed.organization_id !== mOrg) continue;
-            if (parsed.date && meeting.date && parsed.date !== meeting.date) continue;
-            if (parsed.code && meeting.code) {
-              const pHas2526 = parsed.code.includes('25/26');
-              const pHas2627 = parsed.code.includes('26/27');
-              const mHas2526 = meeting.code.includes('25/26');
-              const mHas2627 = meeting.code.includes('26/27');
+            if ((parsed.date || parsed.meetingDate) && meeting.date && (parsed.date || parsed.meetingDate) !== meeting.date) continue;
+            const parsedCode = parsed.code || parsed.meetingCode;
+            if (parsedCode && meeting.code) {
+              const pHas2526 = String(parsedCode).includes('25/26');
+              const pHas2627 = String(parsedCode).includes('26/27');
+              const mHas2526 = String(meeting.code).includes('25/26');
+              const mHas2627 = String(meeting.code).includes('26/27');
               if ((pHas2526 && mHas2627) || (pHas2627 && mHas2526)) continue;
             }
             if (typeof parsed.confirmedCount === 'number' && parsed.confirmedCount > 0) {
@@ -500,10 +499,14 @@ export function calculateMemberStats(memberOrIndex, ewidencja = null, meetings =
   // 1. Bezpieczne pobranie bazy ewidencji ściśle dla aktywnego koła (Multi-Tenant)
   let activeEwidencja = Array.isArray(ewidencja) ? ewidencja : null;
   if (!activeEwidencja) {
-    const parsed = getCachedStorageJson(`${cleanOrg}_crm_ewidencja`) || getCachedStorageJson(`crm_ewidencja_${cleanOrg}`);
+    const parsed =
+      getCachedStorageJson(getOrgKey(cleanOrg, 'crm_ewidencja')) ||
+      getCachedStorageJson(`${cleanOrg}_crm_ewidencja`) ||
+      getCachedStorageJson(`crm_ewidencja_${cleanOrg}`);
     if (Array.isArray(parsed)) activeEwidencja = parsed;
   }
   if (!activeEwidencja) activeEwidencja = [];
+  activeEwidencja = activeEwidencja.filter(e => !e?.organization_id || e.organization_id === cleanOrg);
 
   const safeMeetings = Array.isArray(meetings) ? meetings : [];
 
@@ -729,30 +732,35 @@ export function calculateMemberStats(memberOrIndex, ewidencja = null, meetings =
 
     // d) Sprawdź w zbuforowanym localStorage ściśle dla aktywnego koła (Multi-Tenant)
     if (!isPresent && typeof window !== 'undefined' && window.localStorage) {
-      const cleanCode = String(m.code || '').replace(/^\[.*?\]\s*/, '').trim();
-      const storageKeys = [
-        m.id ? `${cleanOrg}_crm_attendance_${m.id}` : null,
-        m.date ? `${cleanOrg}_crm_attendance_${m.date}` : null,
-        m.code ? `${cleanOrg}_crm_attendance_${m.code}` : null,
-        cleanCode ? `${cleanOrg}_crm_attendance_${cleanCode}` : null,
-      ].filter(Boolean);
+      const storageKeys = getMeetingAttendanceStorageKeys(cleanOrg, m);
 
       for (const key of storageKeys) {
         const parsed = getCachedStorageJson(key);
         if (parsed) {
-          const atts = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.attendees) ? parsed.attendees : []);
+          if (parsed.organization_id && parsed.organization_id !== cleanOrg) continue;
+          if ((parsed.date || parsed.meetingDate) && m.date && (parsed.date || parsed.meetingDate) !== m.date) continue;
+          const atts = Array.isArray(parsed)
+            ? parsed
+            : (Array.isArray(parsed?.attendees)
+                ? parsed.attendees
+                : (Array.isArray(parsed?.allVerifiedList) ? parsed.allVerifiedList : []));
           const matched = atts.some(p => {
-            const isApproved = p.manualApproved !== undefined
-              ? Boolean(p.manualApproved)
-              : (p.isEligible || p.status === 'approved' || p.status === 'Zaliczona' || p.status === 'Zaliczono');
-            if (!isApproved) return false;
-            const pIdx = String(p.member?.index || p.index || '').replace(/\D/g, '').replace(/^0+/, '').trim();
-            const pEmail = String(p.member?.email || p.email || '').trim().toLowerCase();
-            const pName = String(p.member?.fullName || p.rawName || '').trim().toLowerCase();
-            if (cleanIdxDigits && pIdx && cleanIdxDigits === pIdx) return true;
-            if (rawEmail && pEmail && rawEmail === pEmail) return true;
-            if (rawFullName && pName && (rawFullName === pName || pName.includes(rawFullName) || rawFullName.includes(pName))) return true;
-            return false;
+            if (!p) return false;
+            if (typeof p === 'object') {
+              const isApproved = p.manualApproved !== undefined
+                ? Boolean(p.manualApproved)
+                : (p.isEligible !== false && (p.isEligible || p.status === 'approved' || p.status === 'Zaliczona' || p.status === 'Zaliczono' || p.punkty > 0));
+              if (!isApproved) return false;
+              const pIdx = String(p.nrIndeksu || p.index || p.member?.index || p.member?.nrIndeksu || '').replace(/\D/g, '').replace(/^0+/, '').trim();
+              const pEmail = String(p.email || p.member?.email || '').trim().toLowerCase();
+              const pName = String(p.name || p.fullName || p.rawName || p.member?.fullName || '').trim().toLowerCase();
+              if (cleanIdxDigits && pIdx && cleanIdxDigits === pIdx) return true;
+              if (rawEmail && pEmail && rawEmail === pEmail) return true;
+              if (rawFullName && pName && (rawFullName === pName || pName.includes(rawFullName) || rawFullName.includes(pName))) return true;
+              return false;
+            }
+            const strP = String(p).replace(/\D/g, '').replace(/^0+/, '').trim();
+            return Boolean(cleanIdxDigits && strP && strP === cleanIdxDigits);
           });
           if (matched) {
             isPresent = true;
@@ -824,61 +832,107 @@ export function calculateMemberStats(memberOrIndex, ewidencja = null, meetings =
     ? { canIssue: true, label: 'Można wydać', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
     : { canIssue: false, label: 'W toku', color: 'bg-slate-100 text-slate-700 border-slate-300' };
 
-  // ─── KALKULACJA PUNKTÓW AKTYWNOŚCI (v9.4 Points & Merit) ───────────────────
+  // ─── KALKULACJA PUNKTÓW AKTYWNOŚCI (v9.4 Points & Merit - SSOT z tabelą główną) ───
   let meetingPoints = 0;
   let meritPoints = 0;
   let tenurePoints = 0;
 
-  // 1. Punkty ze spotkań (z tablicy ewidencja / studentAttendance)
+  const countedEwidencjaRefs = new Set();
+
+  // 1a. Nalicz punkty za każde zaliczone spotkanie z conductedMeetings (zarówno z ewidencji, jak i z localStorage)
+  conductedMeetings.forEach(m => {
+    const mCode = String(m.code || m.id || '').trim();
+    if (!attendedMeetingCodes.has(mCode)) return;
+
+    const mCodeUpper = mCode.replace(/[\[\]]/g, '').trim().toUpperCase();
+    const mNumMatch = mCodeUpper.match(/M(\d+)/i);
+    const mNum = mNumMatch ? parseInt(mNumMatch[1], 10) : null;
+
+    let ewPts = 0;
+    const matchedEw = studentAttendance.find(e => {
+      if (!e || countedEwidencjaRefs.has(e)) return false;
+      const eCode = String(e.kodSpotkania || e.meetingCode || '').replace(/[\[\]]/g, '').trim().toUpperCase();
+      const eNumMatch = eCode.match(/M(\d+)/i);
+      const eNum = eNumMatch ? parseInt(eNumMatch[1], 10) : null;
+      if (eCode === mCodeUpper) return true;
+      if (e.dataSpotkania && m.date && String(e.dataSpotkania).trim() === String(m.date).trim()) return true;
+      if (mNum !== null && eNum !== null && mNum === eNum) {
+        const eHas2526 = eCode.includes('25/26');
+        const eHas2627 = eCode.includes('26/27');
+        const mHas2526 = mCodeUpper.includes('25/26');
+        const mHas2627 = mCodeUpper.includes('26/27');
+        if ((eHas2526 && mHas2627) || (eHas2627 && mHas2526)) return false;
+        return true;
+      }
+      return false;
+    });
+
+    if (matchedEw) {
+      countedEwidencjaRefs.add(matchedEw);
+      const rawVal = matchedEw.punkty !== undefined ? matchedEw.punkty : (matchedEw.points !== undefined ? matchedEw.points : (matchedEw.pkt !== undefined ? matchedEw.pkt : null));
+      ewPts = 1;
+      if (rawVal !== null && rawVal !== undefined && String(rawVal).trim() !== '') {
+        const parsedVal = Number(rawVal);
+        if (!isNaN(parsedVal)) ewPts = parsedVal;
+      }
+    }
+
+    let localPts = 0;
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const storageKeys = getMeetingAttendanceStorageKeys(cleanOrg, m);
+      for (const k of storageKeys) {
+        const parsed = getCachedStorageJson(k);
+        if (parsed) {
+          if (parsed.organization_id && parsed.organization_id !== cleanOrg) continue;
+          const atts = Array.isArray(parsed)
+            ? parsed
+            : (Array.isArray(parsed?.attendees)
+                ? parsed.attendees
+                : (Array.isArray(parsed?.allVerifiedList) ? parsed.allVerifiedList : []));
+          const matched = atts.find(att => {
+            if (!att || typeof att !== 'object') return false;
+            const attIdx = String(att.nrIndeksu || att.index || att.member?.index || att.member?.nrIndeksu || '').replace(/\D/g, '').replace(/^0+/, '').trim();
+            if (cleanIdxDigits && attIdx && cleanIdxDigits === attIdx) return true;
+            const attEmail = String(att.email || att.member?.email || '').trim().toLowerCase();
+            if (rawEmail && attEmail && rawEmail === attEmail) return true;
+            const attName = String(att.name || att.fullName || att.rawName || att.member?.fullName || '').trim().toLowerCase();
+            if (rawFullName && attName && (rawFullName === attName || attName.includes(rawFullName) || rawFullName.includes(attName))) return true;
+            return false;
+          });
+
+          if (matched) {
+            let basePts = matched.trybUdzialu === 'STACJONARNY' || matched.isOnline === false ? 2 : 1;
+            let extraPts = 0;
+            if (Array.isArray(matched.activities)) {
+              matched.activities.forEach(actId => {
+                const upper = String(actId || '').trim().toUpperCase();
+                if (upper !== 'OB_ONLINE' && upper !== 'OB_STACJO') {
+                  extraPts += getActivityWeight(actId, {}, 0);
+                }
+              });
+            }
+            const explicitPts = Number(matched.punkty || matched.points || 0);
+            localPts = Math.max(basePts + extraPts, explicitPts);
+            break;
+          }
+        }
+      }
+    }
+
+    meetingPoints += Math.max(1, ewPts, localPts);
+  });
+
+  // 1b. Dodaj punkty z pozostałych wpisów w studentAttendance (jeśli nie miały odpowiednika w conductedMeetings)
   studentAttendance.forEach(e => {
-    if (!e) return;
+    if (!e || countedEwidencjaRefs.has(e)) return;
     const rawVal = e.punkty !== undefined ? e.punkty : (e.points !== undefined ? e.points : (e.pkt !== undefined ? e.pkt : null));
-    let p = 1; // domyślnie 1 pkt za zweryfikowaną obecność
+    let p = 1;
     if (rawVal !== null && rawVal !== undefined && String(rawVal).trim() !== '') {
       const parsed = Number(rawVal);
       if (!isNaN(parsed)) p = parsed;
     }
     meetingPoints += p;
   });
-
-  // Punkty z przypisanych aktywności spotkań (zbuforowany localStorage per organizacja) w aktywnym roku akademickim
-  if (typeof window !== 'undefined' && window.localStorage) {
-    scopedMeetings.forEach(m => {
-      if (!m || m.isUpcoming) return;
-      const cleanCode = String(m.code || '').replace(/^\[.*?\]\s*/, '').trim();
-      const storageKeys = [
-        m.id ? `${cleanOrg}_crm_attendance_${m.id}` : null,
-        m.date ? `${cleanOrg}_crm_attendance_${m.date}` : null,
-        m.code ? `${cleanOrg}_crm_attendance_${m.code}` : null,
-        cleanCode ? `${cleanOrg}_crm_attendance_${cleanCode}` : null,
-      ].filter(Boolean);
-
-      for (const k of storageKeys) {
-        const parsed = getCachedStorageJson(k);
-        if (parsed) {
-          const atts = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.attendees) ? parsed.attendees : []);
-          const matched = atts.find(att => {
-            const attIdx = String(att.member?.index || att.index || '').replace(/\D/g, '').replace(/^0+/, '').trim();
-            if (cleanIdxDigits && attIdx && cleanIdxDigits === attIdx) return true;
-            const attEmail = String(att.member?.email || att.email || '').trim().toLowerCase();
-            if (rawEmail && attEmail && rawEmail === attEmail) return true;
-            return false;
-          });
-
-          if (matched && Array.isArray(matched.activities)) {
-            matched.activities.forEach(actId => {
-              const upper = String(actId || '').trim().toUpperCase();
-              // Bazowa obecność OB_ONLINE / OB_STACJO jest już zaliczona w frekwencji ze studentAttendance
-              if (upper !== 'OB_ONLINE' && upper !== 'OB_STACJO') {
-                const actWeight = getActivityWeight(actId, {}, 0);
-                meetingPoints += actWeight;
-              }
-            });
-          }
-        }
-      }
-    });
-  }
 
   // 2. Punkty stałe z dorobku naukowego (izolowane ściśle do aktywnego koła i roku akademickiego)
   let activeDorobek = explicitDorobek || settings?.dorobek || null;

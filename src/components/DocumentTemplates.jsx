@@ -33,7 +33,7 @@ import {
 } from '../utils/academicScope';
 import { calculateMemberStats, hasMeetingAttendanceLogs } from '../utils/meetingTypes';
 import { DEFAULT_FACULTY_SUPERVISORS } from '../utils/specialRoles';
-import { getOrgKey } from '../utils/storage';
+import { getOrgKey, getMeetingAttendanceStorageKeys } from '../utils/storage';
 
 export function getAcademicYearShortSlug(academicYear = getCurrentAcademicYear()) {
   const str = String(academicYear || '');
@@ -868,28 +868,14 @@ export function getMeetingAttendeesCount(m, orgId = null) {
 
   if (typeof window !== 'undefined' && window.localStorage) {
     try {
-      const cleanCode = String(m.code || '').replace(/^\[.*?\]\s*/, '').trim();
-      const orgPrefix = orgId ? `${orgId}_` : '';
-      const keys = [
-        `crm_${orgPrefix}attendance_${m.id}`,
-        `crm_${orgPrefix}attendance_${m.date}`,
-        m.code ? `crm_${orgPrefix}attendance_${m.code}` : null,
-        cleanCode ? `crm_${orgPrefix}attendance_${cleanCode}` : null,
-        `crm_attendance_${m.id}`,
-        `crm_attendance_${m.date}`,
-        m.code ? `crm_attendance_${m.code}` : null,
-        cleanCode ? `crm_attendance_${cleanCode}` : null,
-        `attendance_${m.id}`,
-        `attendance_${m.date}`,
-        m.code ? `attendance_${m.code}` : null,
-        cleanCode ? `attendance_${cleanCode}` : null,
-      ].filter(Boolean);
+      const keys = getMeetingAttendanceStorageKeys(orgId || 'skn_seksuologii', m);
 
       for (const key of keys) {
         const raw = localStorage.getItem(key);
         if (raw) {
           const parsed = JSON.parse(raw);
           if (parsed && typeof parsed === 'object') {
+            if (parsed.organization_id && orgId && parsed.organization_id !== orgId) continue;
             const pDate = parsed.date || parsed.meetingDate;
             if (pDate && m.date && pDate !== m.date) continue;
             let count = 0;

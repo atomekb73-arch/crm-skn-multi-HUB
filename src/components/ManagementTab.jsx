@@ -46,7 +46,7 @@ import { calculateMemberAttendance } from '../utils/attendanceCalculator';
 import { buildAttendanceIndex, precompileMeetings } from '../utils/attendanceIndexer';
 import { isEwidencjaInAcademicScope, getTenureMonthsInScope } from '../utils/academicScope';
 import { getOfficialMemberRecord, getMemberStats, activityRegistry } from '../utils/activityRegistry';
-import { getBlacklistedMembers, addMemberToBlacklist, isMemberBlacklisted } from '../utils/storage';
+import { getBlacklistedMembers, addMemberToBlacklist, isMemberBlacklisted, getMeetingAttendanceStorageKeys } from '../utils/storage';
 import { isMemberActive, isMemberGuest, isMemberInactive, isMemberArchived, isMemberPending, isMemberDeleted, hasMailingConsent, isMemberFinalSemester, isMemberGraduate } from '../utils/memberFilters';
 import EditMemberModal from './EditMemberModal';
 import CertificateModal from './CertificateModal';
@@ -263,19 +263,22 @@ export default function ManagementTab({
     return map;
   }, [weights, currentScope, currentOrg?.id, getStorageKey]);
 
-  // 1. Jednorazowy odczyt ewidencji ze Storage dla aktywnego widoku i organizacji
+  // 1. Jednorazowy odczyt ewidencji ze Storage dla aktywnego widoku, organizacji i roku akademickiego
   const attendanceIndex = useMemo(() => {
     try {
       const orgId = currentOrg?.id || 'skn_seksuologii';
       const ewKey = getStorageKey ? getStorageKey('crm_ewidencja') : `crm_ewidencja_${orgId}`;
       const raw = localStorage.getItem(ewKey) || localStorage.getItem(`crm_ewidencja_${orgId}`);
       const parsed = raw ? JSON.parse(raw) : [];
-      return buildAttendanceIndex(parsed);
+      const scopedParsed = (Array.isArray(parsed) ? parsed : []).filter(
+        e => (!e?.organization_id || e.organization_id === orgId) && isEwidencjaInAcademicScope(e, currentScope, Array.isArray(meetings) ? meetings : [])
+      );
+      return buildAttendanceIndex(scopedParsed);
     } catch (e) {
       console.error('Błąd indeksowania ewidencji:', e);
       return { indexByStudentIndex: new Map(), indexByEmail: new Map() };
     }
-  }, [academicYear, currentOrg?.id, meetings, getStorageKey]); // Odświeżaj przy zmianie koła, roku lub spotkań
+  }, [academicYear, currentScope, currentOrg?.id, meetings, getStorageKey]); // Odświeżaj przy zmianie koła, roku lub spotkań
 
   // 2. Mianownik spotkań (baza obowiązkowa) oraz pula bonusowa liczone RAZ dla całego zakresu
   const { mandatoryScopeMeetings, bonusScopeMeetings } = useMemo(() => {
@@ -382,21 +385,17 @@ export default function ManagementTab({
         rawAttendees = m.attendees;
       }
 
-      // Jeśli w obiekcie spotkania nie ma struktur obiektowych, sięgnij do localStorage
+      // Jeśli w obiekcie spotkania nie ma struktur obiektowych, sięgnij do localStorage (izolacja per koło)
       if (!rawAttendees || rawAttendees.length === 0) {
-        const cleanCode = String(m.code || '').replace(/^\[.*?\]\s*/, '').trim();
-        const candidateKeys = [
-          getStorageKey ? getStorageKey(`crm_attendance_${m.id}`) : null,
-          getStorageKey && m.date ? getStorageKey(`crm_attendance_${m.date}`) : null,
-          getStorageKey && m.code ? getStorageKey(`crm_attendance_${m.code}`) : null,
-          getStorageKey && cleanCode ? getStorageKey(`crm_attendance_${cleanCode}`) : null,
-        ].filter(Boolean);
+        const activeOrgId = currentOrg?.id || 'skn_seksuologii';
+        const candidateKeys = getMeetingAttendanceStorageKeys(activeOrgId, m);
 
         for (const k of candidateKeys) {
           try {
             const cachedPayload = localStorage.getItem(k);
             if (cachedPayload) {
               const parsed = JSON.parse(cachedPayload);
+              if (parsed?.organization_id && parsed.organization_id !== activeOrgId) continue;
               if (Array.isArray(parsed?.attendees) && parsed.attendees.length > 0 && typeof parsed.attendees[0] === 'object') {
                 rawAttendees = parsed.attendees;
                 break;
@@ -408,6 +407,9 @@ export default function ManagementTab({
                 break;
               } else if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object') {
                 rawAttendees = parsed;
+                break;
+              } else if (Array.isArray(parsed?.confirmedIndexes) && parsed.confirmedIndexes.length > 0) {
+                rawAttendees = parsed.confirmedIndexes;
                 break;
               }
             }

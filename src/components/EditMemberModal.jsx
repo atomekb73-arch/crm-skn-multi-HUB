@@ -42,6 +42,7 @@ import { useOrg } from '../context/OrgContext';
 import { useAcademicYear } from '../context/AcademicYearContext';
 import { calculateMemberSemesterProgress, STUDY_CYCLES } from '../utils/academicYear';
 import { getTenureMonthsInScope } from '../utils/academicScope';
+import { getOrgKey, getMeetingAttendanceStorageKeys } from '../utils/storage';
 import { supabase, isValidUUID } from '../supabaseClient';
 
 export default function EditMemberModal({
@@ -370,11 +371,27 @@ export default function EditMemberModal({
       const typeConfig = MEETING_TYPES[typeId] || MEETING_TYPES.mandatory;
       const isEligibleMandatory = isMeetingEligibleForDenominator(m, customMeetingTypes, ewidencjaList);
       const mCodeUpper = String(m.code || m.id || '').replace(/[\[\]]/g, '').trim().toUpperCase();
+      const mNumMatch = mCodeUpper.match(/M(\d+)/i);
+      const mNum = mNumMatch ? parseInt(mNumMatch[1], 10) : null;
+      const activeOrgId = currentOrg?.id || member?.organization_id || 'skn_seksuologii';
 
-      // Check attendance in ewidencja
+      // Check attendance in ewidencja (isolated per org & academic year)
       let matchingEwidencja = studentAttendanceRecords.find(e => {
+        if (e.organization_id && e.organization_id !== activeOrgId) return false;
         const eCode = String(e.kodSpotkania || e.meetingCode || '').replace(/[\[\]]/g, '').trim().toUpperCase();
-        return eCode === mCodeUpper;
+        const eNumMatch = eCode.match(/M(\d+)/i);
+        const eNum = eNumMatch ? parseInt(eNumMatch[1], 10) : null;
+        if (eCode === mCodeUpper) return true;
+        if (e.dataSpotkania && m.date && String(e.dataSpotkania).trim() === String(m.date).trim()) return true;
+        if (mNum !== null && eNum !== null && mNum === eNum) {
+          const eHas2526 = eCode.includes('25/26');
+          const eHas2627 = eCode.includes('26/27');
+          const mHas2526 = mCodeUpper.includes('25/26');
+          const mHas2627 = mCodeUpper.includes('26/27');
+          if ((eHas2526 && mHas2627) || (eHas2627 && mHas2526)) return false;
+          return true;
+        }
+        return false;
       });
 
       // Check attendees array if not in ewidencja
@@ -386,7 +403,7 @@ export default function EditMemberModal({
         isAttended = m.attendees.some(att => {
           if (!att) return false;
           if (typeof att === 'object') {
-            const attIdx = String(att.index || att.member?.index || '').replace(/\D/g, '').replace(/^0+/, '').trim();
+            const attIdx = String(att.nrIndeksu || att.index || att.member?.index || att.member?.nrIndeksu || '').replace(/\D/g, '').replace(/^0+/, '').trim();
             const attEmail = String(att.email || att.member?.email || '').trim().toLowerCase();
             const attName = String(att.fullName || att.rawName || att.name || '').trim().toLowerCase();
             if (cleanMemberIdx && attIdx && cleanMemberIdx === attIdx) return true;
@@ -404,42 +421,55 @@ export default function EditMemberModal({
       if (!isAttended && Array.isArray(m.participantRecords) && m.participantRecords.length > 0) {
         const pRecord = m.participantRecords.find(p => {
           if (!p) return false;
-          const pIdx = String(p.member?.index || p.index || '').replace(/\D/g, '').replace(/^0+/, '').trim();
+          const pIdx = String(p.nrIndeksu || p.member?.index || p.index || '').replace(/\D/g, '').replace(/^0+/, '').trim();
           const pEmail = String(p.member?.email || p.email || '').trim().toLowerCase();
-          const pName = String(p.member?.fullName || p.rawName || '').trim().toLowerCase();
+          const pName = String(p.member?.fullName || p.rawName || p.name || '').trim().toLowerCase();
           return (cleanMemberIdx && pIdx === cleanMemberIdx) || (cleanMemberEmail && pEmail === cleanMemberEmail) || (cleanMemberName && pName && (cleanMemberName === pName || pName.includes(cleanMemberName) || cleanMemberName.includes(pName)));
         });
         if (pRecord) {
-          isAttended = pRecord.manualApproved !== undefined ? Boolean(pRecord.manualApproved) : (pRecord.isEligible || pRecord.status === 'approved' || pRecord.status === 'Zaliczona');
+          isAttended = pRecord.manualApproved !== undefined ? Boolean(pRecord.manualApproved) : (pRecord.isEligible !== false && (pRecord.isEligible || pRecord.status === 'approved' || pRecord.status === 'Zaliczona' || pRecord.status === 'Zaliczono' || pRecord.punkty > 0));
           if (pRecord.durationStr) durationStr = pRecord.durationStr;
           if (pRecord.joinTime) joinTime = pRecord.joinTime;
         }
       }
 
-      // Check localStorage
+      // Check organization-isolated localStorage
       if (!isAttended && typeof window !== 'undefined') {
-        const storageKeys = [
-          `crm_attendance_${m.id}`,
-          `crm_attendance_${m.date}`,
-          m.code ? `crm_attendance_${m.code}` : null,
-        ].filter(Boolean);
+        const storageKeys = getMeetingAttendanceStorageKeys(activeOrgId, m);
 
         for (const key of storageKeys) {
           try {
             const raw = localStorage.getItem(key);
             if (raw) {
               const parsed = JSON.parse(raw);
-              const atts = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.attendees) ? parsed.attendees : []);
+              if (parsed?.organization_id && parsed.organization_id !== activeOrgId) continue;
+              const atts = Array.isArray(parsed)
+                ? parsed
+                : (Array.isArray(parsed?.attendees)
+                    ? parsed.attendees
+                    : (Array.isArray(parsed?.allVerifiedList) ? parsed.allVerifiedList : []));
               const matched = atts.find(p => {
-                const pIdx = String(p.member?.index || p.index || '').replace(/\D/g, '').replace(/^0+/, '').trim();
+                if (!p) return false;
+                if (typeof p !== 'object') {
+                  const cleanP = String(p).replace(/\D/g, '').replace(/^0+/, '').trim();
+                  return Boolean(cleanMemberIdx && cleanP === cleanMemberIdx);
+                }
+                const pIdx = String(p.nrIndeksu || p.member?.index || p.index || p.member?.nrIndeksu || '').replace(/\D/g, '').replace(/^0+/, '').trim();
                 const pEmail = String(p.member?.email || p.email || '').trim().toLowerCase();
-                const pName = String(p.member?.fullName || p.rawName || '').trim().toLowerCase();
+                const pName = String(p.member?.fullName || p.rawName || p.name || '').trim().toLowerCase();
                 return (cleanMemberIdx && pIdx === cleanMemberIdx) || (cleanMemberEmail && pEmail === cleanMemberEmail) || (cleanMemberName && pName && (cleanMemberName === pName || pName.includes(cleanMemberName) || cleanMemberName.includes(pName)));
               });
               if (matched) {
-                isAttended = matched.manualApproved !== undefined ? Boolean(matched.manualApproved) : (matched.isEligible || matched.status === 'approved' || matched.status === 'Zaliczona');
-                if (matched.durationStr) durationStr = matched.durationStr;
-                if (matched.joinTime) joinTime = matched.joinTime;
+                isAttended = typeof matched === 'object'
+                  ? (matched.manualApproved !== undefined ? Boolean(matched.manualApproved) : (matched.isEligible !== false && (matched.isEligible || matched.status === 'approved' || matched.status === 'Zaliczona' || matched.status === 'Zaliczono' || matched.punkty > 0)))
+                  : true;
+                if (matched?.durationStr) durationStr = matched.durationStr;
+                if (matched?.joinTime) joinTime = matched.joinTime;
+                if (isAttended) break;
+              }
+              const confIdxs = Array.isArray(parsed?.confirmedIndexes) ? parsed.confirmedIndexes : [];
+              if (!isAttended && cleanMemberIdx && confIdxs.some(ci => String(ci).replace(/\D/g, '').replace(/^0+/, '').trim() === cleanMemberIdx)) {
+                isAttended = true;
                 break;
               }
             }

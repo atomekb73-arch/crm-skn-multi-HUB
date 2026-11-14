@@ -47,6 +47,7 @@ import { isFacultySupervisor, isMonikaLyniewska, FACULTY_SUPERVISORS, PARTICIPAN
 import { matchMemberExact, matchSupervisorExact, resolveParticipantFromSavedIndex, parseAttendanceInput, parseAliasesList } from '../utils/meetingParser';
 import { useAuth } from '../context/AuthContext';
 import { useOrg } from '../context/OrgContext';
+import { getMeetingAttendanceStorageKeys } from '../utils/storage';
 import { ACADEMIC_YEARS, getAcademicYearKey, getAcademicYearOptions } from '../utils/academicYear';
 import { getAcademicYearFromDate } from '../utils/helpers';
 import AttendanceModal from './AttendanceModal';
@@ -1056,21 +1057,8 @@ export default function MeetingsTab({
 
   function getSavedMeetingAttendance(m) {
     if (!m) return null;
-    const cleanCode = String(m.code || '').replace(/^\[.*?\]\s*/, '').trim();
-    const keys = [
-      getStorageKey(`crm_attendance_${m.id}`),
-      getStorageKey(`crm_attendance_${m.date}`),
-      m.code ? getStorageKey(`crm_attendance_${m.code}`) : null,
-      cleanCode ? getStorageKey(`crm_attendance_${cleanCode}`) : null,
-      `crm_attendance_${m.id}`,
-      `crm_attendance_${m.date}`,
-      m.code ? `crm_attendance_${m.code}` : null,
-      cleanCode ? `crm_attendance_${cleanCode}` : null,
-      `attendance_${m.id}`,
-      `attendance_${m.date}`,
-      m.code ? `attendance_${m.code}` : null,
-      cleanCode ? `attendance_${cleanCode}` : null,
-    ].filter(Boolean);
+    const activeOrgId = currentOrg?.id || 'skn_seksuologii';
+    const keys = getMeetingAttendanceStorageKeys(activeOrgId, m);
 
     for (const key of keys) {
       try {
@@ -1078,6 +1066,7 @@ export default function MeetingsTab({
         if (raw) {
           const parsed = JSON.parse(raw);
           if (parsed && typeof parsed === 'object') {
+            if (parsed.organization_id && parsed.organization_id !== activeOrgId) continue;
             const pDate = parsed.date || parsed.meetingDate;
             if (pDate && m.date && pDate !== m.date) continue;
             const pCode = parsed.code || parsed.meetingCode;
@@ -1364,7 +1353,11 @@ export default function MeetingsTab({
       setCustomMeetings(prev => prev.map(m => (m.id === selectedMeeting?.id || m.code === selectedMeeting?.code) ? { ...m, isNewlyCreated: false } : m));
       setSelectedMeeting(prev => prev ? ({ ...prev, isNewlyCreated: false }) : null);
 
+      const activeOrgId = currentOrg?.id || 'skn_seksuologii';
       const attendancePayload = {
+        organization_id: activeOrgId,
+        orgName: currentOrg?.name || '',
+        orgTag: currentOrg?.tag || '',
         meetingId: selectedMeeting.id,
         meetingDate: selectedMeeting.date,
         date: selectedMeeting.date,
@@ -1380,22 +1373,9 @@ export default function MeetingsTab({
         savedAt: new Date().toISOString(),
       };
 
-      // Mirror save to localStorage so that meetingsAttendanceCounts and getSavedMeetingAttendance immediately find it
+      // Mirror save to localStorage strictly isolated by organization_id
       if (typeof window !== 'undefined' && window.localStorage) {
-        const cleanMeetingCode = String(selectedMeeting.code || '').replace(/^\[.*?\]\s*/, '').trim();
-        const keys = [
-          getStorageKey(`crm_attendance_${selectedMeeting.id || selectedMeeting.date}`),
-          selectedMeeting.id ? getStorageKey(`crm_attendance_${selectedMeeting.id}`) : null,
-          selectedMeeting.date ? getStorageKey(`crm_attendance_${selectedMeeting.date}`) : null,
-          selectedMeeting.code ? getStorageKey(`crm_attendance_${selectedMeeting.code}`) : null,
-          cleanMeetingCode ? getStorageKey(`crm_attendance_${cleanMeetingCode}`) : null,
-          `crm_attendance_${selectedMeeting.id || selectedMeeting.date}`,
-          selectedMeeting.id ? `crm_attendance_${selectedMeeting.id}` : null,
-          selectedMeeting.date ? `crm_attendance_${selectedMeeting.date}` : null,
-          selectedMeeting.code ? `crm_attendance_${selectedMeeting.code}` : null,
-          cleanMeetingCode ? `crm_attendance_${cleanMeetingCode}` : null,
-        ].filter(Boolean);
-
+        const keys = getMeetingAttendanceStorageKeys(activeOrgId, selectedMeeting);
         keys.forEach(k => {
           try {
             localStorage.setItem(k, JSON.stringify(attendancePayload));
@@ -2863,29 +2843,25 @@ export default function MeetingsTab({
         minDurationThreshold={minDurationThreshold}
         onThresholdChange={handleThresholdChange}
         onSaveAttendance={(meetingId, confirmedIndexes, updatedParticipants, payload) => {
+          const activeOrgId = currentOrg?.id || 'skn_seksuologii';
           const targetMeeting = meetings.find(m => m.id === meetingId || m.date === meetingId || m.code === meetingId) || selectedMeeting;
-          const cleanMeetingCode = String(targetMeeting?.code || '').replace(/^\[.*?\]\s*/, '').trim();
-          const finalPayload = payload || {
-            meetingId: targetMeeting?.id || targetMeeting?.date || meetingId,
-            meetingDate: targetMeeting?.date,
-            attendees: updatedParticipants,
-            allVerifiedList: updatedParticipants,
-            participantRecords: updatedParticipants,
-            confirmedIndexes: confirmedIndexes,
-            confirmedCount: confirmedIndexes.length,
-            savedAt: new Date().toISOString(),
+          const finalPayload = {
+            organization_id: activeOrgId,
+            orgName: currentOrg?.name || '',
+            orgTag: currentOrg?.tag || '',
+            ...(payload || {
+              meetingId: targetMeeting?.id || targetMeeting?.date || meetingId,
+              meetingDate: targetMeeting?.date,
+              attendees: updatedParticipants,
+              allVerifiedList: updatedParticipants,
+              participantRecords: updatedParticipants,
+              confirmedIndexes: confirmedIndexes,
+              confirmedCount: confirmedIndexes.length,
+              savedAt: new Date().toISOString(),
+            }),
           };
 
-          const keys = [
-            getStorageKey(`crm_attendance_${targetMeeting?.id || meetingId}`),
-            targetMeeting?.date ? getStorageKey(`crm_attendance_${targetMeeting.date}`) : null,
-            targetMeeting?.code ? getStorageKey(`crm_attendance_${targetMeeting.code}`) : null,
-            cleanMeetingCode ? getStorageKey(`crm_attendance_${cleanMeetingCode}`) : null,
-            `crm_attendance_${targetMeeting?.id || meetingId}`,
-            targetMeeting?.date ? `crm_attendance_${targetMeeting.date}` : null,
-            targetMeeting?.code ? `crm_attendance_${targetMeeting.code}` : null,
-            cleanMeetingCode ? `crm_attendance_${cleanMeetingCode}` : null,
-          ].filter(Boolean);
+          const keys = getMeetingAttendanceStorageKeys(activeOrgId, targetMeeting || { id: meetingId });
 
           keys.forEach(k => {
             try {

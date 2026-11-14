@@ -50,7 +50,7 @@ import { useOrg } from '../context/OrgContext';
 import { ACTIVITY_OPTIONS } from '../utils/activityRegistry';
 import { calculateEventDays, calculateEventPointsBreakdown } from '../utils/pointsCalculator';
 import { saveMeetingAttendanceToSupabase, parseAttendanceLine, updateMemberAliasesInGAS } from '../services/googleSheets';
-import { getAliasesFromStorage, saveAliasesToStorage } from '../utils/storage';
+import { getAliasesFromStorage, saveAliasesToStorage, getMeetingAttendanceStorageKeys } from '../utils/storage';
 import { matchMemberExact, matchSupervisorExact, isMetadataOrHeaderLine } from '../utils/meetingParser';
 
 function findMemberMatch(nameOrIndex, members = [], aliasesMap = {}) {
@@ -1484,6 +1484,7 @@ export default function AttendanceModal({
       }
 
       // Wzbogać obiekty uczestników o obliczone punkty za to spotkanie (w tym dodatkowe aktywności)
+      const activeOrgId = currentOrg?.id || meeting?.organization_id || 'skn_seksuologii';
       const enrichedParticipants = localParticipants.map(p => {
         const attendeeDays = typeof p.daysAttended === 'number' && p.daysAttended > 0 ? Math.min(totalEventDays, p.daysAttended) : totalEventDays;
         const extraActs = Array.isArray(p.activities) ? p.activities : [];
@@ -1498,12 +1499,17 @@ export default function AttendanceModal({
         const finalPts = (!isSup && !isSpk && !isGst && isApprovedParticipant(p)) ? breakdown.totalPoints : 0;
         return {
           ...p,
+          organization_id: activeOrgId,
+          orgTag: currentOrg?.tag || '',
           punkty: finalPts,
           trybUdzialu: breakdown.isParticipantOnline ? 'ONLINE' : 'STACJONARNY',
         };
       });
 
       const payload = {
+        organization_id: activeOrgId,
+        orgName: currentOrg?.name || '',
+        orgTag: currentOrg?.tag || '',
         meetingId: meeting.id || meeting.date,
         meetingDate: meeting.date,
         meetingCode: meeting.code,
@@ -1518,14 +1524,7 @@ export default function AttendanceModal({
         savedAt: new Date().toISOString(),
       };
 
-      const cleanMeetingCode = String(meeting.code || '').replace(/^\[.*?\]\s*/, '').trim();
-      const keys = [
-        getStorageKey(`crm_attendance_${meeting.id || meeting.date}`),
-        meeting.id ? getStorageKey(`crm_attendance_${meeting.id}`) : null,
-        meeting.date ? getStorageKey(`crm_attendance_${meeting.date}`) : null,
-        meeting.code ? getStorageKey(`crm_attendance_${meeting.code}`) : null,
-        cleanMeetingCode ? getStorageKey(`crm_attendance_${cleanMeetingCode}`) : null,
-      ].filter(Boolean);
+      const keys = getMeetingAttendanceStorageKeys(activeOrgId, meeting);
 
       keys.forEach(k => {
         try {
