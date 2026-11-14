@@ -69,17 +69,50 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 })
 
+const _orgClientsCache = new Map();
+
+/**
+ * Zwraca instancję klienta Supabase przypiętą do konkretnego tenanta (`x-organization-id`),
+ * odporną na równoległe przełączanie organizacji oraz zapytania międzykołowe.
+ */
+export function getSupabaseForOrg(orgId) {
+  const cleanOrg = !orgId || orgId === 'skn-template' || orgId === 'default' || orgId === 'skn-seksuologia'
+    ? 'skn_seksuologii'
+    : String(orgId).trim().toLowerCase();
+
+  if (_orgClientsCache.has(cleanOrg)) {
+    return _orgClientsCache.get(cleanOrg);
+  }
+
+  const client = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+    global: {
+      headers: {
+        'x-organization-id': cleanOrg,
+      },
+    },
+  });
+
+  _orgClientsCache.set(cleanOrg, client);
+  return client;
+}
+
 /**
  * Pobiera wszystkie rekordy dla wskazanego tenanta (organization_id) z obsługą stronicowania powyżej limitu 1000 rekordów PostgREST.
  */
 export async function fetchAllTenantRows(table, orgId, options = {}) {
-  const cleanOrg = !orgId || orgId === 'skn-template' || orgId === 'default' ? 'skn_seksuologii' : String(orgId).trim();
+  const cleanOrg = !orgId || orgId === 'skn-template' || orgId === 'default' ? 'skn_seksuologii' : String(orgId).trim().toLowerCase();
+  const tenantClient = getSupabaseForOrg(cleanOrg);
   const pageSize = 1000;
   let from = 0;
   let allRows = [];
 
   while (true) {
-    let query = supabase
+    let query = tenantClient
       .from(table)
       .select(options.select || '*')
       .eq('organization_id', cleanOrg);

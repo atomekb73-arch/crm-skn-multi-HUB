@@ -1,4 +1,5 @@
-import { supabase } from '../supabaseClient.js';
+import { fetchAllTenantRows } from '../supabaseClient.js';
+import { fetchMeetingMetadata } from './meetingMetadataService.js';
 import { WSKZ_ORGANIZATIONS, getWskzOrgById, getWskzOrgBySubcalendarId, isSubcalendarExcluded } from '../config/wskzRegistry.js';
 import { fetchTeamupEvents } from './teamupService.js';
 import { getAutoMeetingType } from '../utils/meetingTypes.js';
@@ -50,20 +51,26 @@ export async function fetchInterClubReportData({
     console.warn('[interClubReport] Błąd pobierania zdarzeń z Teamup:', err);
   }
 
-  // 3. Pobieranie metadanych (meeting_metadata) z Supabase + fallback localStorage
+  // 3. Pobieranie metadanych (meeting_metadata lub fallback [MEETING_META] w attendance) z Supabase + localStorage
   const metadataMap = {}; // klucz: `${orgId}__${meeting_key}`
   try {
-    const { data: dbMeta } = await supabase
-      .from('meeting_metadata')
-      .select('*')
-      .in('organization_id', activeOrgIds);
+    const metaResults = await Promise.allSettled(
+      activeOrgIds.map(async (orgId) => ({
+        orgId,
+        orgMap: await fetchMeetingMetadata(orgId),
+      }))
+    );
 
-    if (Array.isArray(dbMeta)) {
-      dbMeta.forEach(row => {
-        const k = `${row.organization_id}__${String(row.meeting_key || '').trim()}`;
-        metadataMap[k] = row;
-      });
-    }
+    metaResults.forEach((res) => {
+      if (res.status === 'fulfilled' && res.value?.orgMap) {
+        const { orgId, orgMap } = res.value;
+        Object.entries(orgMap).forEach(([meetingKey, row]) => {
+          if (!row) return;
+          const k = `${orgId}__${String(row.meeting_key || meetingKey || '').trim()}`;
+          metadataMap[k] = row;
+        });
+      }
+    });
   } catch (err) {
     console.warn('[interClubReport] Błąd pobierania meeting_metadata z Supabase:', err);
   }
@@ -88,19 +95,33 @@ export async function fetchInterClubReportData({
     });
   }
 
-  // 4. Pobieranie obecności z Supabase (attendance) + fallback localStorage
+  // 4. Pobieranie obecności z Supabase (attendance) dla każdego koła z właściwym nagłówkiem tenant + fallback localStorage
   const attendanceCountMap = {}; // klucz: `${orgId}__${meeting_code}` -> liczba unikalnych obecnych
+  const SYSTEM_PREFIX_RE = /^\[(?:SETTINGS|DOROBEK|BOARD_TERM|KORESPONDENCJA|MEETING_META|EMAIL_CONFIG|ACCESS_USER|DOKUMENT)\]/i;
   try {
-    const { data: dbAtt } = await supabase
-      .from('attendance')
-      .select('organization_id, meeting_code, index_number, role')
-      .in('organization_id', activeOrgIds);
+    const attResults = await Promise.allSettled(
+      activeOrgIds.map(async (orgId) => {
+        const { data, error } = await fetchAllTenantRows(
+          'attendance',
+          orgId,
+          'organization_id, meeting_code, index_number, role'
+        );
+        if (error) {
+          console.warn(`[interClubReport] Błąd pobierania attendance dla ${orgId}:`, error);
+        }
+        return { orgId, rows: Array.isArray(data) ? data : [] };
+      })
+    );
 
-    if (Array.isArray(dbAtt)) {
-      const uniqueAttendees = {};
+    const uniqueAttendees = {};
+    attResults.forEach((res) => {
+      if (res.status !== 'fulfilled') return;
+      const dbAtt = res.value?.rows || [];
       dbAtt.forEach(row => {
-        const org = String(row.organization_id || '').trim().toLowerCase();
-        const code = String(row.meeting_code || '').trim().toUpperCase();
+        const rawCode = String(row.meeting_code || '').trim();
+        if (!rawCode || SYSTEM_PREFIX_RE.test(rawCode)) return;
+        const org = String(row.organization_id || res.value.orgId || '').trim().toLowerCase();
+        const code = rawCode.toUpperCase();
         const cleanCode = code.replace(/^\[.*?\]\s*/, '');
         const idx = String(row.index_number || '').trim();
 
@@ -112,11 +133,11 @@ export async function fetchInterClubReportData({
         addKey(`${org}__${code}`);
         if (cleanCode && cleanCode !== code) addKey(`${org}__${cleanCode}`);
       });
+    });
 
-      Object.entries(uniqueAttendees).forEach(([k, set]) => {
-        attendanceCountMap[k] = set.size;
-      });
-    }
+    Object.entries(uniqueAttendees).forEach(([k, set]) => {
+      attendanceCountMap[k] = set.size;
+    });
   } catch (err) {
     console.warn('[interClubReport] Błąd pobierania attendance z Supabase:', err);
   }

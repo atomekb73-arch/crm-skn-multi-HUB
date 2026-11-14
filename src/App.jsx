@@ -646,30 +646,39 @@ export default function App() {
           const rawCode = String(m.code || m.id || '').toUpperCase().trim();
           const cleanCode = rawCode.replace(/^\[.*?\]\s*/, '');
           
-          let sheetRecords = null;
-          if (effectiveSheetAttendanceMap[m.code]) {
-            sheetRecords = effectiveSheetAttendanceMap[m.code];
-          } else if (rawCode && effectiveSheetAttendanceMap[rawCode]) {
-            sheetRecords = effectiveSheetAttendanceMap[rawCode];
-          } else if (cleanCode && effectiveSheetAttendanceMap[cleanCode]) {
-            sheetRecords = effectiveSheetAttendanceMap[cleanCode];
+          const candidateRecords = [];
+          const pushedKeySet = new Set();
+          const addCandidates = (recs) => {
+            if (!Array.isArray(recs) || recs.length === 0) return;
+            candidateRecords.push(...recs);
+          };
+          if (m.code && effectiveSheetAttendanceMap[m.code]) {
+            pushedKeySet.add(m.code);
+            addCandidates(effectiveSheetAttendanceMap[m.code]);
           }
-
-          if (!sheetRecords) {
-            for (const [k, records] of Object.entries(effectiveSheetAttendanceMap)) {
-              const kClean = k.toUpperCase().trim().replace(/^\[.*?\]\s*/, '');
-              if (kClean === cleanCode || k.toUpperCase().includes(cleanCode)) {
-                sheetRecords = records;
-                break;
-              }
+          if (rawCode && !pushedKeySet.has(rawCode) && effectiveSheetAttendanceMap[rawCode]) {
+            pushedKeySet.add(rawCode);
+            addCandidates(effectiveSheetAttendanceMap[rawCode]);
+          }
+          if (cleanCode && !pushedKeySet.has(cleanCode) && effectiveSheetAttendanceMap[cleanCode]) {
+            pushedKeySet.add(cleanCode);
+            addCandidates(effectiveSheetAttendanceMap[cleanCode]);
+          }
+          for (const [k, records] of Object.entries(effectiveSheetAttendanceMap)) {
+            if (pushedKeySet.has(k)) continue;
+            const kUpper = k.toUpperCase().trim();
+            const kClean = kUpper.replace(/^\[.*?\]\s*/, '');
+            if (cleanCode && (kClean === cleanCode || kUpper === rawCode)) {
+              pushedKeySet.add(k);
+              addCandidates(records);
             }
           }
 
           // Rygorystyczna filtracja rekordów: weryfikuj dopasowanie do daty i roku spotkania oraz unikaj duplikatów
           let uniqueRecords = [];
-          if (Array.isArray(sheetRecords) && sheetRecords.length > 0) {
+          if (candidateRecords.length > 0) {
             const seenPersons = new Set();
-            for (const rec of sheetRecords) {
+            for (const rec of candidateRecords) {
               if (!isEwidencjaMatchForMeeting(rec, m)) continue;
               const personId = String(rec.nrIndeksu || rec.index || rec.identyfikator || rec.fullName || '').trim().toLowerCase();
               if (personId && !seenPersons.has(personId)) {
@@ -770,30 +779,39 @@ export default function App() {
           const rawCode = String(m.code || m.id || '').toUpperCase().trim();
           const cleanCode = rawCode.replace(/^\[.*?\]\s*/, '');
 
-          let sheetRecords = null;
-          if (effectiveSheetAttendanceMap[m.code]) {
-            sheetRecords = effectiveSheetAttendanceMap[m.code];
-          } else if (rawCode && effectiveSheetAttendanceMap[rawCode]) {
-            sheetRecords = effectiveSheetAttendanceMap[rawCode];
-          } else if (cleanCode && effectiveSheetAttendanceMap[cleanCode]) {
-            sheetRecords = effectiveSheetAttendanceMap[cleanCode];
+          const candidateRecords = [];
+          const pushedKeySet = new Set();
+          const addCandidates = (recs) => {
+            if (!Array.isArray(recs) || recs.length === 0) return;
+            candidateRecords.push(...recs);
+          };
+          if (m.code && effectiveSheetAttendanceMap[m.code]) {
+            pushedKeySet.add(m.code);
+            addCandidates(effectiveSheetAttendanceMap[m.code]);
           }
-
-          if (!sheetRecords) {
-            for (const [k, records] of Object.entries(effectiveSheetAttendanceMap)) {
-              const kClean = k.toUpperCase().trim().replace(/^\[.*?\]\s*/, '');
-              if (kClean === cleanCode || k.toUpperCase().includes(cleanCode)) {
-                sheetRecords = records;
-                break;
-              }
+          if (rawCode && !pushedKeySet.has(rawCode) && effectiveSheetAttendanceMap[rawCode]) {
+            pushedKeySet.add(rawCode);
+            addCandidates(effectiveSheetAttendanceMap[rawCode]);
+          }
+          if (cleanCode && !pushedKeySet.has(cleanCode) && effectiveSheetAttendanceMap[cleanCode]) {
+            pushedKeySet.add(cleanCode);
+            addCandidates(effectiveSheetAttendanceMap[cleanCode]);
+          }
+          for (const [k, records] of Object.entries(effectiveSheetAttendanceMap)) {
+            if (pushedKeySet.has(k)) continue;
+            const kUpper = k.toUpperCase().trim();
+            const kClean = kUpper.replace(/^\[.*?\]\s*/, '');
+            if (cleanCode && (kClean === cleanCode || kUpper === rawCode)) {
+              pushedKeySet.add(k);
+              addCandidates(records);
             }
           }
 
           // Rygorystyczna filtracja rekordów: weryfikuj dopasowanie do daty i roku spotkania oraz unikaj duplikatów
           let uniqueRecords = [];
-          if (Array.isArray(sheetRecords) && sheetRecords.length > 0) {
+          if (candidateRecords.length > 0) {
             const seenPersons = new Set();
-            for (const rec of sheetRecords) {
+            for (const rec of candidateRecords) {
               if (!isEwidencjaMatchForMeeting(rec, m)) continue;
               const personId = String(rec.nrIndeksu || rec.index || rec.identyfikator || rec.fullName || '').trim().toLowerCase();
               if (personId && !seenPersons.has(personId)) {
@@ -941,7 +959,7 @@ export default function App() {
           fetchAllTenantRows('members', orgId, { orderBy: 'full_name', ascending: true }),
           fetchAllTenantRows('quarantine_submissions', orgId, { orderBy: 'created_at', ascending: false }),
           fetchAllTenantRows('attendance', orgId),
-          fetchAllTenantRows('meeting_metadata', orgId).catch(() => ({ data: [] })),
+          fetchMeetingMetadata(orgId).catch(() => ({})),
           fetchTeamupSubcalendars(effectiveCalId, effectiveToken, effectiveSubId).catch(() => []),
           fetchTeamupEvents({
             startDate,
@@ -954,13 +972,9 @@ export default function App() {
           }).catch(() => undefined),
         ]);
 
-        if (metaResult?.data && Array.isArray(metaResult.data) && typeof window !== 'undefined' && window.localStorage) {
+        if (metaResult && typeof metaResult === 'object' && !Array.isArray(metaResult) && typeof window !== 'undefined' && window.localStorage) {
           try {
-            const map = {};
-            metaResult.data.forEach(row => {
-              if (row.meeting_key) map[row.meeting_key] = row;
-            });
-            localStorage.setItem(getOrgKey(orgId, 'crm_meeting_metadata'), JSON.stringify(map));
+            localStorage.setItem(getOrgKey(orgId, 'crm_meeting_metadata'), JSON.stringify(metaResult));
           } catch {}
         }
 
@@ -1129,6 +1143,7 @@ export default function App() {
             code.startsWith('[SETTINGS]') ||
             code.startsWith('[EMAIL_CONFIG]') ||
             code.startsWith('[ZARZAD]') ||
+            code.startsWith('[MEETING_META]') ||
             code.startsWith('[ACCESS_USER]') ||
             code.startsWith('[DOKUMENT]')
           ) {
@@ -1205,7 +1220,7 @@ export default function App() {
             isExternalGuest: !isSupervisor && !isSpeaker && !matchedMember,
             isEligible: parsedDesc?.isEligible !== undefined ? parsedDesc.isEligible : (matchedMember || isSpeaker || isSupervisor ? true : false),
             manualApproved: parsedDesc?.manualApproved !== undefined ? parsedDesc.manualApproved : (matchedMember || isSpeaker || isSupervisor ? true : false),
-            opisAktywnosci: parsedDesc?.opisAktywnosci || row.activity_description || 'Obecność na spotkaniu',
+            opisAktywnosci: parsedDesc?.desc || parsedDesc?.opisAktywnosci || row.activity_description || 'Obecność na spotkaniu',
             durationMinutes: rawDurMinutes,
             durationStr: rawDurStr,
             joinTime: rawJoinTime,
@@ -1218,9 +1233,12 @@ export default function App() {
             if (!sheetAttendanceMap[cleanCode]) sheetAttendanceMap[cleanCode] = [];
             sheetAttendanceMap[cleanCode].push(ewItem);
           }
-          const prefixedCode = `[26/27] ${cleanCode}`;
-          if (!sheetAttendanceMap[prefixedCode]) sheetAttendanceMap[prefixedCode] = [];
-          sheetAttendanceMap[prefixedCode].push(ewItem);
+          const acadShort = row.meeting_date ? getAcademicYearFromDate(row.meeting_date).short : '26/27';
+          const prefixedCode = `[${acadShort}] ${cleanCode}`;
+          if (prefixedCode !== code) {
+            if (!sheetAttendanceMap[prefixedCode]) sheetAttendanceMap[prefixedCode] = [];
+            sheetAttendanceMap[prefixedCode].push(ewItem);
+          }
         });
       }
 

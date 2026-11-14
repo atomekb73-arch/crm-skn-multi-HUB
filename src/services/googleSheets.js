@@ -3,7 +3,7 @@ import { matchMemberExact, isMetadataOrHeaderLine } from '../utils/meetingParser
 import { isFacultySupervisor } from '../utils/specialRoles.js';
 import { readSWRData, writeSWRData, CACHE_KEYS } from '../hooks/useCachedData.js';
 import { getAcademicYearFromDate } from '../utils/helpers.js';
-import { supabase, fetchAllTenantRows } from '../supabaseClient.js';
+import { supabase, getSupabaseForOrg, fetchAllTenantRows } from '../supabaseClient.js';
 
 function normalizeOrg(orgId) {
   const fallbackOrg = typeof window !== 'undefined' && window.localStorage
@@ -134,6 +134,16 @@ export async function fetchGasData(orgId = 'skn_seksuologii') {
           const parsed = JSON.parse(row.activity_description || '{}');
           korespondencja.push(parsed);
         } catch {}
+      } else if (
+        code.startsWith('[SETTINGS]') ||
+        code.startsWith('[BOARD_TERM]') ||
+        code.startsWith('[ZARZAD]') ||
+        code.startsWith('[MEETING_META]') ||
+        code.startsWith('[EMAIL_CONFIG]') ||
+        code.startsWith('[ACCESS_USER]') ||
+        code.startsWith('[DOKUMENT]')
+      ) {
+        continue;
       } else if (code) {
         const rawIdx = String(row.index_number || '').trim().toLowerCase();
         const rawDate = String(row.meeting_date || '').trim();
@@ -141,6 +151,13 @@ export async function fetchGasData(orgId = 'skn_seksuologii') {
         const dedupeKey = `${rawDate}_${rawCodeClean}_${rawIdx}`;
         if (!seenEwidencjaKeys.has(dedupeKey)) {
           seenEwidencjaKeys.add(dedupeKey);
+          let parsedDesc = null;
+          const rawDesc = String(row.activity_description || '').trim();
+          if (rawDesc.startsWith('{')) {
+            try {
+              parsedDesc = JSON.parse(rawDesc);
+            } catch {}
+          }
           ewidencja.push({
             id: row.id,
             kodSpotkania: code,
@@ -151,7 +168,13 @@ export async function fetchGasData(orgId = 'skn_seksuologii') {
             rola: row.role || 'Członek koła',
             zrodlo: 'Supabase SSOT',
             punkty: Number(row.points ?? 1),
-            opisAktywnosci: row.activity_description || 'Obecność na spotkaniu'
+            opisAktywnosci: parsedDesc?.desc || parsedDesc?.opisAktywnosci || rawDesc || 'Obecność na spotkaniu',
+            rawName: parsedDesc?.rawName || '',
+            fullName: parsedDesc?.fullName || '',
+            joinTime: parsedDesc?.joinTime || '',
+            durationMinutes: parsedDesc?.durationMinutes ?? null,
+            durationStr: parsedDesc?.durationStr || '',
+            activities: Array.isArray(parsedDesc?.activities) ? parsedDesc.activities : undefined,
           });
         }
       }
@@ -287,15 +310,42 @@ export async function saveQuarantineDecisionsBatchToGAS(decyzje = []) {
  */
 export async function saveMeetingAttendanceToSupabase({ kodSpotkania, dataSpotkania, obecnosci, orgId = 'skn_seksuologii' }) {
   const cleanOrg = normalizeOrg(orgId);
+  const client = getSupabaseForOrg(cleanOrg);
   const listToSave = Array.isArray(obecnosci) ? obecnosci : [];
   const rawCode = String(kodSpotkania || 'M00').replace(/\s+/g, ' ').trim();
   const cleanCode = rawCode.replace(/^\[.*?\]\s*/, '').trim();
+  const hasYearPrefix = /^\[.*?\]/.test(rawCode);
   const dateStr = String(dataSpotkania || new Date().toISOString().slice(0, 10)).split('T')[0].trim();
 
   // Usuń dotychczasowe wpisy dla tego spotkania w Supabase w ramach tej organizacji
-  await supabase.from('attendance').delete().eq('organization_id', cleanOrg).eq('meeting_code', rawCode);
+  let delQuery = client
+    .from('attendance')
+    .delete()
+    .eq('organization_id', cleanOrg)
+    .eq('meeting_code', rawCode);
+  if (!hasYearPrefix && dateStr) {
+    delQuery = delQuery.eq('meeting_date', dateStr);
+  }
+  const { error: delErr } = await delQuery;
+  if (delErr) {
+    console.error('[saveMeetingAttendanceToSupabase] Błąd usuwania starych wpisów attendance:', delErr);
+    throw delErr;
+  }
+
   if (cleanCode && cleanCode !== rawCode) {
-    await supabase.from('attendance').delete().eq('organization_id', cleanOrg).eq('meeting_code', cleanCode);
+    let cleanDelQuery = client
+      .from('attendance')
+      .delete()
+      .eq('organization_id', cleanOrg)
+      .eq('meeting_code', cleanCode);
+    if (dateStr) {
+      cleanDelQuery = cleanDelQuery.eq('meeting_date', dateStr);
+    }
+    const { error: cleanDelErr } = await cleanDelQuery;
+    if (cleanDelErr) {
+      console.error('[saveMeetingAttendanceToSupabase] Błąd czyszczenia aliasu meeting_code:', cleanDelErr);
+      throw cleanDelErr;
+    }
   }
 
   const rowsToInsert = listToSave.map(item => {
@@ -313,17 +363,27 @@ export async function saveMeetingAttendanceToSupabase({ kodSpotkania, dataSpotka
     }
     const nrIndeksu = String(item.nrIndeksu || item.index || '').replace(/\D/g, '').trim();
     const name = String(item.name || item.fullName || item.rawName || '').trim();
-    const isSup = item.role === 'supervisor' || item.rola === 'Opiekun';
+    const isSup = item.role === 'supervisor' || item.rola === 'Opiekun' || item.rola === 'Opiekun Koła';
     const isSpk = item.role === 'speaker' || item.rola === 'Prelegent';
     const isGst = item.role === 'guest' || item.rola === 'Gość' || item.isGuest || item.isExternalGuest || (!nrIndeksu && item.role !== 'member');
     const rola = String(item.rola || item.role || (isSup ? 'Opiekun' : (isSpk ? 'Prelegent' : (isGst ? 'Gość' : 'Członek koła')))).trim();
     const rawPts = item.punkty !== undefined ? item.punkty : (item.points !== undefined ? item.points : 1);
     const punkty = Number(rawPts) > 0 ? Number(rawPts) : 1;
-    const opisAktywnosci = item.opisAktywnosci || item.description || 'Obecność na spotkaniu naukowym';
+    const opisAktywnosci = String(item.opisAktywnosci || item.description || 'Obecność na spotkaniu naukowym').trim();
 
     const identifier = isSup
       ? (name.startsWith('[OPIEKUN]') ? name : `[OPIEKUN]: ${name}`)
       : (isSpk ? (name.startsWith('[SPEAKER]') ? name : `[SPEAKER]: ${name}`) : (nrIndeksu || name));
+
+    const metaPayload = {
+      desc: opisAktywnosci,
+      rawName: String(item.rawName || item.fullName || name || '').trim(),
+      fullName: String(item.fullName || name || '').trim(),
+      joinTime: String(item.joinTime || '').trim(),
+      durationMinutes: item.durationMinutes !== undefined && item.durationMinutes !== null ? Number(item.durationMinutes) : null,
+      durationStr: String(item.durationStr || '').trim(),
+      ...(Array.isArray(item.activities) && item.activities.length > 0 ? { activities: item.activities } : {}),
+    };
 
     return {
       organization_id: cleanOrg,
@@ -332,7 +392,7 @@ export async function saveMeetingAttendanceToSupabase({ kodSpotkania, dataSpotka
       index_number: identifier || 'Uczestnik',
       role: rola,
       points: punkty,
-      activity_description: opisAktywnosci
+      activity_description: JSON.stringify(metaPayload)
     };
   }).filter(r => r.index_number);
 
@@ -347,14 +407,16 @@ export async function saveMeetingAttendanceToSupabase({ kodSpotkania, dataSpotka
   }
 
   if (uniqueRowsToInsert.length > 0) {
-    const { error } = await supabase.from('attendance').insert(uniqueRowsToInsert);
+    const { error } = await client
+      .from('attendance')
+      .insert(uniqueRowsToInsert);
     if (error) {
       console.error('[saveMeetingAttendanceToSupabase] Błąd zapisu attendance:', error);
       throw error;
     }
   }
 
-  return { status: 'success', count: uniqueRowsToInsert.length };
+  return { status: 'success', count: uniqueRowsToInsert.length, meetingCode: rawCode, orgId: cleanOrg };
 }
 
 export const saveMeetingAttendanceToGAS = saveMeetingAttendanceToSupabase;
@@ -529,13 +591,21 @@ export async function syncAllPointsToGAS({ boardTenures = [] }) {
 export async function deleteMeetingAttendanceFromSupabase(kodSpotkania, dateOrStart = null, orgId = null) {
   const rawCode = String(kodSpotkania || '').replace(/\s+/g, ' ').trim();
   const cleanCode = rawCode.replace(/^\[.*?\]\s*/, '').trim();
-  const cleanOrg = normalizeOrg(orgId || (typeof window !== 'undefined' ? localStorage.getItem('crm_active_org_id') : null) || 'skn_seksuologii');
+  const cleanOrg = normalizeOrg(orgId || (typeof window !== 'undefined' ? (localStorage.getItem('crm_skn_current_org_id') || localStorage.getItem('crm_active_org_id')) : null) || 'skn_seksuologii');
+  const client = getSupabaseForOrg(cleanOrg);
+  const dateStr = dateOrStart ? String(dateOrStart).split('T')[0].trim() : '';
 
   if (rawCode) {
-    let q1 = supabase.from('attendance').delete().eq('organization_id', cleanOrg).eq('meeting_code', rawCode);
-    let q2 = supabase.from('attendance').delete().eq('organization_id', cleanOrg).ilike('meeting_code', `%${cleanCode}%`);
-    await q1;
-    await q2;
+    let q1 = client.from('attendance').delete().eq('organization_id', cleanOrg).eq('meeting_code', rawCode);
+    const { error: err1 } = await q1;
+    if (err1) throw err1;
+
+    if (cleanCode && cleanCode !== rawCode) {
+      let q2 = client.from('attendance').delete().eq('organization_id', cleanOrg).eq('meeting_code', cleanCode);
+      if (dateStr) q2 = q2.eq('meeting_date', dateStr);
+      const { error: err2 } = await q2;
+      if (err2) throw err2;
+    }
   }
   return { status: 'success' };
 }
@@ -942,12 +1012,14 @@ export const parseAttendanceInput = parseAttendanceText;
 /**
  * Pobiera obecności na wybranym spotkaniu bezpośrednio z tabeli `attendance` w Supabase.
  */
-export async function fetchMeetingAttendanceFromSupabase(meetingCode, sheetId = '', members = [], orgId = null) {
+export async function fetchMeetingAttendanceFromSupabase(meetingCode, sheetId = '', members = [], orgId = null, meetingDate = null) {
   if (Array.isArray(sheetId)) {
+    orgId = members && typeof members === 'string' ? members : orgId;
     members = sheetId;
   }
   if (!meetingCode) return { ok: false, error: 'Brak kodu spotkania' };
   const cleanOrg = normalizeOrg(orgId || (typeof window !== 'undefined' ? (localStorage.getItem('crm_skn_current_org_id') || localStorage.getItem('crm_active_org_id')) : null) || 'skn_seksuologii');
+  const client = getSupabaseForOrg(cleanOrg);
 
   let activeMembersList = Array.isArray(members) && members.length > 0 ? members : [];
   if (activeMembersList.length === 0 && typeof window !== 'undefined' && window.localStorage) {
@@ -957,13 +1029,15 @@ export async function fetchMeetingAttendanceFromSupabase(meetingCode, sheetId = 
     } catch {}
   }
 
-  const rawCodeUpper = String(meetingCode).trim().toUpperCase();
-  const cleanCodeUpper = rawCodeUpper.replace(/^\[.*?\]\s*/, '');
+  const rawCodeUpper = String(meetingCode).replace(/\s+/g, ' ').trim().toUpperCase();
+  const cleanCodeUpper = rawCodeUpper.replace(/^\[.*?\]\s*/, '').trim();
+  const targetDateStr = meetingDate ? String(meetingDate).split('T')[0].trim() : '';
+  const targetAcademicYear = targetDateStr ? getAcademicYearFromDate(targetDateStr) : '';
 
   try {
     // Jeśli lista członków nadal jest pusta, pobierz ją równolegle z members w Supabase
     if (activeMembersList.length === 0) {
-      const { data: dbMems } = await supabase.from('members').select('*').eq('organization_id', cleanOrg);
+      const { data: dbMems } = await fetchAllTenantRows('members', cleanOrg);
       if (Array.isArray(dbMems)) {
         activeMembersList = dbMems.map(m => ({
           ...m,
@@ -974,17 +1048,38 @@ export async function fetchMeetingAttendanceFromSupabase(meetingCode, sheetId = 
       }
     }
 
-    const { data: attRows, error } = await supabase.from('attendance').select('*').eq('organization_id', cleanOrg);
+    const { data: attRows, error } = await fetchAllTenantRows('attendance', cleanOrg);
+    if (error) {
+      console.error('[fetchMeetingAttendanceFromSupabase] Błąd Supabase:', error);
+      return { ok: false, error: `Błąd Supabase (${error.code || error.status || 'DB'}): ${error.message}` };
+    }
 
-    if (error) throw error;
-
+    const SYSTEM_PREFIX_RE = /^\[(?:SETTINGS|DOROBEK|BOARD_TERM|KORESPONDENCJA|ZARZAD|MEETING_META|EMAIL_CONFIG|ACCESS_USER|DOKUMENT)\]/i;
     const matching = (attRows || []).filter(row => {
-      const itemCode = String(row.meeting_code || '').trim().toUpperCase();
-      if (itemCode.startsWith('[DOROBEK]') || itemCode.startsWith('[KORESPONDENCJA]') || itemCode.startsWith('[ZARZAD]')) {
+      const itemCode = String(row.meeting_code || '').replace(/\s+/g, ' ').trim().toUpperCase();
+      if (!itemCode || SYSTEM_PREFIX_RE.test(itemCode)) {
         return false;
       }
-      const itemCleanCode = itemCode.replace(/^\[.*?\]\s*/, '');
-      return itemCode === rawCodeUpper || itemCleanCode === cleanCodeUpper || itemCode.includes(cleanCodeUpper) || cleanCodeUpper.includes(itemCleanCode);
+      if (itemCode === rawCodeUpper) return true;
+
+      const itemCleanCode = itemCode.replace(/^\[.*?\]\s*/, '').trim();
+      if (itemCleanCode !== cleanCodeUpper) return false;
+
+      // Jeśli porównujemy kody bazowe (np. [25/26] M02 vs [26/27] M02 lub M02), sprawdź zgodność roku akademickiego / daty
+      const rowDateStr = String(row.meeting_date || '').split('T')[0].trim();
+      if (targetDateStr && rowDateStr) {
+        if (rowDateStr === targetDateStr) return true;
+        const rowAcYear = getAcademicYearFromDate(rowDateStr);
+        if (targetAcademicYear && rowAcYear && targetAcademicYear !== rowAcYear) {
+          return false;
+        }
+      }
+      const rawPrefix = rawCodeUpper.match(/^\[(.*?)\]/)?.[1];
+      const itemPrefix = itemCode.match(/^\[(.*?)\]/)?.[1];
+      if (rawPrefix && itemPrefix && rawPrefix !== itemPrefix) {
+        return false;
+      }
+      return true;
     });
 
     if (matching.length > 0) {
@@ -995,12 +1090,20 @@ export async function fetchMeetingAttendanceFromSupabase(meetingCode, sheetId = 
       matching.forEach((item, idx) => {
         const idxStr = String(item.index_number || '').trim();
         const dedupeKey = idxStr.toLowerCase();
-        if (seenAttendees.has(dedupeKey)) return;
+        if (!dedupeKey || seenAttendees.has(dedupeKey)) return;
         seenAttendees.add(dedupeKey);
+
+        let parsedDesc = null;
+        const rawDesc = String(item.activity_description || '').trim();
+        if (rawDesc.startsWith('{')) {
+          try {
+            parsedDesc = JSON.parse(rawDesc);
+          } catch {}
+        }
 
         const rolaStr = String(item.role || '').toLowerCase().trim();
 
-        const isSupervisor = rolaStr === 'supervisor' || rolaStr === 'opiekun' ||
+        const isSupervisor = rolaStr === 'supervisor' || rolaStr === 'opiekun' || rolaStr === 'opiekun koła' ||
                              idxStr.includes('[OPIEKUN]') || isFacultySupervisor(idxStr);
 
         const isSpeaker = !isSupervisor && (
@@ -1025,18 +1128,19 @@ export async function fetchMeetingAttendanceFromSupabase(meetingCode, sheetId = 
           matchedMember = matchMemberExact(idxStr, activeMembersList) || matchMemberExact(cleanName, activeMembersList);
         }
 
+        const fallbackName = parsedDesc?.fullName || parsedDesc?.rawName || cleanName;
         const finalName = isSupervisor
           ? cleanName
-          : (isSpeaker ? cleanName : (matchedMember ? (matchedMember.fullName || `${matchedMember.firstName || ''} ${matchedMember.lastName || ''}`.trim()) : cleanName));
+          : (isSpeaker ? cleanName : (matchedMember ? (matchedMember.fullName || `${matchedMember.firstName || ''} ${matchedMember.lastName || ''}`.trim()) : fallbackName));
         const finalIndex = isSupervisor ? '' : (isSpeaker ? '[SPEAKER]' : (isExplicitGuest ? '' : (matchedMember?.index || (/^\d+$/.test(cleanName) ? cleanName : ''))));
         const finalRole = isSupervisor ? 'supervisor' : (isSpeaker ? 'speaker' : (isExplicitGuest ? 'Gość' : (item.role || (matchedMember || finalIndex ? 'Członek koła' : 'Gość'))));
 
-        let formattedRawName = finalName;
+        let formattedRawName = parsedDesc?.rawName || finalName;
         if (isSpeaker) {
           formattedRawName = finalName.startsWith('[SPEAKER]') ? finalName : `[SPEAKER]: ${finalName}`;
         } else if (finalRole === 'Gość' || isExplicitGuest) {
           formattedRawName = finalName.startsWith('[GOŚĆ]') ? finalName : `[GOŚĆ]: ${finalName}`;
-        } else if (finalIndex && !finalName.includes(finalIndex)) {
+        } else if (finalIndex && !formattedRawName.includes(finalIndex)) {
           formattedRawName = `${finalName} (${finalIndex})`;
         }
 
@@ -1057,9 +1161,12 @@ export async function fetchMeetingAttendanceFromSupabase(meetingCode, sheetId = 
           manualApproved: true,
           isEligible: true,
           status: isSupervisor ? 'supervisor' : (isSpeaker ? 'speaker' : 'approved'),
-          joinTime: item.meeting_date || '18:00',
-          durationStr: '60 min',
-          durationMinutes: 60,
+          points: Number(item.points ?? 1),
+          opisAktywnosci: parsedDesc?.desc || rawDesc || 'Obecność na spotkaniu naukowym',
+          ...(Array.isArray(parsedDesc?.activities) ? { activities: parsedDesc.activities } : {}),
+          joinTime: parsedDesc?.joinTime || item.meeting_date || '18:00',
+          durationStr: parsedDesc?.durationStr || '60 min',
+          durationMinutes: parsedDesc?.durationMinutes ?? 60,
         });
       });
 
@@ -1067,8 +1174,14 @@ export async function fetchMeetingAttendanceFromSupabase(meetingCode, sheetId = 
     }
   } catch (err) {
     console.warn('[fetchMeetingAttendanceFromSupabase -> Supabase] Błąd odczytu:', err);
+    return {
+      ok: false,
+      error: `Błąd połączenia z Supabase: ${err?.message || String(err)}`,
+    };
   }
 
+  // Dodatkowe sprawdzenie, czy client został utworzony poprawnie (zachowanie spójności)
+  void client;
   return {
     ok: false,
     error: 'Brak zapisanych obecności w bazie Supabase dla tego spotkania. Wklej listę z Google Meet i kliknij Przetwórz.',

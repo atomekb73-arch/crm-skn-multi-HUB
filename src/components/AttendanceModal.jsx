@@ -1006,7 +1006,8 @@ export default function AttendanceModal({
   const [addJoinTime, setAddJoinTime] = useState('18:00');
   const [addRole, setAddRole] = useState('guest');
 
-  const { getStorageKey } = useOrg();
+  const { currentOrg, getStorageKey } = useOrg();
+  const [saveError, setSaveError] = useState(null);
   const prevMeetingKeyRef = React.useRef(null);
   const wasOpenRef = React.useRef(false);
 
@@ -1019,6 +1020,7 @@ export default function AttendanceModal({
         wasOpenRef.current = true;
         setActiveFilter('all');
         setSearchQuery('');
+        setSaveError(null);
         const currentAliases = getAliasesFromStorage();
         setAliasesMap(currentAliases);
         setLocalParticipants(resolveInitialParticipants(meeting, members, participants, localThreshold, supervisors, getStorageKey, currentAliases));
@@ -1026,6 +1028,7 @@ export default function AttendanceModal({
     } else if (!isOpen) {
       wasOpenRef.current = false;
       prevMeetingKeyRef.current = null;
+      setSaveError(null);
     }
   }, [isOpen, meeting, getStorageKey]);
 
@@ -1419,16 +1422,15 @@ export default function AttendanceModal({
   // Save changes
   const handleSaveAndApply = async () => {
     setIsSaving(true);
+    setSaveError(null);
     try {
+      const activeOrgId = currentOrg?.id || meeting?.organization_id || 'skn_seksuologii';
       const startDate = meeting.startDate || meeting.date;
       const endDate = meeting.endDate;
       const totalEventDays = calculateEventDays(startDate, endDate);
 
       const meetingTypeStr = String(meeting.type || meeting.meetingType || meeting.customType || '').toLowerCase();
       const isConferenceOrDelegation = meetingTypeStr.includes('conference') || meetingTypeStr.includes('konf') || meetingTypeStr.includes('delegac') || totalEventDays > 1;
-
-      const meetingModeStr = String(meeting.eventMode || meeting.mode || meeting.forma || '').toLowerCase();
-      const isConferenceOnline = meetingModeStr.includes('online');
 
       const allVerifiedList = localParticipants
         .filter(isApprovedParticipant)
@@ -1460,6 +1462,12 @@ export default function AttendanceModal({
           return {
             nrIndeksu,
             name,
+            fullName: name,
+            rawName: p.rawName || name,
+            joinTime: p.joinTime || '',
+            durationMinutes: p.durationMinutes ?? null,
+            durationStr: p.durationStr || '',
+            activities: extraActs,
             rola,
             punkty: finalPointsForMeeting,
             trybUdzialu: breakdown.isParticipantOnline ? 'ONLINE' : 'STACJONARNY',
@@ -1470,21 +1478,16 @@ export default function AttendanceModal({
 
       const confirmedIndexes = allVerifiedList.map(m => m.nrIndeksu || m.name).filter(Boolean);
 
-      // Zapis bezpośrednio do tabeli attendance w Supabase (bez Google Sheets)
-      try {
-        await saveMeetingAttendanceToSupabase({
-          kodSpotkania: meeting.code || "M00",
-          dataSpotkania: meeting.date || new Date().toISOString().slice(0, 10),
-          obecnosci: allVerifiedList,
-          aliasy: aliasesMap,
-          orgId: currentOrg?.id || 'skn_seksuologii'
-        });
-      } catch (e) {
-        console.warn("Błąd zapisu obecności w Supabase:", e);
-      }
+      // Zapis bezpośrednio do tabeli attendance w Supabase — błędy NIE mogą być połykane po cichu
+      await saveMeetingAttendanceToSupabase({
+        kodSpotkania: meeting.code || "M00",
+        dataSpotkania: meeting.date || new Date().toISOString().slice(0, 10),
+        obecnosci: allVerifiedList,
+        aliasy: aliasesMap,
+        orgId: activeOrgId
+      });
 
       // Wzbogać obiekty uczestników o obliczone punkty za to spotkanie (w tym dodatkowe aktywności)
-      const activeOrgId = currentOrg?.id || meeting?.organization_id || 'skn_seksuologii';
       const enrichedParticipants = localParticipants.map(p => {
         const attendeeDays = typeof p.daysAttended === 'number' && p.daysAttended > 0 ? Math.min(totalEventDays, p.daysAttended) : totalEventDays;
         const extraActs = Array.isArray(p.activities) ? p.activities : [];
@@ -1535,7 +1538,15 @@ export default function AttendanceModal({
       if (onSaveAttendance) {
         await onSaveAttendance(meeting.id || meeting.date, confirmedIndexes, enrichedParticipants, payload);
       }
+      showToast(`Zapisano ${allVerifiedList.length} obecności w Supabase (${meeting.code || 'Spotkanie'}).`, 'success');
       onClose();
+    } catch (err) {
+      const codePart = err?.code || err?.status ? `[${err.code || err.status}] ` : '';
+      const detailsPart = err?.details || err?.hint ? ` (${err.details || err.hint})` : '';
+      const errMsg = `Błąd zapisu obecności w Supabase: ${codePart}${err?.message || String(err)}${detailsPart}`;
+      console.error('[AttendanceModal.handleSaveAndApply]', err);
+      setSaveError(errMsg);
+      showToast(errMsg, 'error');
     } finally {
       setIsSaving(false);
     }
@@ -1644,6 +1655,24 @@ export default function AttendanceModal({
             </button>
           </div>
         </div>
+
+        {/* ── Supabase Error Banner ───────────────────────────────────────── */}
+        {saveError && (
+          <div className="px-6 py-3 bg-rose-50 border-b border-rose-200 flex items-center justify-between gap-3 shrink-0">
+            <div className="flex items-center gap-2 text-rose-800 text-xs font-semibold">
+              <AlertTriangle size={16} className="text-rose-600 shrink-0" />
+              <span>{saveError}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSaveError(null)}
+              className="text-rose-500 hover:text-rose-700 p-1 rounded-lg cursor-pointer"
+              title="Zamknij komunikat"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
 
         {/* ── Paste Raw Meet Text Drawer ─────────────────────────────────── */}
         {isPasteDrawerOpen && (

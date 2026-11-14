@@ -626,9 +626,19 @@ export default function MeetingsTab({
 
   useEffect(() => {
     if (activeMeetings.length > 0) {
-      const isCurrentSelectedStillActive = selectedMeeting && activeMeetings.some(m => (m.id && m.id === selectedMeeting.id) || (m.code && m.code === selectedMeeting.code));
-      if (!isCurrentSelectedStillActive) {
+      const matchedActive = selectedMeeting && activeMeetings.find(
+        m => (m.id && m.id === selectedMeeting.id) || (m.code && m.code === selectedMeeting.code)
+      );
+      if (!matchedActive) {
         handleSelectMeeting(activeMeetings[0]);
+      } else {
+        const prevCount = selectedMeeting.participantRecords?.length || selectedMeeting.attendees?.length || 0;
+        const nextCount = matchedActive.participantRecords?.length || matchedActive.attendees?.length || 0;
+        const hasLocalUnsavedList = Boolean(rawList && rawList.trim()) && parsedParticipants.length > 0;
+        if (nextCount > prevCount || (nextCount > 0 && parsedParticipants.length === 0 && !hasLocalUnsavedList)) {
+          setSelectedMeeting(matchedActive);
+          loadMeetingAttendance(matchedActive);
+        }
       }
     } else if (selectedMeeting) {
       setSelectedMeeting(null);
@@ -1428,17 +1438,20 @@ export default function MeetingsTab({
         localStorage.setItem(storageKey, JSON.stringify(updated));
       } catch {}
     }
+
+    return updated;
   }
 
-  async function handleSaveSidebarAttendance() {
-    if (isViewer) { showToast('Brak uprawnień do modyfikacji danych (konto w trybie tylko do odczytu).'); return; }
-    if (!selectedMeeting || parsedParticipants.length === 0) return;
-    setIsSavingAttendance(true);
+  async function persistVerifiedParticipantsToSupabase(participantsList, targetMeeting, { toastSuccessMsg = null } = {}) {
+    if (!targetMeeting || !Array.isArray(participantsList)) return;
+    const activeOrgId = currentOrg?.id || 'skn_seksuologii';
+    const meetCode = String(targetMeeting?.code || targetMeeting?.id || 'M00').replace(/\s+/g, ' ').trim();
+    const meetDate = targetMeeting?.date || new Date().toISOString().slice(0, 10);
 
-    const verifiedList = parsedParticipants
+    const verifiedList = participantsList
       .filter(p => p.manualApproved)
       .map(p => {
-        const nrIndeksu = String(p.member?.index || p.nrIndeksu || p.index || (isMonikaLyniewska(p.rawName) ? '34327' : (p.rawName.match(/\d{4,6}/)?.[0] || ''))).replace(/\D/g, '').trim();
+        const nrIndeksu = String(p.member?.index || p.nrIndeksu || p.index || (isMonikaLyniewska(p.rawName) ? '34327' : (p.rawName?.match(/\d{4,6}/)?.[0] || ''))).replace(/\D/g, '').trim();
         let name = String(p.member?.fullName || p.fullName || p.rawName || '').trim();
         if (/^\d+$/.test(name) && nrIndeksu) {
           name = (p.member && !/^\d+$/.test(p.member.fullName || '')) ? p.member.fullName : '';
@@ -1450,51 +1463,59 @@ export default function MeetingsTab({
         return {
           nrIndeksu: nrIndeksu || '',
           name,
+          fullName: name,
+          rawName: p.rawName || name,
+          joinTime: p.joinTime || '',
+          durationMinutes: p.durationMinutes ?? null,
+          durationStr: p.durationStr || '',
+          activities: Array.isArray(p.activities) ? p.activities : [],
           rola,
-          punkty: 1,
-          opisAktywnosci: 'Obecność na spotkaniu'
+          punkty: Number(p.punkty ?? p.points ?? 1) || 1,
+          opisAktywnosci: p.opisAktywnosci || 'Obecność na spotkaniu'
         };
       })
       .filter(p => p.nrIndeksu || p.name);
 
-    const meetCode = String(selectedMeeting?.code || selectedMeeting?.id || "M00").replace(/\s+/g, ' ').trim();
-
+    setIsSavingAttendance(true);
+    setSheetFeedback(null);
     try {
-      // Bezpośredni zapis do tabeli attendance w Supabase (całkowicie odcięty od Google Sheets)
       await saveMeetingAttendanceToSupabase({
         kodSpotkania: meetCode,
-        dataSpotkania: selectedMeeting?.date || new Date().toISOString().slice(0, 10),
+        dataSpotkania: meetDate,
         obecnosci: verifiedList,
-        orgId: currentOrg?.id || 'skn_seksuologii'
+        orgId: activeOrgId
       });
 
       const confirmedIndexes = verifiedList.map(item => item.nrIndeksu || item.name).filter(Boolean);
-      setCustomMeetings(prev => prev.map(m => (m.id === selectedMeeting?.id || m.code === selectedMeeting?.code) ? { ...m, isNewlyCreated: false } : m));
-      setSelectedMeeting(prev => prev ? ({ ...prev, isNewlyCreated: false }) : null);
+      setCustomMeetings(prev => prev.map(m => (m.id === targetMeeting?.id || m.code === targetMeeting?.code) ? { ...m, isNewlyCreated: false } : m));
+      setSelectedMeeting(prev => prev ? ({
+        ...prev,
+        isNewlyCreated: false,
+        attendees: confirmedIndexes,
+        participantRecords: participantsList,
+      }) : null);
 
-      const activeOrgId = currentOrg?.id || 'skn_seksuologii';
       const attendancePayload = {
         organization_id: activeOrgId,
         orgName: currentOrg?.name || '',
         orgTag: currentOrg?.tag || '',
-        meetingId: selectedMeeting.id,
-        meetingDate: selectedMeeting.date,
-        date: selectedMeeting.date,
-        meetingCode: selectedMeeting.code,
-        code: selectedMeeting.code,
-        academicYear: selectedMeeting.academicYear || (selectedMeeting.date >= '2026-10-01' ? '2026/2027' : '2025/2026'),
-        attendees: parsedParticipants,
+        meetingId: targetMeeting.id,
+        meetingDate: targetMeeting.date,
+        date: targetMeeting.date,
+        meetingCode: targetMeeting.code,
+        code: targetMeeting.code,
+        academicYear: targetMeeting.academicYear || (targetMeeting.date >= '2026-10-01' ? '2026/2027' : '2025/2026'),
+        attendees: participantsList,
         allVerifiedList: verifiedList,
         obecnosci: verifiedList,
-        participantRecords: parsedParticipants,
+        participantRecords: participantsList,
         confirmedIndexes,
         confirmedCount: confirmedIndexes.length,
         savedAt: new Date().toISOString(),
       };
 
-      // Mirror save to localStorage strictly isolated by organization_id
       if (typeof window !== 'undefined' && window.localStorage) {
-        const keys = getMeetingAttendanceStorageKeys(activeOrgId, selectedMeeting);
+        const keys = getMeetingAttendanceStorageKeys(activeOrgId, targetMeeting);
         keys.forEach(k => {
           try {
             localStorage.setItem(k, JSON.stringify(attendancePayload));
@@ -1502,16 +1523,30 @@ export default function MeetingsTab({
         });
       }
 
-      onMarkAttendance(selectedMeeting.id, confirmedIndexes, attendancePayload);
-      // Bump version to force sidebar cards to reflect new count immediately
+      onMarkAttendance(targetMeeting.id, confirmedIndexes, attendancePayload);
       setLocalStorageVersion(v => v + 1);
-      showToast("Obecności zostały zapisane bezpośrednio w bazie Supabase!");
+      if (toastSuccessMsg) {
+        showToast(toastSuccessMsg, 'success');
+      }
+      return true;
     } catch (err) {
-      console.error("Błąd zapisu do bazy Supabase:", err);
-      showToast("Błąd zapisu do bazy Supabase: " + (err.message || err));
+      const codePart = err?.code || err?.status ? `[${err.code || err.status}] ` : '';
+      const errMsg = `Błąd zapisu obecności do Supabase: ${codePart}${err?.message || String(err)}`;
+      console.error('[MeetingsTab.persistVerifiedParticipantsToSupabase]', err);
+      setSheetFeedback({ ok: false, error: errMsg });
+      showToast(errMsg, 'error');
+      return false;
     } finally {
       setIsSavingAttendance(false);
     }
+  }
+
+  async function handleSaveSidebarAttendance() {
+    if (isViewer) { showToast('Brak uprawnień do modyfikacji danych (konto w trybie tylko do odczytu).'); return; }
+    if (!selectedMeeting || parsedParticipants.length === 0) return;
+    await persistVerifiedParticipantsToSupabase(parsedParticipants, selectedMeeting, {
+      toastSuccessMsg: 'Obecności zostały zapisane bezpośrednio w bazie Supabase!'
+    });
   }
 
   const handleProcessAttendance = (overrideText = null) => {
@@ -1619,7 +1654,7 @@ export default function MeetingsTab({
     setFetchingSheet(true);
     setSheetFeedback(null);
     try {
-      const res = await fetchMeetingAttendanceFromSupabase(selectedMeeting.code || selectedMeeting.id, null, members, currentOrg?.id);
+      const res = await fetchMeetingAttendanceFromSupabase(selectedMeeting.code || selectedMeeting.id, null, members, currentOrg?.id, selectedMeeting.date);
 
       // Zabezpieczenie przed race condition: weryfikacja czy spotkanie jest nadal aktywne
       const currentActiveId = selectedMeetingRef.current?.id || selectedMeetingRef.current?.code || selectedMeetingRef.current?.date;
@@ -1770,7 +1805,11 @@ export default function MeetingsTab({
     }
   }
 
-  function handleToggleManualApproval(participantId) {
+  async function handleToggleManualApproval(participantId) {
+    if (isViewer) {
+      showToast('Brak uprawnień do modyfikacji danych (konto w trybie tylko do odczytu).', 'error');
+      return;
+    }
     const part = parsedParticipants.find(p => p.id === participantId);
     if (!part) return;
 
@@ -1783,7 +1822,14 @@ export default function MeetingsTab({
     };
     setManualOverrides(nextOverrides);
 
-    recalculateAttendance(parsedParticipants, nextOverrides);
+    const updatedParticipants = recalculateAttendance(parsedParticipants, nextOverrides);
+    if (selectedMeeting && Array.isArray(updatedParticipants)) {
+      await persistVerifiedParticipantsToSupabase(updatedParticipants, selectedMeeting, {
+        toastSuccessMsg: nextApproved
+          ? `Zapisano obecność (${part.fullName || part.rawName}) w Supabase.`
+          : `Usunięto zaliczenie obecności (${part.fullName || part.rawName}) w Supabase.`
+      });
+    }
   }
 
   // ── Protocol / Meeting Minutes Handlers ────────────────────────────────────
