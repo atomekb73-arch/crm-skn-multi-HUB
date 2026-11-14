@@ -171,14 +171,24 @@ export function getAutoMeetingType(meeting) {
     return 'project';
   }
 
-  // 4. Trigger Warning / Wrażliwe
+  // 4. Trigger Warning / Wrażliwe (nieobowiązkowe dla członków)
   if (
-    title.includes('trauma') ||
-    title.includes('traumy') ||
+    title.includes('trigger') ||
+    title.includes('triger') ||
+    title.includes('warning') ||
+    title.includes('warnink') ||
+    title.includes('wrażliw') ||
+    title.includes('wrazliw') ||
+    title.includes('ostrzeżenie o treści') ||
+    title.includes('ostrzezenie o tresci') ||
+    title.includes('traum') ||
     title.includes('przemoc') ||
     title.includes('nadużyc') ||
     title.includes('naduzyc') ||
-    title.includes('zaburzen')
+    title.includes('zaburzen') ||
+    title.includes('[tw]') ||
+    title.includes('(tw)') ||
+    title.includes('tw:')
   ) {
     return 'trigger_warning';
   }
@@ -431,8 +441,17 @@ export function isMeetingEligibleForDenominator(meeting, customTypes = {}, ewide
       text.includes('burza mózgów') ||
       text.includes('spotkanie z dyrektorem') ||
       text.includes('relacja z konferencji') ||
-      text.includes('trigger warning') ||
-      text.includes('[tw]');
+      text.includes('trigger') ||
+      text.includes('triger') ||
+      text.includes('warning') ||
+      text.includes('warnink') ||
+      text.includes('wrażliw') ||
+      text.includes('wrazliw') ||
+      text.includes('ostrzeżenie o treści') ||
+      text.includes('ostrzezenie o tresci') ||
+      text.includes('[tw]') ||
+      text.includes('(tw)') ||
+      text.includes('tw:');
 
     if (isExcluded) return false;
 

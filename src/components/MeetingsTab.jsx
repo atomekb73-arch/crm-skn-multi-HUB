@@ -3617,7 +3617,7 @@ export default function MeetingsTab({
                     <option value="mandatory">◯ Obowiązkowe (wliczane do frekwencji certyfikatu)</option>
                     <option value="optional">◯ Nieobowiązkowe / Dodatkowe (dla chętnych)</option>
                     <option value="project">🔧 Spotkanie projektowe / techniczne (prace zespołów)</option>
-                    <option value="trigger_warning">◯ Trigger Warning (ostrzeżenie / wymóg szczególny)</option>
+                    <option value="trigger_warning">◯ Trigger Warning (nieobowiązkowe – tematyka wrażliwa)</option>
                     <option value="internal">◯ Wewnętrzne Zarządzanie (organizacyjne)</option>
                   </optgroup>
                   <optgroup label="Format / Kategoria wydarzenia">

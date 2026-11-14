@@ -271,6 +271,12 @@ export default function ManagementTab({
         rawCharakter.includes('nieobowiązkow') ||
         rawCharakter.includes('nieobowiazkow') ||
         rawCharakter.includes('trigger') ||
+        rawCharakter.includes('triger') ||
+        rawCharakter.includes('warning') ||
+        rawCharakter.includes('warnink') ||
+        rawCharakter.includes('wrażliw') ||
+        rawCharakter.includes('wrazliw') ||
+        rawCharakter.includes('tw') ||
         rawCharakter.includes('otwart');
 
       if (typeCfg?.countsTowardsDenominator && !isExplicitBonusCharakter) {
