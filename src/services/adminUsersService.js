@@ -1,5 +1,4 @@
 import { supabase } from '../supabaseClient.js';
-import { WSKZ_ORGANIZATIONS } from '../config/wskzRegistry.js';
 import { hashPassword } from '../utils/crypto.js';
 import {
   GLOBAL_SUPERADMIN_EMAIL,
@@ -9,20 +8,167 @@ import {
 
 export const RBAC_STARTER_PASSWORD = 'Start2026!';
 
-export const PRODUCTION_CRM_ORGANIZATIONS = WSKZ_ORGANIZATIONS.filter(
-  (org) => org.hasActiveCrm && normalizeOrgId(org.orgId) !== 'test'
-).map((org) => ({
-  id: normalizeOrgId(org.orgId),
-  orgId: normalizeOrgId(org.orgId),
-  name: org.name,
-  shortName: org.shortName || org.name,
-  code: org.code || '',
-  icon: org.icon || 'Building2',
-  color: org.color || '#4f46e5',
-  bgLight: org.bgLight || '#eef2ff',
-}));
+export const ALL_WSKZ_RBAC_ORGANIZATIONS = [
+  {
+    id: 'biuro_dziekana',
+    code: 'DZIEKANAT',
+    name: 'Biuro Dziekana WSKZ',
+    displayName: 'Biuro Dziekana',
+    icon: 'Building2',
+    color: '#1E293B',
+    bgLight: '#F1F5F9',
+  },
+  {
+    id: 'samorzad_studencki',
+    code: 'SAMORZĄD',
+    name: 'Samorząd Studentów WSKZ',
+    displayName: 'Samorząd Studentów',
+    icon: 'Users',
+    color: '#0284C7',
+    bgLight: '#E0F2FE',
+  },
+  {
+    id: 'wydarzenia_ogolne',
+    code: 'OGÓLNE',
+    name: 'Wydarzenia Ogólnowydziałowe',
+    displayName: 'Wydarzenia Ogólne',
+    icon: 'GraduationCap',
+    color: '#334155',
+    bgLight: '#F8FAFC',
+  },
+  {
+    id: 'skn_psychologii_klinicznej',
+    code: 'KLINICZNA',
+    name: '01 SKN Psychologii Klinicznej',
+    displayName: '01 SKN Psychologii Klinicznej',
+    icon: 'Brain',
+    color: '#6D28D9',
+    bgLight: '#EDE9FE',
+  },
+  {
+    id: 'skn_psychotraumatologii',
+    code: 'INTEGRUM',
+    name: '02 SKN Psychotraumatologii - Integrum',
+    displayName: '02 SKN Psychotraumatologii',
+    icon: 'Puzzle',
+    color: '#BE185D',
+    bgLight: '#FCE7F3',
+  },
+  {
+    id: 'skn_psychoterapii',
+    code: 'TERAPII',
+    name: '03 SKN Psychoterapii',
+    displayName: '03 SKN Psychoterapii',
+    icon: 'Armchair',
+    color: '#DB2777',
+    bgLight: '#FDF2F8',
+  },
+  {
+    id: 'skn_psychologii_kryminalnej',
+    code: 'KRYMINALNA',
+    name: '04 SKN Psychologii Kryminalnej',
+    displayName: '04 SKN Psychologii Kryminalnej',
+    icon: 'Search',
+    color: '#B45309',
+    bgLight: '#FEF3C7',
+  },
+  {
+    id: 'uzaleznienia',
+    code: 'UZALEŻNIEŃ',
+    name: '05 SKN Psychologii Zachowań Ryzykownych i Uzależnień',
+    displayName: '05 SKN Zachowań Ryzykownych',
+    icon: 'Flame',
+    color: '#C2410C',
+    bgLight: '#FFEDD5',
+  },
+  {
+    id: 'skn_spolecznej_ewolucyjnej',
+    code: 'EWOLUCYJNA',
+    name: '06 SKN Psychologii Społecznej i Ewolucyjnej',
+    displayName: '06 SKN Społecznej i Ewolucyjnej',
+    icon: 'Dna',
+    color: '#D97706',
+    bgLight: '#FEF3C7',
+  },
+  {
+    id: 'psychoonkologia',
+    code: 'ONKOLOGIA',
+    name: '07 SKN Psychoonkologii',
+    displayName: '07 SKN Psychoonkologii',
+    icon: 'Ribbon',
+    color: '#0284C7',
+    bgLight: '#E0F2FE',
+  },
+  {
+    id: 'skn_psychofizjologii',
+    code: 'FIZJOLOGIA',
+    name: '08 SKN Psychofizjologii',
+    displayName: '08 SKN Psychofizjologii',
+    icon: 'Zap',
+    color: '#0D9488',
+    bgLight: '#CCFBF1',
+  },
+  {
+    id: 'skn_zdrowia_srodowiska',
+    code: 'ZDROWIA',
+    name: '09 SKN Psychologii Zdrowia i Środowiska',
+    displayName: '09 SKN Zdrowia i Środowiska',
+    icon: 'Leaf',
+    color: '#059669',
+    bgLight: '#D1FAE5',
+  },
+  {
+    id: 'skn_seksuologii',
+    code: 'SEKSUOLOGIA',
+    name: '10 SKN Seksuologii',
+    displayName: '10 SKN Seksuologii',
+    icon: 'Heart',
+    color: '#16A34A',
+    bgLight: '#DCFCE7',
+  },
+  {
+    id: 'skn_rozwoju_dzieci',
+    code: 'ROZWOJU',
+    name: '11 SKN Psychologii Rozwoju Dzieci i Młodzieży',
+    displayName: '11 SKN Rozwoju Dzieci',
+    icon: 'Sparkles',
+    color: '#A21CAF',
+    bgLight: '#FAE8FF',
+  },
+  {
+    id: 'skn_krytycznego_myslenia',
+    code: 'MYŚLENIA',
+    name: '12 SKN Warsztat Krytycznego Myślenia',
+    displayName: '12 SKN Krytycznego Myślenia',
+    icon: 'HelpCircle',
+    color: '#7E22CE',
+    bgLight: '#F3E8FF',
+  },
+  {
+    id: 'skn_reklamy_pr',
+    code: 'REKLAMY',
+    name: '13 SKN Reklamy, PR i Marketingu',
+    displayName: '13 SKN Reklamy i Marketingu',
+    icon: 'Target',
+    color: '#E11D48',
+    bgLight: '#FFE4E6',
+  },
+  {
+    id: 'skn_startupow',
+    code: 'STARTUP',
+    name: '14 SKN Nowoczesnego Zarządzania i Start-upów',
+    displayName: '14 SKN Start-upów',
+    icon: 'Rocket',
+    color: '#0D9488',
+    bgLight: '#CCFBF1',
+  },
+];
 
-export const PRODUCTION_CLUB_IDS = PRODUCTION_CRM_ORGANIZATIONS.map((o) => o.id);
+export const ALL_WSKZ_ORGANIZATION_IDS = ALL_WSKZ_RBAC_ORGANIZATIONS.map((o) => o.id);
+
+export const PRODUCTION_CRM_ORGANIZATIONS = ALL_WSKZ_RBAC_ORGANIZATIONS;
+
+export const PRODUCTION_CLUB_IDS = ALL_WSKZ_ORGANIZATION_IDS;
 
 function normalizeRbacRole(rawRole, email = '') {
   const cleanEmail = String(email || '').trim().toLowerCase();
@@ -41,7 +187,7 @@ function sanitizeClubs(rawClubs, email = '') {
   const valid = new Set();
   for (const club of list) {
     const norm = normalizeOrgId(club);
-    if (norm && norm !== 'test' && norm !== '*' && PRODUCTION_CLUB_IDS.includes(norm)) {
+    if (norm && norm !== 'test' && norm !== '*' && ALL_WSKZ_ORGANIZATION_IDS.includes(norm)) {
       valid.add(norm);
     }
   }

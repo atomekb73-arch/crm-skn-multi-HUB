@@ -3,7 +3,25 @@ import { hashPassword } from '../../src/utils/crypto.js';
 
 const GLOBAL_SUPERADMIN_EMAIL = 'atomekb73@gmail.com';
 const STARTER_PASSWORD = process.env.CRM_STARTER_PASSWORD || 'Start2026!';
-const PRODUCTION_CLUB_IDS = ['skn_seksuologii', 'uzaleznienia', 'psychoonkologia'];
+const PRODUCTION_CLUB_IDS = [
+  'biuro_dziekana',
+  'samorzad_studencki',
+  'wydarzenia_ogolne',
+  'skn_psychologii_klinicznej',
+  'skn_psychotraumatologii',
+  'skn_psychoterapii',
+  'skn_psychologii_kryminalnej',
+  'uzaleznienia',
+  'skn_spolecznej_ewolucyjnej',
+  'psychoonkologia',
+  'skn_psychofizjologii',
+  'skn_zdrowia_srodowiska',
+  'skn_seksuologii',
+  'skn_rozwoju_dzieci',
+  'skn_krytycznego_myslenia',
+  'skn_reklamy_pr',
+  'skn_startupow',
+];
 const VALID_ROLES = ['superadmin', 'admin', 'user'];
 
 function normalizeOrgId(raw) {
