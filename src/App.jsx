@@ -534,7 +534,7 @@ export default function App() {
     }
     try {
       const { startDate, endDate, yearPrefix } = getRangeForYear(yr, cStart, cEnd);
-      const effectiveSubId = subId || currentOrg?.subcalendarId || DEFAULT_SUBCALENDAR_ID || '14518766';
+      const effectiveSubId = currentOrg?.subcalendarId || subId || DEFAULT_SUBCALENDAR_ID || '14518766';
       const effectiveCalId = currentOrg?.calendarKey || currentOrg?.calendarId || 'ks9aiux4jiza1ronpd';
       const effectiveToken = currentOrg?.teamupApiKey || currentOrg?.teamupToken || '20dc4242d0d74be314e5ee108dc618cf3f6fbcb7647865568775fe4d9a89c112';
 
@@ -1879,7 +1879,7 @@ export default function App() {
   };
 
   const handleRefreshCalendar = useCallback(async () => {
-    const targetSub = String(selectedSubcalendar || currentOrg?.subcalendarId || '14518766').trim();
+    const targetSub = String(currentOrg?.subcalendarId || selectedSubcalendar || '14518766').trim();
     return await loadMeetings(
       targetSub,
       academicYear,

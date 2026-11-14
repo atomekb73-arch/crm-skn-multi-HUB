@@ -24,6 +24,7 @@ import {
 import { fetchOrgSettingsFromDB, deduplicateSupervisors } from '../services/settingsService';
 import { getTenantTheme, applyTenantThemeToDom } from '../theme/tenantTheme';
 import { useAuth } from './AuthContext';
+import { WSKZ_ORGANIZATIONS, getActiveCrmOrganizations } from '../config/wskzRegistry';
 
 const envTeamupToken = (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env.VITE_TEAMUP_API_KEY || import.meta.env.VITE_TEAMUP_TOKEN)) || '';
 
@@ -45,6 +46,7 @@ export const DEFAULT_ORGS = [
     subcalendarName: '10 💚 SKN Seksuologii',
     description: 'Studenckie Koło Naukowe Seksuologii WSKZ - Oficjalna ewidencja i harmonogram',
     color: 'indigo',
+    hasActiveCrm: true,
     isDefault: true,
     supervisors: [],
   },
@@ -65,6 +67,7 @@ export const DEFAULT_ORGS = [
     subcalendarName: '05 🏷️ SKN Psychologii Zachowań Ryzykownych i Uzależnień',
     description: 'Studenckie Koło Naukowe Zachowań Ryzykowych i Uzależnień WSKZ',
     color: 'teal',
+    hasActiveCrm: true,
     isDefault: false,
     supervisors: [],
   },
@@ -86,6 +89,7 @@ export const DEFAULT_ORGS = [
     subcalendarName: '07 🎗️ SKN Psychoonkologii',
     description: 'Studenckie Koło Naukowe Psychoonkologii WSKZ - Oficjalna ewidencja i harmonogram',
     color: 'purple',
+    hasActiveCrm: true,
     isDefault: false,
     supervisors: [],
   },
@@ -183,7 +187,8 @@ export function OrgProvider({ children }) {
         if (!mapped.some(o => o.id === 'psychoonkologia')) {
           mapped.push(DEFAULT_ORGS[2]);
         }
-        return mapped;
+        // Ścisła izolacja: W przełączniku instancji renderuj WYŁĄCZNIE koła z hasActiveCrm === true
+        return mapped.filter(o => o.hasActiveCrm !== false && ['skn_seksuologii', 'uzaleznienia', 'psychoonkologia'].includes(o.id));
       }
     } catch (err) {
       console.error('Błąd odczytu crm_skn_organizations z localStorage:', err);
