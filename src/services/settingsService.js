@@ -139,7 +139,11 @@ export const deduplicateSupervisors = (list, targetOrgId = null) => {
       academicTitle,
       name,
       fullName,
-      affiliation: s.affiliation || 'Instytut Psychologii WSKZ',
+      affiliation: (s.affiliation || 'Wydział Psychologii WSKZ')
+        .replace(/Instytut Psychologii/g, 'Wydział Psychologii')
+        .replace(/INSTYTUT PSYCHOLOGII/g, 'WYDZIAŁ PSYCHOLOGII')
+        .replace(/Instytucie Psychologii/g, 'Wydziale Psychologii')
+        .replace(/Instytutu Psychologii/g, 'Wydziału Psychologii'),
       role,
       email,
       startDate,

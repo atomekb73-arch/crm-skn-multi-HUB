@@ -26,7 +26,7 @@ const INDEX_REGEX = /^[1-9][0-9]{3,4}$/;
 // Standardowy wzorzec poprawnej struktury adresu e-mail
 const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
 
-// Oficjalne kierunki studiów w Instytucie Psychologii WSKZ
+// Oficjalne kierunki studiów w Wydziale Psychologii WSKZ
 const RECRUITMENT_STUDY_FIELDS = [
   'Psychologia',
   'Psychologia w biznesie',
@@ -1326,7 +1326,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
                       ))}
                     </select>
                     <p className="text-[11px] text-slate-500 mt-1">
-                      Wybierz kierunek studiów w Instytucie Psychologii WSKZ.
+                      Wybierz kierunek studiów w Wydziale Psychologii WSKZ.
                     </p>
                   </div>
 

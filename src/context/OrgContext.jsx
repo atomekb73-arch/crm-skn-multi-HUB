@@ -33,8 +33,8 @@ export const DEFAULT_ORGS = [
     name: 'Studenckie Koło Naukowe Seksuologii WSKZ',
     shortName: 'SKN Seksuologii',
     tag: 'SKN-SEKS',
-    faculty: 'Instytut Psychologii WSKZ',
-    unit: 'Instytut Psychologii WSKZ',
+    faculty: 'Wydział Psychologii WSKZ',
+    unit: 'Wydział Psychologii WSKZ',
     academicYear: '2026/2027',
     sheetId: '1hNCTDi08_ttX8wI04FVh7MCgs2T4w92KdRgfK7pCiq0k',
     calendarKey: 'ks9aiux4jiza1ronpd',
@@ -53,8 +53,8 @@ export const DEFAULT_ORGS = [
     name: 'Studenckie Koło Naukowe Zachowań Ryzykowych i Uzależnień',
     shortName: 'SKN Uzależnień',
     tag: 'SKN-UZAL',
-    faculty: 'Instytut Psychologii WSKZ',
-    unit: 'Instytut Psychologii WSKZ',
+    faculty: 'Wydział Psychologii WSKZ',
+    unit: 'Wydział Psychologii WSKZ',
     academicYear: '2026/2027',
     sheetId: '1xIJDJP2PpIJY8EfaY2gf6Qcq3YBcSCKX3BW-oO92u6Y',
     calendarKey: 'ks9aiux4jiza1ronpd',
@@ -74,8 +74,8 @@ export const DEFAULT_ORGS = [
     shortName: 'SKN Psychoonkologii',
     tag: 'SKN-ONKO',
     badgeText: 'ONKO',
-    faculty: 'Instytut Psychologii WSKZ',
-    unit: 'Instytut Psychologii WSKZ',
+    faculty: 'Wydział Psychologii WSKZ',
+    unit: 'Wydział Psychologii WSKZ',
     academicYear: '2026/2027',
     sheetId: '1Omb7RbsMeiUs8IlXuKDAteXyd8lnkAXehX1nhofOTAY',
     calendarKey: 'ks9aiux4jiza1ronpd',
@@ -109,7 +109,22 @@ export function OrgProvider({ children }) {
     try {
       const parsed = safeGetStorage('crm_skn_organizations', null);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        const mapped = parsed.map((o) => {
+        const mapped = parsed.map((rawO) => {
+          const o = { ...rawO };
+          if (o.faculty && o.faculty.includes('Instytut')) {
+            o.faculty = o.faculty
+              .replace(/Instytut Psychologii/g, 'Wydział Psychologii')
+              .replace(/INSTYTUT PSYCHOLOGII/g, 'WYDZIAŁ PSYCHOLOGII')
+              .replace(/Instytucie Psychologii/g, 'Wydziale Psychologii')
+              .replace(/Instytutu Psychologii/g, 'Wydziału Psychologii');
+          }
+          if (o.unit && o.unit.includes('Instytut')) {
+            o.unit = o.unit
+              .replace(/Instytut Psychologii/g, 'Wydział Psychologii')
+              .replace(/INSTYTUT PSYCHOLOGII/g, 'WYDZIAŁ PSYCHOLOGII')
+              .replace(/Instytucie Psychologii/g, 'Wydziale Psychologii')
+              .replace(/Instytutu Psychologii/g, 'Wydziału Psychologii');
+          }
           if (
             !o.name ||
             o.id === 'skn-template' ||

@@ -89,7 +89,7 @@ async function doImport() {
       academicTitle: 'mgr',
       name: 'Sławomir Pietrzak',
       fullName: 'mgr Sławomir Pietrzak',
-      affiliation: 'Instytut Psychologii WSKZ',
+      affiliation: 'Wydział Psychologii WSKZ',
       role: 'Opiekun Koła Naukowego',
       email: 'slawomir.pietrzak@wskz.pl',
       isActive: true,

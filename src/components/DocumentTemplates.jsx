@@ -77,9 +77,19 @@ export function getOrgMetadata(org) {
   // Oficjalny tag referencyjny dokumentacji (np. SKN-UZAL, SKN-SEKS)
   let tag = resolvedOrg?.tag || (resolvedOrg?.shortName ? resolvedOrg.shortName.toUpperCase().replace(/\s+/g, '-') : 'SKN');
 
-  // Jednostka organizacyjna i Instytut
-  let unit = resolvedOrg?.unit || resolvedOrg?.faculty || 'Instytut Psychologii WSKZ';
-  const faculty = resolvedOrg?.faculty || unit;
+  // Jednostka organizacyjna i Wydział
+  let rawUnit = resolvedOrg?.unit || resolvedOrg?.faculty || 'Wydział Psychologii WSKZ';
+  let unit = rawUnit
+    .replace(/Instytut Psychologii/g, 'Wydział Psychologii')
+    .replace(/INSTYTUT PSYCHOLOGII/g, 'WYDZIAŁ PSYCHOLOGII')
+    .replace(/Instytucie Psychologii/g, 'Wydziale Psychologii')
+    .replace(/Instytutu Psychologii/g, 'Wydziału Psychologii');
+  let rawFaculty = resolvedOrg?.faculty || unit;
+  let faculty = rawFaculty
+    .replace(/Instytut Psychologii/g, 'Wydział Psychologii')
+    .replace(/INSTYTUT PSYCHOLOGII/g, 'WYDZIAŁ PSYCHOLOGII')
+    .replace(/Instytucie Psychologii/g, 'Wydziale Psychologii')
+    .replace(/Instytutu Psychologii/g, 'Wydziału Psychologii');
 
   return {
     id,
@@ -137,7 +147,7 @@ export function getOrgAffiliationSub(orgName = '') {
  * Globalny, ujednolicony nagłówek dokumentu w architekturze Multi-Tenant:
  * Lewa strona:
  *   Linia 1: WYŻSZA SZKOŁA KSZTAŁCENIA ZAWODOWEGO
- *   Linia 2: INSTYTUT PSYCHOLOGII WSKZ (lub odpowiedni instytut)
+ *   Linia 2: WYDZIAŁ PSYCHOLOGII WSKZ (lub odpowiedni wydział)
  *   Linia 3: Pełna nazwa koła (np. STUDENCKIE KOŁO NAUKOWE ZACHOWAŃ RYZYKOWYCH I UZALEŻNIEŃ)
  *   Linia 4 (jeśli dotyczy): Dodatkowy podtytuł (np. Działalność Badawcza i Konferencyjna)
  * Zmniejszona czcionka (8-9pt / text-[8.5px] - text-[9px]), aby tytuł główny był dominujący.
@@ -162,11 +172,11 @@ export function DocumentStandardHeader({
     <div className={`document-standard-header w-full ${borderBottom ? 'border-b border-slate-300 pb-1.5 mb-2' : 'pb-1 mb-1'} ${className}`}>
       {/* 1. Oficjalna belka graficzna WSKZ z logotypem, cytatem i paskiem */}
       {showFullBanner && (
-        <div className="w-full mb-1 overflow-hidden">
+        <div className="w-full mb-1 overflow-hidden p-0 m-0 text-left flex justify-start items-center">
           <img
             src="/wskz-header.png"
             alt="Wyższa Szkoła Kształcenia Zawodowego"
-            className="w-full h-auto max-h-[17mm] sm:max-h-[20mm] object-contain object-left block"
+            className="w-full h-auto max-h-[17mm] sm:max-h-[20mm] object-contain object-left block m-0 p-0"
             loading="eager"
           />
         </div>
@@ -311,13 +321,21 @@ export function formatSupervisorRole(s) {
   return s.role || 'Opiekun Koła';
 }
 
-export function formatSupervisorAffiliation(s, defaultUnit = 'Instytut Psychologii WSKZ') {
+export function formatSupervisorAffiliation(s, defaultUnit = 'Wydział Psychologii WSKZ') {
   if (!s) return defaultUnit;
   if (typeof s === 'string') {
-    return s.includes('Wydział Psychologii') ? 'Instytut Psychologii WSKZ' : s;
+    return s
+      .replace(/Instytut Psychologii/g, 'Wydział Psychologii')
+      .replace(/INSTYTUT PSYCHOLOGII/g, 'WYDZIAŁ PSYCHOLOGII')
+      .replace(/Instytucie Psychologii/g, 'Wydziale Psychologii')
+      .replace(/Instytutu Psychologii/g, 'Wydziału Psychologii');
   }
-  const aff = s.affiliation || defaultUnit;
-  return aff.includes('Wydział Psychologii') ? 'Instytut Psychologii WSKZ' : aff;
+  const rawAff = s.affiliation || defaultUnit;
+  return rawAff
+    .replace(/Instytut Psychologii/g, 'Wydział Psychologii')
+    .replace(/INSTYTUT PSYCHOLOGII/g, 'WYDZIAŁ PSYCHOLOGII')
+    .replace(/Instytucie Psychologii/g, 'Wydziale Psychologii')
+    .replace(/Instytutu Psychologii/g, 'Wydziału Psychologii');
 }
 
 /**
@@ -327,7 +345,7 @@ export function DocumentSignaturesBlock({
   activeSupervisors = [],
   orgShortName = 'Koło Naukowe',
   orgName = '',
-  orgUnit = 'Instytut Psychologii WSKZ',
+  orgUnit = 'Wydział Psychologii WSKZ',
   chairpersonTitle = 'Zarząd Koła Naukowego',
   chairpersonSub = null,
   className = 'pt-3 sm:pt-4',
@@ -1017,7 +1035,7 @@ export function MeetingsSummaryTableTemplate({
               <th colSpan={10} className="p-0 pb-1 text-left font-normal">
                 <div className="flex items-center justify-between text-[8px] text-slate-600 font-sans pb-1 mb-1 border-b border-slate-200">
                   <div className="flex items-center gap-2">
-                    <img src="/wskz-header.png" alt="" className="h-[7mm] object-contain" />
+                    <img src="/wskz-header.png" alt="" className="h-[7mm] object-contain object-left block m-0 p-0" />
                     <span className="font-bold text-slate-800 uppercase tracking-tight">{orgName}</span>
                   </div>
                   <div className="font-mono text-slate-500">
@@ -1439,7 +1457,7 @@ export function MembersRegistryTemplate({
                 <th colSpan={10} className="p-0 pb-1 text-left font-normal">
                   <div className="flex items-center justify-between text-[8px] text-slate-600 font-sans pb-1 mb-1 border-b border-slate-200">
                     <div className="flex items-center gap-2">
-                      <img src="/wskz-header.png" alt="" className="h-[7mm] object-contain" />
+                      <img src="/wskz-header.png" alt="" className="h-[7mm] object-contain object-left block m-0 p-0" />
                       <span className="font-bold text-slate-800 uppercase tracking-tight">{orgName}</span>
                     </div>
                     <div className="font-mono text-slate-500">
@@ -1652,7 +1670,7 @@ export function ResearchConferencesRegistryTemplate({
               <th colSpan={10} className="p-0 pb-1 text-left font-normal">
                 <div className="flex items-center justify-between text-[8px] text-slate-600 font-sans pb-1 mb-1 border-b border-slate-200">
                   <div className="flex items-center gap-2">
-                    <img src="/wskz-header.png" alt="" className="h-[7mm] object-contain" />
+                    <img src="/wskz-header.png" alt="" className="h-[7mm] object-contain object-left block m-0 p-0" />
                     <span className="font-bold text-slate-800 uppercase tracking-tight">{orgName}</span>
                   </div>
                   <div className="font-mono text-slate-500">
