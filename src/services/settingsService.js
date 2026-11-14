@@ -1096,7 +1096,7 @@ export async function fetchGlobalAccessMatrix(actorEmail) {
     supabase.from('board_terms').select('*').then(r => r).catch(() => ({ data: null, error: true })),
     ...activeClubIds.map(orgId =>
       fetchAllTenantRows('members', orgId, {
-        select: 'organization_id, first_name, last_name, full_name, email, index_number, nr_indeksu, role, status',
+        select: 'organization_id, full_name, email, index_number',
       }).catch(() => ({ data: [], error: true }))
     ),
   ]);
