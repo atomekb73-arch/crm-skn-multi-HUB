@@ -19,7 +19,7 @@ import {
 import { useAuth, DEFAULT_STARTER_PASSWORD } from '../context/AuthContext';
 
 export default function LoginScreen({ onOpenPublicForm, currentOrgId }) {
-  const { checkEmailStatus, refreshRemoteAccess, activateAccount, loginWithPassword } = useAuth();
+  const { checkEmailStatus, refreshRemoteAccess, activateAccount, loginWithPassword, authNotice, clearAuthNotice } = useAuth();
 
   // Step state: 'email' | 'password' | 'activate'
   const [step, setStep] = useState('email');
@@ -43,13 +43,14 @@ export default function LoginScreen({ onOpenPublicForm, currentOrgId }) {
   // Validation rules for new password during first-time activation
   const hasMinLength = newPassword.length >= 8;
   const passwordsMatch = newPassword.length > 0 && newPassword === confirmPassword;
-  const isNotStarterPassword = newPassword !== DEFAULT_STARTER_PASSWORD && newPassword !== 'Start2026!';
+  const isNotStarterPassword = Boolean(newPassword) && newPassword !== DEFAULT_STARTER_PASSWORD && newPassword !== 'Start2026!';
   const isActivationValid = hasMinLength && passwordsMatch && isNotStarterPassword;
 
   // STEP 1: Verify Email
   const handleEmailSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+    if (typeof clearAuthNotice === 'function') clearAuthNotice();
     const cleanEmail = email.trim().toLowerCase();
 
     if (!cleanEmail) {
@@ -201,12 +202,12 @@ export default function LoginScreen({ onOpenPublicForm, currentOrgId }) {
           </div>
 
           {/* Error Notice */}
-          {error && (
+          {(error || authNotice) && (
             <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2.5 animate-in fade-in zoom-in-95 duration-150">
               <AlertCircle size={16} className="text-rose-600 shrink-0 mt-0.5" />
               <div className="leading-snug">
                 <p className="font-bold">Odmowa dostępu</p>
-                <p className="text-[11px] text-rose-700 mt-0.5">{error}</p>
+                <p className="text-[11px] text-rose-700 mt-0.5">{error || authNotice}</p>
               </div>
             </div>
           )}
@@ -234,7 +235,7 @@ export default function LoginScreen({ onOpenPublicForm, currentOrgId }) {
                       setEmail(e.target.value);
                       setError(null);
                     }}
-                    placeholder="np. zarzad@wskz.pl lub identyfikator"
+                    placeholder="Wpisz autoryzowany adres e-mail..."
                     className="w-full pl-10 pr-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none transition font-medium text-slate-800"
                   />
                 </div>
@@ -281,9 +282,6 @@ export default function LoginScreen({ onOpenPublicForm, currentOrgId }) {
                   <label htmlFor="app_access_code" className="block text-xs font-bold text-slate-700">
                     Hasło dostępu
                   </label>
-                  <span className="text-[10px] text-indigo-600 font-medium bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
-                    Startowe: StartCRM2026!
-                  </span>
                 </div>
                 <div className="relative">
                   <KeyRound size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -298,7 +296,7 @@ export default function LoginScreen({ onOpenPublicForm, currentOrgId }) {
                     spellCheck="false"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Wpisz hasło stałe lub startowe (StartCRM2026!)..."
+                    placeholder="Wpisz swoje hasło dostępowe..."
                     className="w-full pl-10 pr-10 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 outline-none transition font-medium text-slate-800 font-mono"
                   />
                   <button
@@ -311,7 +309,7 @@ export default function LoginScreen({ onOpenPublicForm, currentOrgId }) {
                   </button>
                 </div>
                 <p className="text-[10px] text-slate-400">
-                  Przy pierwszym logowaniu hasłem startowym system poprosi o nadanie własnego hasła stałego.
+                  Przy pierwszym logowaniu podaj hasło tymczasowe otrzymane od administratora, aby ustawić własne hasło stałe.
                 </p>
               </div>
 
@@ -365,7 +363,7 @@ export default function LoginScreen({ onOpenPublicForm, currentOrgId }) {
                   Witaj, {verifiedUser?.name || 'Użytkowniku'}!
                 </p>
                 <p className="text-[11px] text-indigo-900/80 leading-relaxed">
-                  Podano prawidłowe hasło startowe (<span className="font-mono font-bold text-indigo-700 bg-white/70 px-1 py-0.5 rounded border border-indigo-200">StartCRM2026!</span>). Ze względów bezpieczeństwa musisz teraz ustanowić swoje własne, unikalne hasło stałe.
+                  Podano prawidłowe hasło tymczasowe. Ze względów bezpieczeństwa musisz teraz ustanowić swoje własne, unikalne hasło stałe.
                 </p>
               </div>
 
@@ -479,7 +477,7 @@ export default function LoginScreen({ onOpenPublicForm, currentOrgId }) {
                     <div className="w-3 h-3 rounded-full border border-slate-300" />
                   )}
                   <span className={newPassword && newPassword !== DEFAULT_STARTER_PASSWORD ? 'text-emerald-700 font-semibold' : 'text-slate-500'}>
-                    Różne od hasła startowego ({DEFAULT_STARTER_PASSWORD})
+                    Różne od hasła startowego
                   </span>
                 </div>
               </div>

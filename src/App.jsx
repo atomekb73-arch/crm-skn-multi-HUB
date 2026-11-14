@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef, startTransition } fr
 import {
   LayoutDashboard,
   ShieldAlert,
+  ShieldCheck,
   CalendarDays,
   Wrench,
   RefreshCw,
@@ -25,6 +26,7 @@ import ToolsTab      from './components/ToolsTab';
 import SettingsTab   from './components/SettingsTab';
 import Navbar        from './components/Navbar';
 import SettingsModal from './components/SettingsModal';
+import SuperAdminPanel from './components/SuperAdminPanel';
 import ProfileMenu   from './components/ProfileMenu';
 import SyncIndicator from './components/SyncIndicator';
 import PwaInstallPrompt from './components/PwaInstallPrompt';
@@ -47,7 +49,7 @@ import { getCanonicalMeetingsForOrg, filterLegitimateMeetings } from './utils/ca
 import { getMeetingType, calculateCategorizedFrequency, calculateMemberStats, isMeetingEligibleForDenominator, MEETING_TYPES, hasMeetingAttendanceLogs } from './utils/meetingTypes';
 import { isMemberActive, isMemberGuest, isMemberInactive, isMemberArchived, hasMailingConsent } from './utils/memberFilters';
 import { normalizeDiacritics, isFacultySupervisor } from './utils/specialRoles';
-import { uniqueTenures, deduplicateBoard, deduplicateBoardTenures, DEFAULT_BOARD_TENURES_SEKSUOLOGIA, getDefaultBoardTenuresForOrg } from './services/settingsService';
+import { uniqueTenures, deduplicateBoard, deduplicateBoardTenures, DEFAULT_BOARD_TENURES_SEKSUOLOGIA, getDefaultBoardTenuresForOrg, GLOBAL_SUPERADMIN_EMAIL } from './services/settingsService';
 import { buildAttendanceIndex, precompileMeetings } from './utils/attendanceIndexer';
 import { calculateMemberAttendance } from './utils/attendanceCalculator';
 import { isEwidencjaInAcademicScope, isEwidencjaMatchForMeeting } from './utils/academicScope';
@@ -109,8 +111,18 @@ try {
 }
 
 export default function App() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isSuperAdmin, canAccessOrg, canAdminOrg, revalidateSessionAccess } = useAuth();
   const { currentOrg, organizations, switchOrg, getStorageKey, theme } = useOrg();
+  const isExclusiveGlobalSuperadmin = Boolean(
+    isAuthenticated &&
+    isSuperAdmin &&
+    user?.email?.toLowerCase().trim() === GLOBAL_SUPERADMIN_EMAIL
+  );
+  const accessibleOrganizations = useMemo(
+    () => organizations.filter(org => canAccessOrg(org.id)),
+    [organizations, canAccessOrg]
+  );
+  const [isSuperAdminPanelOpen, setIsSuperAdminPanelOpen] = useState(false);
   const currentOrgCleanId = (currentOrg?.id === 'skn-template' ? 'skn_seksuologii' : currentOrg?.id) || 'skn_seksuologii';
   const { attendanceConfig } = useSettings();
   const [activeTab, setActiveTabState] = useState(() => {
@@ -3192,16 +3204,19 @@ export default function App() {
                     <div className="absolute top-full left-0 mt-2 w-80 max-w-[calc(100vw-24px)] bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 z-[70] animate-in fade-in zoom-in-95 duration-100">
                       <div className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 flex items-center justify-between">
                         <span>Wybierz Koło Naukowe</span>
-                        <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">Multi-Tenant</span>
+                        <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">
+                          {accessibleOrganizations.length} dostępne
+                        </span>
                       </div>
                       <div className="space-y-1.5 py-1.5 max-h-72 overflow-y-auto">
-                        {organizations.map(org => {
+                        {accessibleOrganizations.map(org => {
                           const isSelected = org.id === currentOrg.id;
                           const orgTheme = getTenantTheme(org.id);
                           return (
                             <button
                               key={org.id}
                               onClick={() => {
+                                if (!canAccessOrg(org.id)) return;
                                 switchOrg(org.id);
                                 setIsOrgDropdownOpen(false);
                                 setToastMessage(`Przełączono kontekst: ${org.name}`);
@@ -3234,18 +3249,20 @@ export default function App() {
                           );
                         })}
                       </div>
-                      <div className="border-t border-slate-100 pt-1.5 mt-1">
-                        <button
-                          onClick={() => {
-                            setIsOrgDropdownOpen(false);
-                            setIsSettingsOpen(true);
-                          }}
-                          className={`w-full flex items-center gap-2 p-2 rounded-xl text-xs font-bold text-slate-600 ${theme?.headerHoverTitle || 'hover:text-indigo-600'} hover:bg-slate-50 transition cursor-pointer`}
-                        >
-                          <Settings size={14} />
-                          <span>Konfiguracja kół i uprawnień…</span>
-                        </button>
-                      </div>
+                      {(isSuperAdmin || (typeof canAdminOrg === 'function' && canAdminOrg(currentOrg?.id))) && (
+                        <div className="border-t border-slate-100 pt-1.5 mt-1">
+                          <button
+                            onClick={() => {
+                              setIsOrgDropdownOpen(false);
+                              setIsSettingsOpen(true);
+                            }}
+                            className={`w-full flex items-center gap-2 p-2 rounded-xl text-xs font-bold text-slate-600 ${theme?.headerHoverTitle || 'hover:text-indigo-600'} hover:bg-slate-50 transition cursor-pointer`}
+                          >
+                            <Settings size={14} />
+                            <span>Konfiguracja koła i uprawnień…</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </>
                 )}
@@ -3278,6 +3295,19 @@ export default function App() {
                 <RefreshCw size={13} className={(loading || isSyncing) ? 'animate-spin' : ''} />
                 <span className="hidden md:inline">{isSyncing ? 'Synchronizacja...' : 'Odśwież dane'}</span>
               </button>
+
+              {/* Wyłączny Panel Superadministratora (renderowany wyłącznie dla atomekb73@gmail.com) */}
+              {isExclusiveGlobalSuperadmin && (
+                <button
+                  type="button"
+                  onClick={() => setIsSuperAdminPanelOpen(true)}
+                  title="Panel Superadministratora — globalny audyt dostępów i Kill Switch"
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 border border-amber-400/40 text-xs font-bold transition-all shadow-sm cursor-pointer whitespace-nowrap min-h-[36px] sm:min-h-0"
+                >
+                  <ShieldCheck size={14} className="text-amber-300 shrink-0" />
+                  <span className="hidden sm:inline">Panel Superadmina</span>
+                </button>
+              )}
 
               {/* User Profile & Role Switcher Menu */}
               <ProfileMenu onOpenSettings={() => setIsSettingsOpen(true)} />
@@ -3541,6 +3571,15 @@ export default function App() {
           handleRefreshData();
         }}
       />
+
+      {/* ── Exclusive Superadmin Panel (tylko atomekb73@gmail.com) ────────── */}
+      {isExclusiveGlobalSuperadmin && (
+        <SuperAdminPanel
+          isOpen={isSuperAdminPanelOpen}
+          onClose={() => setIsSuperAdminPanelOpen(false)}
+          onPermissionsChanged={() => revalidateSessionAccess?.()}
+        />
+      )}
 
       {/* ── PWA Mobile Install Banner (Floating on mobile browsers) ─────────── */}
       <PwaInstallPrompt variant="banner" />

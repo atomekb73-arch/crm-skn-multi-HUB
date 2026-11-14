@@ -3,6 +3,7 @@ import {
   saveUserPasswordToDB,
   saveAccessUsersToDB,
   fetchLoginAccessForEmail,
+  GLOBAL_SUPERADMIN_EMAIL,
 } from '../services/settingsService';
 import { hashPassword, verifyPassword } from '../utils/crypto';
 
@@ -45,115 +46,26 @@ export const ADMIN_PASSWORD = import.meta.env?.VITE_ADMIN_PASSWORD || '';
 export const DEFAULT_STARTER_PASSWORD = 'StartCRM2026!';
 
 export const MASTER_ADMIN_EMAILS = [
-  'admin@wskz.pl',
-  'admin',
-  'atomekb73@gmail.com',
-  'zarzad@wskz.pl',
+  GLOBAL_SUPERADMIN_EMAIL,
 ];
 
-export const MASTER_ADMIN_PASSWORDS = {
-  'admin@wskz.pl': ADMIN_PASSWORD,
-  'admin': ADMIN_PASSWORD,
-  'zarzad@wskz.pl': ADMIN_PASSWORD,
-};
+export const MASTER_ADMIN_PASSWORDS = {};
 
-export const DEFAULT_AUTHORIZED_ACCOUNTS = [
-  {
-    email: 'w.czepirska@gmail.com',
-    name: 'Magda Czepirska',
-    full_name: 'Magda Czepirska',
-    role: 'Koordynator / Pełny dostęp',
-    roleLabel: 'Koordynator / Pełny dostęp',
-    organizations: ['skn_seksuologii', 'uzaleznienia'],
-    accessibleOrgs: ['skn_seksuologii', 'uzaleznienia'],
-    is_global_admin: false,
-    must_change_password: false,
-    isFirstLogin: false,
-    organization_id: 'uzaleznienia',
-  },
-  {
-    email: 'm.czepirek@gmail.com',
-    name: 'Magda Czepirska',
-    full_name: 'Magda Czepirska',
-    role: 'Koordynator / Pełny dostęp',
-    roleLabel: 'Koordynator / Pełny dostęp',
-    organizations: ['skn_seksuologii', 'uzaleznienia'],
-    accessibleOrgs: ['skn_seksuologii', 'uzaleznienia'],
-    is_global_admin: false,
-    must_change_password: false,
-    isFirstLogin: false,
-    organization_id: 'uzaleznienia',
-  },
-  {
-    email: '15998@student.wskz.pl',
-    name: 'Tomasz Bratkowski',
-    role: 'SUPER_ADMIN',
-    roleLabel: 'Przewodniczący SKNS',
-    isFirstLogin: true,
-    accessibleOrgs: ['*'],
-  },
-  {
-    email: 'gabriel.creart@gmail.com',
-    name: 'Michał Rodak',
-    role: 'ADMIN',
-    roleLabel: 'Zarząd Koła',
-    isFirstLogin: true,
-    accessibleOrgs: ['*'],
-  },
-  {
-    email: 'lajlasienkiewicz@gmail.com',
-    name: 'Liliana Sienkiewicz',
-    full_name: 'Liliana Sienkiewicz',
-    role: 'Koordynator / Pełny dostęp',
-    roleLabel: 'Koordynator / Pełny dostęp',
-    organizations: ['psychoonkologia'],
-    accessibleOrgs: ['psychoonkologia'],
-    organization_id: 'psychoonkologia',
-    is_global_admin: false,
-    isFirstLogin: true,
-  },
-];
+// Brak statycznie zakodowanych kont przekrojowych — jedynym źródłem uprawnień per koło jest Supabase SSOT.
+export const DEFAULT_AUTHORIZED_ACCOUNTS = [];
 
 export const STARTER_PASSWORDS = {};
 
 export const ACCESS_PASSWORDS = [
-  ADMIN_PASSWORD,
   DEFAULT_STARTER_PASSWORD,
   import.meta.env?.VITE_ACCESS_PASSWORD,
   import.meta.env?.VITE_ADMIN_PASSWORD,
 ].filter(Boolean);
 
-export const DEFAULT_USER = {
-  email: 'zarzad@wskz.pl',
-  name: 'Zarząd SKN WSKZ',
-  avatarUrl: '',
-  role: 'SUPER_ADMIN',
-  accessibleOrgs: ['*'], // Pełne uprawnienia administracyjne
-};
+export const DEFAULT_USER = null;
 
-export const DEMO_ACCOUNTS = [
-  {
-    email: 'zarzad@wskz.pl',
-    name: 'Zarząd SKN',
-    role: 'SUPER_ADMIN',
-    accessibleOrgs: ['*'],
-    description: 'Dostęp zarządu (pełne uprawnienia)',
-  },
-  {
-    email: 'opiekun@wskz.pl',
-    name: 'Opiekun Naukowy Koła',
-    role: 'COORDINATOR',
-    accessibleOrgs: ['*'],
-    description: 'Opiekun naukowy koła',
-  },
-  {
-    email: 'audytor@wskz.pl',
-    name: 'Podgląd / Audyt',
-    role: 'VIEWER',
-    accessibleOrgs: ['*'],
-    description: 'Ewidencja i sprawozdania (tylko odczyt)',
-  },
-];
+// Wyłączone konta demonstracyjne w produkcji / izolacji wielokołowej
+export const DEMO_ACCOUNTS = [];
 
 const AuthContext = createContext(null);
 
@@ -167,10 +79,11 @@ const STARTER_PASSWORD_SET = new Set([DEFAULT_STARTER_PASSWORD, 'StartCRM2026!',
 
 /** Ujednolicenie identyfikatorów kół (aliasy) – zgodne z normalizeOrgId w settingsService */
 function normalizeAuthOrgId(orgId) {
-  const str = String(orgId || '').trim();
+  const str = String(orgId || '').trim().toLowerCase();
   if (!str || str === '*') return str;
-  if (str === 'skn-template' || str === 'default' || str === 'seksuologia') return 'skn_seksuologii';
+  if (str === 'skn-template' || str === 'skn_template' || str === 'default' || str === 'seksuologia' || str === 'skn-seksuologia') return 'skn_seksuologii';
   if (str === 'skn_psychoonkologii' || str === 'skn-psychoonkologia') return 'psychoonkologia';
+  if (str === 'skn_uzaleznienia' || str === 'skn-uzaleznienia') return 'uzaleznienia';
   return str;
 }
 
@@ -334,13 +247,51 @@ function parseJwtPayload(token) {
   }
 }
 
+function sanitizeSessionUser(rawUser) {
+  if (!rawUser || !rawUser.email) return null;
+  const cleanEmail = String(rawUser.email).toLowerCase().trim();
+  const isGlobalSuperadmin = cleanEmail === GLOBAL_SUPERADMIN_EMAIL;
+  if (isGlobalSuperadmin) {
+    return {
+      ...rawUser,
+      email: cleanEmail,
+      role: 'SUPER_ADMIN',
+      is_global_admin: true,
+      accessibleOrgs: ['*'],
+      organizations: ['*'],
+    };
+  }
+  const rawOrgs = Array.isArray(rawUser.accessibleOrgs)
+    ? rawUser.accessibleOrgs
+    : Array.isArray(rawUser.organizations)
+    ? rawUser.organizations
+    : [];
+  const filteredOrgs = Array.from(new Set(
+    rawOrgs
+      .map(o => normalizeAuthOrgId(o))
+      .filter(o => o && o !== '*' && o !== 'test')
+  ));
+  if (filteredOrgs.length === 0) {
+    return null;
+  }
+  return {
+    ...rawUser,
+    email: cleanEmail,
+    role: rawUser.role === 'SUPER_ADMIN' ? 'ADMIN' : (rawUser.role || 'COORDINATOR'),
+    is_global_admin: false,
+    accessibleOrgs: filteredOrgs,
+    organizations: filteredOrgs,
+    organization_id: filteredOrgs[0],
+  };
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try {
       const session = localStorage.getItem('crm_skn_auth_session');
       const saved = localStorage.getItem('crm_skn_auth_user');
       if (session && saved) {
-        const parsed = JSON.parse(saved);
+        const parsed = sanitizeSessionUser(JSON.parse(saved));
         if (parsed && parsed.email) {
           return parsed;
         }
@@ -353,11 +304,27 @@ export function AuthProvider({ children }) {
     try {
       const session = localStorage.getItem('crm_skn_auth_session');
       const saved = localStorage.getItem('crm_skn_auth_user');
-      return !!(session && saved);
+      if (!session || !saved) return false;
+      return Boolean(sanitizeSessionUser(JSON.parse(saved)));
     } catch {
       return false;
     }
   });
+
+  const [authNotice, setAuthNotice] = useState(() => {
+    try {
+      return sessionStorage.getItem('skn_auth_revoked_notice') || null;
+    } catch {
+      return null;
+    }
+  });
+
+  const clearAuthNotice = useCallback(() => {
+    setAuthNotice(null);
+    try {
+      sessionStorage.removeItem('skn_auth_revoked_notice');
+    } catch {}
+  }, []);
 
   useEffect(() => {
     try {
@@ -380,35 +347,57 @@ export function AuthProvider({ children }) {
 
   const isMasterUser = useMemo(() => {
     const userEmail = (user?.email || '').toLowerCase().trim();
-    if (user?.is_global_admin === false) return false;
-    return MASTER_ADMIN_EMAILS.some(mEmail => mEmail.toLowerCase().trim() === userEmail);
+    if (!userEmail || user?.is_global_admin === false) return false;
+    return userEmail === GLOBAL_SUPERADMIN_EMAIL;
   }, [user]);
 
-  /** Weryfikacja czy użytkownik ma uprawnienia do danego koła */
+  /** Ścisła weryfikacja czy zalogowany użytkownik ma uprawnienia do danego koła (zero wycieku między kołami) */
   const canAccessOrg = useCallback((orgId) => {
     if (!user || !isAuthenticated) return false;
-    if (isMasterUser || (user.role === 'SUPER_ADMIN' && user.is_global_admin !== false)) return true;
+    if (isMasterUser) return true;
+    const cleanTarget = normalizeAuthOrgId(orgId);
+    if (!cleanTarget || cleanTarget === '*' || cleanTarget === 'test') return false;
     const allowedOrgs = user.organizations || user.accessibleOrgs || [];
-    if (Array.isArray(allowedOrgs)) {
-      if (allowedOrgs.includes('*')) return true;
-      if (allowedOrgs.includes(orgId)) return true;
-      // mapowanie aliasów: seksuologia <-> skn_seksuologii
-      if (orgId === 'skn_seksuologii' && allowedOrgs.includes('seksuologia')) return true;
-      if (orgId === 'seksuologia' && allowedOrgs.includes('skn_seksuologii')) return true;
-      if (orgId === 'psychoonkologia' && (allowedOrgs.includes('skn_psychoonkologii') || allowedOrgs.includes('skn-psychoonkologia'))) return true;
-      if ((orgId === 'skn_psychoonkologii' || orgId === 'skn-psychoonkologia') && allowedOrgs.includes('psychoonkologia')) return true;
-    }
-    return false;
+    if (!Array.isArray(allowedOrgs) || allowedOrgs.length === 0) return false;
+    return allowedOrgs.some(o => {
+      const norm = normalizeAuthOrgId(o);
+      return Boolean(norm && norm !== '*' && norm === cleanTarget);
+    });
   }, [user, isAuthenticated, isMasterUser]);
 
-  const isSuperAdmin = isMasterUser || (user?.role === 'SUPER_ADMIN' && user?.is_global_admin !== false);
+  /** Superadministrator globalny (wyłącznie atomekb73@gmail.com) */
+  const isSuperAdmin = isMasterUser;
+
+  /** Administrator konkretnego koła (Zarząd / Przewodniczący / Sekretarz / ADMIN) */
+  const isClubAdmin = Boolean(
+    isSuperAdmin ||
+    user?.isClubAdmin ||
+    user?.role === 'ADMIN' ||
+    user?.role === 'SUPER_ADMIN' ||
+    user?.role === 'Dostęp pełny' ||
+    user?.role === 'Koordynator / Pełny dostęp'
+  );
+
+  const canAdminOrg = useCallback((orgId) => {
+    if (isSuperAdmin) return true;
+    if (!canAccessOrg(orgId)) return false;
+    const cleanTarget = normalizeAuthOrgId(orgId);
+    const orgRole = user?.rolePerOrg?.[cleanTarget];
+    if (orgRole) {
+      return ['ADMIN', 'SUPER_ADMIN', 'Dostęp pełny', 'Koordynator / Pełny dostęp'].includes(orgRole);
+    }
+    return isClubAdmin;
+  }, [isSuperAdmin, canAccessOrg, user, isClubAdmin]);
+
   const isCoordinator = user?.role === 'COORDINATOR' || 
+                        user?.role === 'ADMIN' ||
                         user?.role === 'Koordynator / Pełny dostęp' || 
                         user?.role === 'Dostęp pełny' || 
+                        isClubAdmin ||
                         isSuperAdmin;
   const isViewer = user?.role === 'VIEWER';
 
-  /** Sprawdzenie uprawnień adresu e-mail i stanu hasła */
+  /** Sprawdzenie uprawnień adresu e-mail i stanu hasła (ścisła izolacja per koło) */
   const checkEmailStatus = useCallback((inputEmail) => {
     if (!inputEmail || !inputEmail.trim()) {
       return { authorized: false, error: 'Wprowadź adres e-mail.' };
@@ -416,46 +405,41 @@ export function AuthProvider({ children }) {
 
     const cleanEmail = inputEmail.trim().toLowerCase();
 
-    // 1. Sprawdź czy konto jest w bazie uprawnionych lub dziedziczy rolę
-    const isMaster = MASTER_ADMIN_EMAILS.some(e => e.toLowerCase() === cleanEmail);
-    const isDefaultBoard = cleanEmail === 'zarzad@wskz.pl';
-    const demoMatch = DEMO_ACCOUNTS.find(d => d.email.toLowerCase() === cleanEmail);
-    const defaultAuthMatch = DEFAULT_AUTHORIZED_ACCOUNTS.find(d => d.email.toLowerCase() === cleanEmail);
+    // 1. Wyłącznie atomekb73@gmail.com posiada globalny status Superadministratora
+    const isMaster = cleanEmail === GLOBAL_SUPERADMIN_EMAIL;
 
-    // Źródła uprawnień (wszystkie koła):
-    //  a) Supabase SSOT (cache z refreshRemoteAccess) – działa z każdego urządzenia,
-    //  b) localStorage – klucze per koło (skn_access_users_<org>, crm_skn_<org>_supervisors, skn_board_tenures_<org>)
-    //     oraz klucze globalne (legacy, bez przypisania do koła).
+    // Źródła uprawnień (Supabase SSOT ma bezwzględny priorytet nad localStorage)
     const remote = remoteAccessCache.get(cleanEmail) || null;
     const sameEmail = (v) => String(v || '').trim().toLowerCase() === cleanEmail;
+    const revokedSet = new Set((remote?.revokedOrgs || []).map(o => normalizeAuthOrgId(o)));
 
     const collectMatches = (lists, emailOf, extraFilter = () => true) => {
       const found = [];
       lists.forEach(({ orgId, list }) => {
+        const cleanOrgId = orgId ? normalizeAuthOrgId(orgId) : null;
+        if (!cleanOrgId || cleanOrgId === '*' || cleanOrgId === 'test' || revokedSet.has(cleanOrgId)) return;
         list.forEach(item => {
-          if (item && sameEmail(emailOf(item)) && extraFilter(item)) found.push({ ...item, orgId: orgId || null });
+          if (item && sameEmail(emailOf(item)) && extraFilter(item)) {
+            found.push({ ...item, orgId: cleanOrgId });
+          }
         });
       });
       return found;
     };
 
-    const accessMatches = [
-      ...(remote?.accessMatches || []),
-      ...collectMatches(collectLocalLists(/^skn_access_users_(.+)$/), u => u.email),
-      ...collectMatches(collectLocalLists(/^skn_access_users$/), u => u.email),
-    ];
+    const useRemoteOnly = Boolean(remote && remote.ok);
 
-    const supervisorMatches = [
-      ...(remote?.supervisorMatches || []),
-      ...collectMatches(collectLocalLists(/^crm_skn_(.+)_supervisors$/), s => s.email),
-      ...collectMatches(collectLocalLists(/^skn_faculty_supervisors$/), s => s.email),
-    ];
+    const accessMatches = useRemoteOnly
+      ? (remote.accessMatches || []).filter(m => m?.orgId && m.orgId !== 'test' && !revokedSet.has(normalizeAuthOrgId(m.orgId)))
+      : collectMatches(collectLocalLists(/^skn_access_users_(.+)$/), u => u.email, u => u?.active !== false && u?.status !== 'revoked');
 
-    const boardMatches = [
-      ...(remote?.boardMatches || []),
-      ...collectMatches(collectLocalLists(/^skn_board_tenures_(.+)$/), t => t.memberEmail || t.email, t => t.isActive !== false),
-      ...collectMatches(collectLocalLists(/^skn_board_tenures$/), t => t.memberEmail || t.email, t => t.isActive !== false),
-    ];
+    const supervisorMatches = useRemoteOnly
+      ? (remote.supervisorMatches || []).filter(m => m?.orgId && m.orgId !== 'test' && !revokedSet.has(normalizeAuthOrgId(m.orgId)))
+      : collectMatches(collectLocalLists(/^crm_skn_(.+)_supervisors$/), s => s.email, s => s?.isActive !== false);
+
+    const boardMatches = useRemoteOnly
+      ? (remote.boardMatches || []).filter(m => m?.orgId && m.orgId !== 'test' && !revokedSet.has(normalizeAuthOrgId(m.orgId)))
+      : collectMatches(collectLocalLists(/^skn_board_tenures_(.+)$/), t => t.memberEmail || t.email, t => t.isActive !== false);
 
     // Najsilniejsza rola wśród wpisów ręcznych (ADMIN > pełny dostęp > koordynator > odczyt)
     const accessRank = (u) => {
@@ -466,7 +450,7 @@ export function AuthProvider({ children }) {
       if (r === 'VIEWER') return 1;
       return 2;
     };
-    const accessMatch = [...accessMatches].sort((a, b) => accessRank(b) - accessRank(a))[0] || defaultAuthMatch;
+    const accessMatch = [...accessMatches].sort((a, b) => accessRank(b) - accessRank(a))[0] || null;
 
     const supervisorMatch = supervisorMatches[0] || null;
 
@@ -476,59 +460,64 @@ export function AuthProvider({ children }) {
     };
     const boardMatch = boardMatches.find(isBoardAdminRole) || boardMatches[0] || null;
 
-    if (!isMaster && !isDefaultBoard && !demoMatch && !accessMatch && !supervisorMatch && !boardMatch) {
+    if (!isMaster && !accessMatch && !supervisorMatch && !boardMatch) {
+      const wasRevoked = revokedSet.size > 0;
       return {
         authorized: false,
-        error: 'Brak uprawnień dostępu. Twój adres nie został dodany przez zarząd koła ani nie pełni funkcji funkcyjnej.',
+        revoked: wasRevoked,
+        error: wasRevoked
+          ? 'Dostęp do systemu CRM został zablokowany lub cofnięty przez Superadministratora.'
+          : 'Brak uprawnień dostępu. Twój adres nie należy do aktywnego zarządu żadnego koła ani nie został dodany w jego ustawieniach.',
       };
     }
 
-    // 1b. Ustal koła, do których użytkownik ma dostęp (izolacja tenantów)
+    // 1b. Ścisłe ustalenie listy kół (wyłącznie jawne przypisania per organization_id; wildcard '*' wyłącznie dla Superadmina)
     const orgSet = new Set();
-    let hasLegacyUntagged = false;
-    [...accessMatches, ...supervisorMatches, ...boardMatches].forEach(m => {
-      if (m.orgId) orgSet.add(normalizeAuthOrgId(m.orgId));
-      else hasLegacyUntagged = true;
-    });
-    let hasWildcard = Boolean(isMaster || isDefaultBoard || demoMatch);
-    if (defaultAuthMatch) {
-      const defOrgs = defaultAuthMatch.accessibleOrgs || defaultAuthMatch.organizations || ['*'];
-      defOrgs.forEach(o => (o === '*' ? (hasWildcard = true) : orgSet.add(normalizeAuthOrgId(o))));
-    }
-    if (orgSet.size === 0 && hasLegacyUntagged) hasWildcard = true;
+    const rolePerOrg = {};
+    const recordOrgRole = (rawOrg, newRole) => {
+      const o = normalizeAuthOrgId(rawOrg);
+      if (!o || o === '*' || o === 'test' || revokedSet.has(o)) return;
+      orgSet.add(o);
+      const prev = rolePerOrg[o];
+      const rank = { ADMIN: 4, 'Dostęp pełny': 3, 'Koordynator / Pełny dostęp': 3, COORDINATOR: 2, VIEWER: 1 };
+      if (!prev || (rank[newRole] || 0) > (rank[prev] || 0)) {
+        rolePerOrg[o] = newRole;
+      }
+    };
 
-    // 2. Utwórz profil użytkownika z uwzględnieniem dziedziczenia ról (Zarząd, Sekretarz, Opiekun)
+    boardMatches.forEach(b => recordOrgRole(b.orgId, isBoardAdminRole(b) ? 'ADMIN' : 'COORDINATOR'));
+    accessMatches.forEach(u => recordOrgRole(u.orgId, u.role === 'VIEWER' ? 'VIEWER' : (u.role === 'ADMIN' || u.role === 'SUPER_ADMIN' ? 'ADMIN' : (u.role || 'COORDINATOR'))));
+    supervisorMatches.forEach(s => recordOrgRole(s.orgId, 'COORDINATOR'));
+
+    if (!isMaster && orgSet.size === 0) {
+      return {
+        authorized: false,
+        revoked: revokedSet.size > 0,
+        error: 'Brak aktywnego przypisania do żadnego koła naukowego.',
+      };
+    }
+
+    // 2. Utwórz profil użytkownika z uwzględnieniem ścisłej izolacji koła
     let role = 'COORDINATOR';
     let name = cleanEmail.split('@')[0];
-    let accessibleOrgs = hasWildcard || orgSet.size === 0 ? ['*'] : Array.from(orgSet);
+    const accessibleOrgs = isMaster ? ['*'] : Array.from(orgSet);
     let inheritedRole = null;
+    let isClubAdminFlag = false;
 
     if (isMaster) {
       role = 'SUPER_ADMIN';
-      name = 'Administrator Główny';
-    } else if (isDefaultBoard) {
-      role = 'SUPER_ADMIN';
-      name = 'Zarząd Koła';
-    } else if (boardMatch) {
-      // Dziedziczenie ról funkcyjnych Zarządu: Sekretarz, Przewodniczący, Wiceprzewodniczący mają pełny dostęp (SUPER_ADMIN)
-      if (isBoardAdminRole(boardMatch)) {
-        role = 'SUPER_ADMIN';
-      } else {
-        role = 'COORDINATOR';
-      }
-      name = boardMatch.memberName || boardMatch.name || cleanEmail.split('@')[0];
-      inheritedRole = boardMatch.roleName || 'Członek Zarządu';
-    } else if (accessMatch) {
-      role = accessMatch.role === 'ADMIN' ? 'SUPER_ADMIN' : (accessMatch.role || 'COORDINATOR');
-      name = accessMatch.name || cleanEmail.split('@')[0];
+      name = 'Tomasz Bratkowski (Superadmin)';
+      isClubAdminFlag = true;
+    } else if (boardMatch || accessMatch) {
+      const hasAnyAdmin = Object.values(rolePerOrg).includes('ADMIN');
+      role = hasAnyAdmin ? 'ADMIN' : (accessMatch?.role === 'VIEWER' ? 'VIEWER' : 'COORDINATOR');
+      isClubAdminFlag = hasAnyAdmin || ['ADMIN', 'SUPER_ADMIN', 'Dostęp pełny', 'Koordynator / Pełny dostęp'].includes(accessMatch?.role);
+      name = boardMatch?.memberName || boardMatch?.name || accessMatch?.name || cleanEmail.split('@')[0];
+      if (boardMatch) inheritedRole = boardMatch.roleName || 'Członek Zarządu';
     } else if (supervisorMatch) {
-      // Dziedziczenie ról: Opiekun Naukowy
       role = 'COORDINATOR';
       name = supervisorMatch.name || supervisorMatch.fullName || 'Opiekun Naukowy';
       inheritedRole = 'Opiekun Naukowy Koła';
-    } else if (demoMatch) {
-      role = demoMatch.role || 'COORDINATOR';
-      name = demoMatch.name;
     }
 
     // 3. Stan aktywacji konta: konto aktywowane (własne hasło) na dowolnym urządzeniu → hasło startowe nieważne
@@ -545,6 +534,9 @@ export function AuthProvider({ children }) {
       email: cleanEmail,
       name,
       role,
+      is_global_admin: isMaster,
+      isClubAdmin: isClubAdminFlag,
+      rolePerOrg,
       accessibleOrgs,
       organizations: accessibleOrgs,
       organization_id: accessibleOrgs[0] !== '*' ? accessibleOrgs[0] : undefined,
@@ -602,7 +594,7 @@ export function AuthProvider({ children }) {
     ].filter(Boolean).includes(p1);
 
     if (isStarter) {
-      return { success: false, error: 'Nowe hasło nie może być hasłem startowym (StartCRM2026!). Wybierz inne, bezpieczne hasło stałe.' };
+      return { success: false, error: 'Nowe hasło nie może być takie samo jak hasło tymczasowe. Wybierz inne, bezpieczne hasło stałe.' };
     }
 
     try {
@@ -646,14 +638,12 @@ export function AuthProvider({ children }) {
         }
       } catch {}
 
-      // 4. Utwórz profil i zaloguj bezpośrednio do CRM (bez haseł w obiekcie sesyjnym)
-      const authUser = userData || {
-        email: cleanEmail,
-        name: cleanEmail.split('@')[0],
-        role: cleanEmail.includes('zarzad') ? 'SUPER_ADMIN' : 'COORDINATOR',
-        accessibleOrgs: ['*'],
-        loggedAt: new Date().toISOString(),
-      };
+      // 4. Utwórz profil (wyłącznie ze zweryfikowanych uprawnień, nigdy wildcard ['*'] dla zwykłych kont)
+      const verified = userData || checkEmailStatus(cleanEmail)?.user;
+      const authUser = sanitizeSessionUser(verified);
+      if (!authUser) {
+        return { success: false, error: 'Brak aktywnych uprawnień do któregokolwiek koła naukowego.' };
+      }
 
       setUser(authUser);
       setIsAuthenticated(true);
@@ -698,7 +688,7 @@ export function AuthProvider({ children }) {
 
     const storedPasswordOrHash = getUserStoredPassword(cleanEmail);
     const tempPassword = status.tempPassword || null;
-    const isMasterOrBoard = MASTER_ADMIN_EMAILS.some(e => e.toLowerCase() === cleanEmail) || cleanEmail === 'zarzad@wskz.pl';
+    const isMasterOrBoard = cleanEmail === GLOBAL_SUPERADMIN_EMAIL;
 
     const isStarterPassword = STARTER_PASSWORD_SET.has(cleanPassword);
     // Po aktywacji konta hasło startowe przestaje działać
@@ -817,7 +807,7 @@ export function AuthProvider({ children }) {
     ].filter(Boolean).includes(p1);
 
     if (isStarter) {
-      return { success: false, error: 'Nowe hasło nie może być hasłem startowym (StartCRM2026!). Wybierz inne, bezpieczne hasło stałe.' };
+      return { success: false, error: 'Nowe hasło nie może być takie samo jak hasło tymczasowe. Wybierz inne, bezpieczne hasło stałe.' };
     }
 
     try {
@@ -859,14 +849,12 @@ export function AuthProvider({ children }) {
         }
       } catch {}
 
-      // 4. Utwórz obiekt zautoryzowanego użytkownika
-      const authUser = userData || {
-        email: cleanEmail,
-        name: cleanEmail.split('@')[0],
-        role: cleanEmail.includes('zarzad') ? 'SUPER_ADMIN' : 'COORDINATOR',
-        accessibleOrgs: ['*'],
-        loggedAt: new Date().toISOString(),
-      };
+      // 4. Utwórz obiekt zautoryzowanego użytkownika ze ścisłą izolacją kół
+      const verified = userData || checkEmailStatus(cleanEmail)?.user;
+      const authUser = sanitizeSessionUser(verified);
+      if (!authUser) {
+        return { success: false, error: 'Brak aktywnych uprawnień do któregokolwiek koła naukowego.' };
+      }
 
       setUser(authUser);
       setIsAuthenticated(true);
@@ -884,49 +872,47 @@ export function AuthProvider({ children }) {
       console.error('Błąd podczas zapisywania nowego hasła:', e);
       return { success: false, error: 'Wystąpił błąd podczas zapisywania hasła.' };
     }
-  }, []);
+  }, [checkEmailStatus]);
 
-  /** Logowanie za pomocą Google OAuth 2.0 (Google Identity Services / @react-oauth/google ready) */
-  const loginWithGoogle = useCallback((credentialResponse) => {
+  /** Logowanie za pomocą Google OAuth 2.0 z pełną weryfikacją uprawnień w Supabase */
+  const loginWithGoogle = useCallback(async (credentialResponse) => {
     if (!credentialResponse?.credential) {
       console.error('Brak tokenu w odpowiedzi Google OAuth');
-      return;
+      return { success: false, error: 'Brak tokenu Google OAuth.' };
     }
 
     const payload = parseJwtPayload(credentialResponse.credential);
     if (!payload || !payload.email) {
       console.error('Nieprawidłowy payload Google OAuth');
-      return;
+      return { success: false, error: 'Nieprawidłowy token Google OAuth.' };
     }
 
     const email = payload.email.toLowerCase().trim();
-    const isMaster = MASTER_ADMIN_EMAILS.some(mEmail => mEmail.toLowerCase().trim() === email);
+    await refreshRemoteAccess(email);
+    const status = checkEmailStatus(email);
+    if (!status.authorized || !status.user) {
+      return { success: false, error: status.error || 'Brak uprawnień dostępu do systemu CRM.' };
+    }
 
-    const newUser = {
-      email,
-      name: payload.name || payload.given_name || email.split('@')[0],
+    const newUser = sanitizeSessionUser({
+      ...status.user,
+      name: payload.name || payload.given_name || status.user.name,
       avatarUrl: payload.picture || '',
-      role: isMaster ? 'SUPER_ADMIN' : 'COORDINATOR',
-      accessibleOrgs: ['*'],
       token: credentialResponse.credential,
-    };
+    });
+
+    if (!newUser) {
+      return { success: false, error: 'Brak przypisania do żadnego koła naukowego.' };
+    }
 
     setUser(newUser);
     setIsAuthenticated(true);
-  }, []);
+    return { success: true, user: newUser };
+  }, [checkEmailStatus]);
 
-  /** Przełącz profil demonstracyjny */
-  const switchDemoAccount = useCallback((account) => {
-    if (import.meta.env?.PROD) {
-      console.warn('[AuthContext] switchDemoAccount jest zablokowane w środowisku produkcyjnym.');
-      return;
-    }
-    const updated = {
-      ...account,
-      avatarUrl: account.avatarUrl || '',
-    };
-    setUser(updated);
-    setIsAuthenticated(true);
+  /** Przełączanie profili demonstracyjnych zostało zablokowane ze względów bezpieczeństwa */
+  const switchDemoAccount = useCallback(() => {
+    console.warn('[AuthContext] Przełączanie profili demonstracyjnych zostało trwale wyłączone ze względów bezpieczeństwa izolacji kół.');
   }, []);
 
   /** Zmiana hasła przez zalogowanego użytkownika (z weryfikacją aktualnego hasła) */
@@ -976,9 +962,15 @@ export function AuthProvider({ children }) {
   }, [user, changePassword]);
 
   /** Wylogowanie */
-  const logout = useCallback(() => {
+  const logout = useCallback((noticeMessage = null) => {
     setUser(null);
     setIsAuthenticated(false);
+    if (noticeMessage && typeof noticeMessage === 'string') {
+      setAuthNotice(noticeMessage);
+      try {
+        sessionStorage.setItem('skn_auth_revoked_notice', noticeMessage);
+      } catch {}
+    }
     try {
       localStorage.removeItem('crm_skn_auth_session');
       localStorage.removeItem('crm_skn_auth_user');
@@ -988,15 +980,82 @@ export function AuthProvider({ children }) {
     } catch {}
   }, []);
 
+  /**
+   * Natychmiastowa rewalidacja sesji wobec Supabase SSOT (Kill Switch + izolacja kół).
+   * Odświeża listę dozwolonych kół po powrocie do karty, na żądanie i cyklicznie.
+   */
+  const revalidateSessionAccess = useCallback(async () => {
+    if (!isAuthenticated || !user?.email) return { valid: false };
+    const cleanEmail = String(user.email).toLowerCase().trim();
+    const remote = await refreshRemoteAccess(cleanEmail);
+    // Jeżeli Supabase chwilowo nie odpowiedział, zachowaj lokalny stan (ale bez wildcard dla zwykłych kont)
+    if (!remote || !remote.ok) return { valid: true, offlineFallback: true };
+
+    const status = checkEmailStatus(cleanEmail);
+    if (!status.authorized || !status.user) {
+      const msg = status.error || 'Twój dostęp do systemu CRM został cofnięty przez Superadministratora.';
+      logout(msg);
+      return { valid: false, revoked: true, error: msg };
+    }
+
+    const sanitizedNext = sanitizeSessionUser({
+      ...user,
+      ...status.user,
+      avatarUrl: user.avatarUrl || '',
+      loggedAt: user.loggedAt || status.user.loggedAt,
+    });
+
+    if (!sanitizedNext) {
+      const msg = 'Brak aktywnego dostępu do któregokolwiek koła naukowego.';
+      logout(msg);
+      return { valid: false, revoked: true, error: msg };
+    }
+
+    const prevOrgs = JSON.stringify(user.accessibleOrgs || []);
+    const nextOrgs = JSON.stringify(sanitizedNext.accessibleOrgs || []);
+    const prevRoles = JSON.stringify(user.rolePerOrg || {});
+    const nextRoles = JSON.stringify(sanitizedNext.rolePerOrg || {});
+    if (prevOrgs !== nextOrgs || prevRoles !== nextRoles || user.role !== sanitizedNext.role || user.is_global_admin !== sanitizedNext.is_global_admin) {
+      setUser(sanitizedNext);
+    }
+
+    return { valid: true, user: sanitizedNext };
+  }, [isAuthenticated, user, checkEmailStatus, logout]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user?.email || typeof window === 'undefined') return undefined;
+
+    revalidateSessionAccess();
+
+    const onFocusOrVisible = () => {
+      if (document.visibilityState === 'hidden') return;
+      revalidateSessionAccess();
+    };
+    window.addEventListener('focus', onFocusOrVisible);
+    document.addEventListener('visibilitychange', onFocusOrVisible);
+    const interval = setInterval(() => {
+      revalidateSessionAccess();
+    }, 45000);
+
+    return () => {
+      window.removeEventListener('focus', onFocusOrVisible);
+      document.removeEventListener('visibilitychange', onFocusOrVisible);
+      clearInterval(interval);
+    };
+  }, [isAuthenticated, user?.email, revalidateSessionAccess]);
+
   const value = useMemo(() => ({
     user,
     isAuthenticated,
     isSuperAdmin,
+    isClubAdmin,
+    canAdminOrg,
     isCoordinator,
     isViewer,
     canAccessOrg,
     checkEmailStatus,
     refreshRemoteAccess,
+    revalidateSessionAccess,
     activateAccount,
     loginWithPassword,
     loginWithCredentials,
@@ -1005,15 +1064,20 @@ export function AuthProvider({ children }) {
     loginWithGoogle,
     switchDemoAccount,
     logout,
+    authNotice,
+    clearAuthNotice,
     setUser,
   }), [
     user,
     isAuthenticated,
     isSuperAdmin,
+    isClubAdmin,
+    canAdminOrg,
     isCoordinator,
     isViewer,
     canAccessOrg,
     checkEmailStatus,
+    revalidateSessionAccess,
     activateAccount,
     loginWithPassword,
     loginWithCredentials,
@@ -1022,6 +1086,8 @@ export function AuthProvider({ children }) {
     loginWithGoogle,
     switchDemoAccount,
     logout,
+    authNotice,
+    clearAuthNotice,
   ]);
 
   return (

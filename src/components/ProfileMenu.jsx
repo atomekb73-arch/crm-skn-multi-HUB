@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   Shield,
   Layers,
-  Sparkles,
   UserCheck,
   Check,
   KeyRound,
@@ -20,15 +19,14 @@ import {
   ShieldCheck,
   ArrowRight,
 } from 'lucide-react';
-import { useAuth, ROLES, DEMO_ACCOUNTS } from '../context/AuthContext';
+import { useAuth, ROLES } from '../context/AuthContext';
 import { useOrg } from '../context/OrgContext';
 
 export default function ProfileMenu({ onOpenSettings }) {
-  const { user, isSuperAdmin, canAccessOrg, switchDemoAccount, logout, changeUserPassword } = useAuth();
+  const { user, isSuperAdmin, canAccessOrg, canAdminOrg, logout, changeUserPassword } = useAuth();
   const { currentOrg, organizations, switchOrg } = useOrg();
   
   const [isOpen, setIsOpen] = useState(false);
-  const [showDemoSelector, setShowDemoSelector] = useState(false);
   const menuRef = useRef(null);
 
   // Change password modal state
@@ -234,8 +232,8 @@ export default function ProfileMenu({ onOpenSettings }) {
 
             <div className="border-t border-slate-100 my-1" />
 
-            {/* Section 2: Super-Admin Settings */}
-            {isSuperAdmin && (
+            {/* Section 2: Club Admin / Super-Admin Settings */}
+            {(isSuperAdmin || (typeof canAdminOrg === 'function' && canAdminOrg(currentOrg?.id))) && (
               <button
                 onClick={() => {
                   setIsOpen(false);
@@ -256,48 +254,6 @@ export default function ProfileMenu({ onOpenSettings }) {
               <KeyRound size={14} className="text-amber-500" />
               <span>Zmień hasło</span>
             </button>
-
-            {/* Section 4: Demo Persona Switcher (Allows live testing) */}
-            <div className="py-1">
-              <button
-                onClick={() => setShowDemoSelector(prev => !prev)}
-                className="w-full flex items-center justify-between p-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 transition cursor-pointer"
-              >
-                <span className="flex items-center gap-2">
-                  <Sparkles size={14} className="text-amber-500" />
-                  <span>Przełącz profil demonstracyjny</span>
-                </span>
-                <ChevronDown size={12} className={`text-slate-400 transition-transform ${showDemoSelector ? 'rotate-180' : ''}`} />
-              </button>
-
-              {showDemoSelector && (
-                <div className="p-1.5 bg-slate-50 rounded-2xl mt-1 space-y-1 border border-slate-200/60">
-                  {DEMO_ACCOUNTS.map(acc => {
-                    const isCurrent = user.email === acc.email;
-                    return (
-                      <button
-                        key={acc.email}
-                        onClick={() => {
-                          switchDemoAccount(acc);
-                          setShowDemoSelector(false);
-                          setIsOpen(false);
-                        }}
-                        className={`w-full text-left p-2 rounded-xl text-[11px] transition cursor-pointer ${
-                          isCurrent
-                            ? 'bg-white font-bold text-indigo-700 shadow-2xs border border-indigo-100'
-                            : 'text-slate-600 hover:bg-white'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold truncate">{acc.name}</span>
-                        </div>
-                        <p className="text-[10px] text-slate-400 truncate mt-0.5">{acc.description}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
 
             <div className="border-t border-slate-100 my-1" />
 

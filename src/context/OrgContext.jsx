@@ -285,20 +285,38 @@ export function OrgProvider({ children }) {
     applyTenantThemeToDom(theme);
   }, [theme]);
 
-  // Switch active organization
+  const { isAuthenticated, canAccessOrg, revalidateSessionAccess } = useAuth();
+
+  // Switch active organization (z twardym egzekwowaniem izolacji per koło)
   const switchOrg = useCallback((orgId) => {
     if (!orgId) return;
-    const cleanId = orgId === 'skn-template' ? 'skn_seksuologii' : orgId;
+    const raw = String(orgId).trim().toLowerCase();
+    const cleanId =
+      raw === 'skn-template' || raw === 'skn_template' || raw === 'default' || raw === 'seksuologia' || raw === 'skn-seksuologia'
+        ? 'skn_seksuologii'
+        : raw === 'skn_psychoonkologii' || raw === 'skn-psychoonkologia'
+        ? 'psychoonkologia'
+        : raw === 'skn_uzaleznienia' || raw === 'skn-uzaleznienia'
+        ? 'uzaleznienia'
+        : raw;
+
+    if (isAuthenticated && typeof canAccessOrg === 'function' && !canAccessOrg(cleanId)) {
+      console.warn(`[OrgContext] Zablokowano próbę przełączenia na nieautoryzowane koło: ${cleanId}`);
+      return;
+    }
+
     setCurrentOrgIdState(cleanId);
     try {
       localStorage.setItem('crm_skn_current_org_id', cleanId);
       localStorage.setItem('crm_active_org_id', cleanId);
     } catch {}
-  }, []);
+    if (isAuthenticated && typeof revalidateSessionAccess === 'function') {
+      revalidateSessionAccess();
+    }
+  }, [isAuthenticated, canAccessOrg, revalidateSessionAccess]);
 
   // Izolacja tenantów po zalogowaniu: jeżeli aktywne koło nie należy do uprawnień użytkownika,
   // przełącz na pierwsze dostępne koło (np. Psychoonkologia dla osób dodanych tylko tam).
-  const { isAuthenticated, canAccessOrg } = useAuth();
   useEffect(() => {
     if (!isAuthenticated || typeof canAccessOrg !== 'function') return;
     if (canAccessOrg(currentOrgId)) return;

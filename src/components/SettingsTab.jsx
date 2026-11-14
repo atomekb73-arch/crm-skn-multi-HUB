@@ -61,6 +61,7 @@ import { ActivityWeightIcon, VectorRingIndicator } from './VectorIcons';
 import { useSettings, DEFAULT_POINT_WEIGHTS, DEFAULT_ATTENDANCE_CONFIG, getEngagementScaleLevel } from '../context/SettingsContext';
 import { useOrg } from '../context/OrgContext';
 import { useAuth, DEFAULT_STARTER_PASSWORD } from '../context/AuthContext';
+import { GLOBAL_SUPERADMIN_EMAIL } from '../services/settingsService';
 import {
   exportOrgBackup,
   importOrgBackup,
@@ -140,7 +141,7 @@ const getInitialBoardTenuresForOrg = (targetOrgId, rawList) => {
 
 export default function SettingsTab({ members = [], meetings = [], onRefreshData }) {
   const { currentOrg, currentOrgId, updateOrganization } = useOrg();
-  const { currentUser, isSuperAdmin } = useAuth();
+  const { user: currentUser, isSuperAdmin } = useAuth();
   const orgId = currentOrg?.id || currentOrgId || 'skn_seksuologii';
 
   const {
@@ -560,7 +561,7 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
   const visibleAccessUsers = useMemo(() => {
     return accessUsers.filter(u => {
       const email = (u?.email || '').toLowerCase().trim();
-      if (email === 'admin@wskz.pl' || email === 'atomekb73@gmail.com') return false;
+      if (email === GLOBAL_SUPERADMIN_EMAIL) return false;
       if (u?.id === 'usr_super_admin') return false;
       if (u?.isPermanent) return false;
       return true;
@@ -621,7 +622,7 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
     // Dziedziczenie z kadencji Zarządu Koła (Sekretarz i Przewodniczący mają pełne uprawnienia ADMIN/SUPER_ADMIN)
     (boardTenures || []).filter(t => t.isActive && t.memberEmail).forEach(t => {
       const email = t.memberEmail.toLowerCase().trim();
-      if (!email || email === 'admin@wskz.pl' || email === 'atomekb73@gmail.com') return;
+      if (!email || email === GLOBAL_SUPERADMIN_EMAIL) return;
       if (addedEmails.has(email)) return;
       addedEmails.add(email);
 
@@ -645,7 +646,7 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
     // Dziedziczenie z Opiekunów Naukowych Koła
     (supervisors || []).filter(s => s.isActive && s.email).forEach(s => {
       const email = s.email.toLowerCase().trim();
-      if (!email || email === 'admin@wskz.pl' || email === 'atomekb73@gmail.com') return;
+      if (!email || email === GLOBAL_SUPERADMIN_EMAIL) return;
       if (addedEmails.has(email)) return;
       addedEmails.add(email);
 
@@ -3368,8 +3369,8 @@ export default function SettingsTab({ members = [], meetings = [], onRefreshData
           </div>
         </div>
 
-        {/* ── SEKTOR 8: ZAAWANSOWANE ZARZĄDZANIE DANYMI (Kopia i Konserwacja) ─────── */}
-        {(isSuperAdmin || currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'Dostęp pełny' || currentUser?.email === 'atomekb73@gmail.com') && (
+        {/* ── SEKTOR 8: ZAAWANSOWANE ZARZĄDZANIE DANYMI (Wyłącznie atomekb73@gmail.com) ─────── */}
+        {(isSuperAdmin && currentUser?.email?.toLowerCase().trim() === GLOBAL_SUPERADMIN_EMAIL) && (
           <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-4 sm:p-5 border border-indigo-500/30 text-white shadow-xl space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-indigo-800/40">
               <div className="flex items-center gap-3">
