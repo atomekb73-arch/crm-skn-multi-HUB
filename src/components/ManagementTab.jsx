@@ -327,6 +327,8 @@ export default function ManagementTab({
         rawCharakter.includes('zarzad') ||
         rawCharakter.includes('wewnętrzn') ||
         rawCharakter.includes('wewnetrzn') ||
+        rawCharakter.includes('projektow') ||
+        rawCharakter.includes('techniczn') ||
         rawCharakter.includes('nieobowiązkow') ||
         rawCharakter.includes('nieobowiazkow') ||
         rawCharakter.includes('trigger') ||

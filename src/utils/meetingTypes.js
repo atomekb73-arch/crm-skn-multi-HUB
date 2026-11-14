@@ -61,6 +61,7 @@ export const MEETING_TYPES = {
     badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-300',
     description: 'Wliczane do bazowej frekwencji (mianownik)',
     countsTowardsDenominator: true,
+    reportCategory: 'substantive',
   },
   optional: {
     id: 'optional',
@@ -71,6 +72,18 @@ export const MEETING_TYPES = {
     badgeClass: 'bg-amber-50 text-amber-800 border-amber-300',
     description: 'Otwarte / dodatkowe – brak obecności nie obniża frekwencji',
     countsTowardsDenominator: false,
+    reportCategory: 'substantive',
+  },
+  project: {
+    id: 'project',
+    group: 'status',
+    label: 'Spotkanie projektowe / techniczne',
+    icon: 'Wrench',
+    ringColorClass: 'text-cyan-600',
+    badgeClass: 'bg-cyan-50 text-cyan-800 border-cyan-300',
+    description: 'Prace zespołów projektowych, techniczne i organizacja wydarzeń',
+    countsTowardsDenominator: false,
+    reportCategory: 'project',
   },
   trigger_warning: {
     id: 'trigger_warning',
@@ -81,6 +94,7 @@ export const MEETING_TYPES = {
     badgeClass: 'bg-rose-50 text-rose-800 border-rose-300',
     description: 'Tematyka wrażliwa – wyłączone z obowiązku',
     countsTowardsDenominator: false,
+    reportCategory: 'substantive',
   },
   internal: {
     id: 'internal',
@@ -91,6 +105,7 @@ export const MEETING_TYPES = {
     badgeClass: 'bg-indigo-50 text-indigo-800 border-indigo-300',
     description: 'Spotkanie zarządu – niewliczane do frekwencji koła',
     countsTowardsDenominator: false,
+    reportCategory: 'board',
   },
   conference_passive: {
     id: 'conference_passive',
@@ -101,6 +116,7 @@ export const MEETING_TYPES = {
     badgeClass: 'bg-purple-50 text-purple-800 border-purple-300',
     description: 'Wydarzenie naukowe, dyskusja lub delegacja – udział bierny / słuchacz',
     countsTowardsDenominator: false,
+    reportCategory: 'substantive',
   },
   workshop_external: {
     id: 'workshop_external',
@@ -111,6 +127,7 @@ export const MEETING_TYPES = {
     badgeClass: 'bg-violet-50 text-violet-800 border-violet-300',
     description: 'Praktyczne warsztaty, szkolenia i formy podnoszenia kwalifikacji',
     countsTowardsDenominator: false,
+    reportCategory: 'substantive',
   },
 };
 
@@ -142,7 +159,19 @@ export function getAutoMeetingType(meeting) {
     return 'internal';
   }
 
-  // 3. Trigger Warning / Wrażliwe
+  // 3. Spotkania projektowe / techniczne
+  if (
+    title.includes('projektow') ||
+    title.includes('techniczn') ||
+    title.includes('zespół projektowy') ||
+    title.includes('zespol projektowy') ||
+    title.includes('grupa robocza') ||
+    title.includes('organizacja konferencji')
+  ) {
+    return 'project';
+  }
+
+  // 4. Trigger Warning / Wrażliwe
   if (
     title.includes('trauma') ||
     title.includes('traumy') ||
@@ -373,7 +402,7 @@ export function isMeetingEligibleForDenominator(meeting, customTypes = {}, ewide
     const rawType = meeting.type || meeting.meetingType || meeting.category || '';
     const typeKey = String(rawType).toLowerCase();
     if (typeKey === 'mandatory' || typeKey === 'obowiazkowe' || typeKey === 'obowiązkowe') return true;
-    if (['optional', 'internal', 'trigger_warning', 'workshop_external', 'conference_passive'].includes(typeKey)) {
+    if (['optional', 'internal', 'project', 'trigger_warning', 'workshop_external', 'conference_passive'].includes(typeKey)) {
       return false;
     }
 
@@ -388,6 +417,8 @@ export function isMeetingEligibleForDenominator(meeting, customTypes = {}, ewide
     const isExcluded = 
       text.includes('nieobowiązkowe') ||
       text.includes('nieobowiazkowe') ||
+      text.includes('projektow') ||
+      text.includes('techniczn') ||
       text.includes('wewnętrzne') ||
       text.includes('wewnetrzne') ||
       text.includes('zarząd') ||
@@ -406,7 +437,6 @@ export function isMeetingEligibleForDenominator(meeting, customTypes = {}, ewide
     if (
       text.includes('spotkanie merytoryczne') || 
       text.includes('kawiarenka') || 
-      text.includes('spotkanie projektowe') ||
       text.includes('inauguracja') ||
       text.includes('zebranie') ||
       text.includes('prelekcja') ||

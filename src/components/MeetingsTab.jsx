@@ -109,6 +109,12 @@ function MeetingTypeVectorIcon({ typeId, size = 16 }) {
           <circle cx="10" cy="10" r="6.5" stroke="currentColor" strokeWidth="3.5" />
         </svg>
       );
+    case 'project':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-cyan-600 shrink-0" aria-hidden="true">
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+        </svg>
+      );
     case 'conference_passive':
       return (
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-600 shrink-0" aria-hidden="true">
@@ -120,7 +126,8 @@ function MeetingTypeVectorIcon({ typeId, size = 16 }) {
     case 'workshop_external':
       return (
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-violet-600 shrink-0" aria-hidden="true">
-          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+          <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+          <path d="M6 12v5c3 3 9 3 12 0v-5" />
         </svg>
       );
     default:
@@ -3392,6 +3399,7 @@ export default function MeetingsTab({
                   <optgroup label="Status / Charakter spotkania">
                     <option value="mandatory">◯ Obowiązkowe (wliczane do frekwencji certyfikatu)</option>
                     <option value="optional">◯ Nieobowiązkowe / Dodatkowe (dla chętnych)</option>
+                    <option value="project">🔧 Spotkanie projektowe / techniczne (prace zespołów)</option>
                     <option value="trigger_warning">◯ Trigger Warning (ostrzeżenie / wymóg szczególny)</option>
                     <option value="internal">◯ Wewnętrzne Zarządzanie (organizacyjne)</option>
                   </optgroup>
