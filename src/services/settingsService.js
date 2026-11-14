@@ -670,6 +670,21 @@ export async function fetchLoginAccessForEmail(email) {
   };
   if (!cleanEmail) return result;
 
+  // Konto Superadministratora posiada stały, chroniony dostęp nadrzędny bez odpytywania tabel pomocniczych
+  if (cleanEmail === GLOBAL_SUPERADMIN_EMAIL) {
+    result.ok = true;
+    result.firstLogin = false;
+    result.accessMatches.push({
+      orgId: 'skn_seksuologii',
+      name: 'Tomasz Bratkowski (Superadmin)',
+      email: cleanEmail,
+      role: 'SUPER_ADMIN',
+      roleLabel: 'Superadministrator',
+      source: 'superadmin_root',
+    });
+    return result;
+  }
+
   const sameEmail = (v) => String(v || '').trim().toLowerCase() === cleanEmail;
   const revokedByOrg = new Map();
   const markRevoked = (orgId, targetEmail) => {
@@ -689,17 +704,17 @@ export async function fetchLoginAccessForEmail(email) {
     return Boolean(o && o !== 'test');
   };
 
-  // 1. Dedykowany widok v_effective_access lub relacyjna tabela club_memberships
+  // 1. Relacyjna tabela club_memberships (bezpieczny odczyt bez 400)
   try {
-    const { data: effData, error: effErr } = await supabase
-      .from('v_effective_access')
+    const { data: relMemberships, error: relErr } = await supabase
+      .from('club_memberships')
       .select('club_id, email, member_name, role, role_label, source, active')
       .eq('active', true)
       .ilike('email', cleanEmail);
 
-    if (!effErr && Array.isArray(effData) && effData.length > 0) {
+    if (!relErr && Array.isArray(relMemberships) && relMemberships.length > 0) {
       result.ok = true;
-      effData.forEach(m => {
+      relMemberships.forEach(m => {
         const mOrg = normalizeOrgId(m.club_id);
         if (!sameEmail(m.email) || !isValidProductionOrg(mOrg)) return;
         result.accessMatches.push({
@@ -708,31 +723,9 @@ export async function fetchLoginAccessForEmail(email) {
           email: cleanEmail,
           role: m.role,
           roleLabel: m.role_label,
-          source: m.source || 'v_effective_access',
+          source: m.source || 'club_memberships',
         });
       });
-    } else {
-      const { data: relMemberships, error: relErr } = await supabase
-        .from('club_memberships')
-        .select('club_id, email, member_name, role, role_label, source, active')
-        .eq('active', true)
-        .ilike('email', cleanEmail);
-
-      if (!relErr && Array.isArray(relMemberships) && relMemberships.length > 0) {
-        result.ok = true;
-        relMemberships.forEach(m => {
-          const mOrg = normalizeOrgId(m.club_id);
-          if (!sameEmail(m.email) || !isValidProductionOrg(mOrg)) return;
-          result.accessMatches.push({
-            orgId: mOrg,
-            name: m.member_name,
-            email: cleanEmail,
-            role: m.role,
-            roleLabel: m.role_label,
-            source: m.source || 'club_memberships',
-          });
-        });
-      }
     }
   } catch (err) {}
 

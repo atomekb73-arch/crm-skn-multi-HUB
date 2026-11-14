@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   saveUserPasswordToDB,
   saveAccessUsersToDB,
@@ -130,6 +130,28 @@ function collectLocalLists(pattern) {
 export async function refreshRemoteAccess(email) {
   const cleanEmail = String(email || '').trim().toLowerCase();
   if (!cleanEmail) return null;
+
+  if (cleanEmail === GLOBAL_SUPERADMIN_EMAIL) {
+    const cached = {
+      ok: true,
+      accessMatches: [{ orgId: 'skn_seksuologii', name: 'Tomasz Bratkowski (Superadmin)', email: cleanEmail, role: 'SUPER_ADMIN', source: 'superadmin' }],
+      supervisorMatches: [],
+      boardMatches: [],
+      revokedOrgs: [],
+      rbacProfile: {
+        id: 'superadmin-root',
+        email: cleanEmail,
+        name: 'Tomasz Bratkowski (Superadmin)',
+        role: 'superadmin',
+        mustChangePassword: false,
+        isActive: true,
+        clubs: ['*'],
+      },
+    };
+    remoteAccessCache.set(cleanEmail, cached);
+    return cached;
+  }
+
   try {
     const timeout = new Promise(resolve => setTimeout(() => resolve(null), REMOTE_ACCESS_TIMEOUT_MS));
     const [res, rbacProfile] = await Promise.all([
@@ -1081,47 +1103,76 @@ export function AuthProvider({ children }) {
     } catch {}
   }, []);
 
+  const userRef = useRef(user);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  const lastRevalidateRef = useRef(0);
+  const isRevalidatingRef = useRef(false);
+
   /**
    * Natychmiastowa rewalidacja sesji wobec Supabase SSOT (Kill Switch + izolacja kół).
    * Odświeża listę dozwolonych kół po powrocie do karty, na żądanie i cyklicznie.
    */
-  const revalidateSessionAccess = useCallback(async () => {
-    if (!isAuthenticated || !user?.email) return { valid: false };
-    const cleanEmail = String(user.email).toLowerCase().trim();
-    const remote = await refreshRemoteAccess(cleanEmail);
-    // Jeżeli Supabase chwilowo nie odpowiedział, zachowaj lokalny stan (ale bez wildcard dla zwykłych kont)
-    if (!remote || !remote.ok) return { valid: true, offlineFallback: true };
+  const revalidateSessionAccess = useCallback(async (force = false) => {
+    const currentUser = userRef.current;
+    if (!isAuthenticated || !currentUser?.email) return { valid: false };
 
-    const status = checkEmailStatus(cleanEmail);
-    if (!status.authorized || !status.user) {
-      const msg = status.error || 'Twój dostęp do systemu CRM został cofnięty przez Superadministratora.';
-      logout(msg);
-      return { valid: false, revoked: true, error: msg };
+    const now = Date.now();
+    if (!force && (isRevalidatingRef.current || (now - lastRevalidateRef.current < 20000))) {
+      return { valid: true, skipped: true };
     }
+    isRevalidatingRef.current = true;
+    lastRevalidateRef.current = now;
 
-    const sanitizedNext = sanitizeSessionUser({
-      ...user,
-      ...status.user,
-      avatarUrl: user.avatarUrl || '',
-      loggedAt: user.loggedAt || status.user.loggedAt,
-    });
+    try {
+      const cleanEmail = String(currentUser.email).toLowerCase().trim();
+      const remote = await refreshRemoteAccess(cleanEmail);
+      // Jeżeli Supabase chwilowo nie odpowiedział, zachowaj lokalny stan (ale bez wildcard dla zwykłych kont)
+      if (!remote || !remote.ok) return { valid: true, offlineFallback: true };
 
-    if (!sanitizedNext) {
-      const msg = 'Brak aktywnego dostępu do któregokolwiek koła naukowego.';
-      logout(msg);
-      return { valid: false, revoked: true, error: msg };
+      const status = checkEmailStatus(cleanEmail);
+      if (!status.authorized || !status.user) {
+        const msg = status.error || 'Twój dostęp do systemu CRM został cofnięty przez Superadministratora.';
+        logout(msg);
+        return { valid: false, revoked: true, error: msg };
+      }
+
+      const sanitizedNext = sanitizeSessionUser({
+        ...currentUser,
+        ...status.user,
+        avatarUrl: currentUser.avatarUrl || '',
+        loggedAt: currentUser.loggedAt || status.user.loggedAt,
+      });
+
+      if (!sanitizedNext) {
+        const msg = 'Brak aktywnego dostępu do któregokolwiek koła naukowego.';
+        logout(msg);
+        return { valid: false, revoked: true, error: msg };
+      }
+
+      const prevOrgs = JSON.stringify(currentUser.accessibleOrgs || []);
+      const nextOrgs = JSON.stringify(sanitizedNext.accessibleOrgs || []);
+      const prevRoles = JSON.stringify(currentUser.rolePerOrg || {});
+      const nextRoles = JSON.stringify(sanitizedNext.rolePerOrg || {});
+      const hasChanged =
+        prevOrgs !== nextOrgs ||
+        prevRoles !== nextRoles ||
+        currentUser.role !== sanitizedNext.role ||
+        currentUser.rbacRole !== sanitizedNext.rbacRole ||
+        Boolean(currentUser.mustChangePassword) !== Boolean(sanitizedNext.mustChangePassword) ||
+        currentUser.is_global_admin !== sanitizedNext.is_global_admin;
+
+      if (hasChanged) {
+        setUser(sanitizedNext);
+      }
+
+      return { valid: true, user: sanitizedNext };
+    } finally {
+      isRevalidatingRef.current = false;
     }
-
-    const prevOrgs = JSON.stringify(user.accessibleOrgs || []);
-    const nextOrgs = JSON.stringify(sanitizedNext.accessibleOrgs || []);
-    const prevRoles = JSON.stringify(user.rolePerOrg || {});
-    const nextRoles = JSON.stringify(sanitizedNext.rolePerOrg || {});
-    if (prevOrgs !== nextOrgs || prevRoles !== nextRoles || user.role !== sanitizedNext.role || user.rbacRole !== sanitizedNext.rbacRole || Boolean(user.mustChangePassword) !== Boolean(sanitizedNext.mustChangePassword) || user.is_global_admin !== sanitizedNext.is_global_admin) {
-      setUser(sanitizedNext);
-    }
-
-    return { valid: true, user: sanitizedNext };
-  }, [isAuthenticated, user, checkEmailStatus, logout]);
+  }, [isAuthenticated, checkEmailStatus, logout]);
 
   useEffect(() => {
     if (!isAuthenticated || !user?.email || typeof window === 'undefined') return undefined;
@@ -1136,7 +1187,7 @@ export function AuthProvider({ children }) {
     document.addEventListener('visibilitychange', onFocusOrVisible);
     const interval = setInterval(() => {
       revalidateSessionAccess();
-    }, 45000);
+    }, 60000);
 
     return () => {
       window.removeEventListener('focus', onFocusOrVisible);

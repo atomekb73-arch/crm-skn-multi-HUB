@@ -1,11 +1,11 @@
-import { supabase } from '../supabaseClient';
-import { WSKZ_ORGANIZATIONS } from '../config/wskzRegistry';
-import { hashPassword } from '../utils/crypto';
+import { supabase } from '../supabaseClient.js';
+import { WSKZ_ORGANIZATIONS } from '../config/wskzRegistry.js';
+import { hashPassword } from '../utils/crypto.js';
 import {
   GLOBAL_SUPERADMIN_EMAIL,
   normalizeOrgId,
   fetchGlobalAccessMatrix,
-} from './settingsService';
+} from './settingsService.js';
 
 export const RBAC_STARTER_PASSWORD = 'Start2026!';
 
@@ -508,19 +508,41 @@ export async function deleteRbacUser({ actorEmail, email }) {
   }
 }
 
+let _hasRbacRpc = true;
+
 /**
  * Pobiera profil RBAC użytkownika podczas logowania (RPC get_rbac_login_profile).
- * Jeśli tabela / RPC nie zostały jeszcze zmigrowane, zwraca null bez błędów w konsoli.
+ * Jeśli tabela / RPC nie zostały jeszcze zmigrowane, zwraca null bez powtarzania błędów w konsoli.
  */
 export async function fetchRbacLoginProfile(email) {
   const cleanEmail = String(email || '').trim().toLowerCase();
   if (!cleanEmail) return null;
 
+  if (cleanEmail === GLOBAL_SUPERADMIN_EMAIL) {
+    return {
+      id: 'superadmin-root',
+      email: cleanEmail,
+      name: 'Tomasz Bratkowski (Superadmin)',
+      role: 'superadmin',
+      mustChangePassword: false,
+      isActive: true,
+      clubs: ['*'],
+    };
+  }
+
+  if (!_hasRbacRpc) return null;
+
   try {
     const { data, error } = await supabase.rpc('get_rbac_login_profile', {
       p_email: cleanEmail,
     });
-    if (!error && data) {
+    if (error) {
+      if (error.code === 'PGRST202' || error.message?.includes('Could not find') || error.code === '42883') {
+        _hasRbacRpc = false;
+      }
+      return null;
+    }
+    if (data) {
       const clubs = cleanEmail === GLOBAL_SUPERADMIN_EMAIL
         ? ['*']
         : (Array.isArray(data.clubs) ? data.clubs : [])
@@ -538,7 +560,7 @@ export async function fetchRbacLoginProfile(email) {
       };
     }
   } catch {
-    // RPC niedostępne przed wdrożeniem migracji SQL
+    _hasRbacRpc = false;
   }
   return null;
 }

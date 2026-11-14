@@ -285,7 +285,7 @@ export function OrgProvider({ children }) {
     applyTenantThemeToDom(theme);
   }, [theme]);
 
-  const { isAuthenticated, canAccessOrg, revalidateSessionAccess } = useAuth();
+  const { isAuthenticated, canAccessOrg } = useAuth();
 
   // Switch active organization (z twardym egzekwowaniem izolacji per koło)
   const switchOrg = useCallback((orgId) => {
@@ -311,10 +311,7 @@ export function OrgProvider({ children }) {
       localStorage.setItem('crm_skn_current_org_id', cleanId);
       localStorage.setItem('crm_active_org_id', cleanId);
     } catch {}
-    if (isAuthenticated && typeof revalidateSessionAccess === 'function') {
-      revalidateSessionAccess();
-    }
-  }, [isAuthenticated, canAccessOrg, revalidateSessionAccess]);
+  }, [isAuthenticated, canAccessOrg]);
 
   // Izolacja tenantów po zalogowaniu: jeżeli aktywne koło nie należy do uprawnień użytkownika,
   // przełącz na pierwsze dostępne koło (np. Psychoonkologia dla osób dodanych tylko tam).
