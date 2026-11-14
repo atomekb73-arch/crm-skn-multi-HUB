@@ -1206,7 +1206,7 @@ export function MembersRegistryTemplate({
 }) {
   const orgMeta = getOrgMetadata(org);
   const { id: orgId, name: orgName, shortName: orgShortName, tag: orgTag, unit: orgUnit } = orgMeta;
-  const resolvedOrg = org || orgMeta?.resolvedOrg || { id: orgId || 'test', name: orgName || 'Koło Naukowe', shortName: orgShortName || 'SKN' };
+  const resolvedOrg = org || orgMeta?.resolvedOrg || { id: orgId || 'skn_seksuologii', name: orgName || 'Koło Naukowe', shortName: orgShortName || 'SKN' };
 
   const scope = useMemo(() => getAcademicScope(academicYear), [academicYear]);
   const timeStatus = getAcademicYearTimeStatus(academicYear);

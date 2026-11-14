@@ -211,54 +211,6 @@ export default function DocumentsRepositoryTab() {
       console.error('Błąd odczytu dokumentów z storage:', e);
     }
 
-    if (currentOrg?.id === 'test') {
-      return [
-        {
-          id: 'test-doc-01',
-          code: 'UCH/SKN-TEST/01/2025',
-          title: 'Uchwała Zarządu nr 1/2025 w sprawie przyjęcia planu pracy naukowej na rok 2025/2026',
-          category: 'Uchwały Zarządu',
-          date: '2025-10-15',
-          status: 'Zatwierdzony',
-          driveUrl: '',
-          author: 'Zarząd Koła Naukowego',
-          organization_id: 'test'
-        },
-        {
-          id: 'test-doc-02',
-          code: 'PROT/SKN-TEST/01/2025',
-          title: 'Protokół z Walnego Zebrania Wyborczego Członków Koła Testowego',
-          category: 'Protokoły Zebrań',
-          date: '2025-10-20',
-          status: 'Zatwierdzony',
-          driveUrl: '',
-          author: 'Piotr Wiśniewski (Sekretarz)',
-          organization_id: 'test'
-        },
-        {
-          id: 'test-doc-03',
-          code: 'REG/SKN-TEST/2025',
-          title: 'Regulamin Wewnętrzny i Kryteria Oceny Dorobku Naukowego Koła',
-          category: 'Regulaminy i Statut',
-          date: '2025-11-02',
-          status: 'Obowiązujący',
-          driveUrl: '',
-          author: 'Zarząd i Opiekun Koła',
-          organization_id: 'test'
-        },
-        {
-          id: 'test-doc-04',
-          code: 'WNIO/SKN-TEST/01/2026',
-          title: 'Wniosek o dofinansowanie udziału członków w Ogólnopolskim Zjeździe Kół Naukowych',
-          category: 'Wnioski i Granty',
-          date: '2026-02-10',
-          status: 'Rozpatrzony pozytywnie',
-          driveUrl: '',
-          author: 'Jan Kowalski (Przewodniczący)',
-          organization_id: 'test'
-        }
-      ];
-    }
     return [];
   });
 

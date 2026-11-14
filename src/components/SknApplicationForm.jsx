@@ -115,42 +115,40 @@ const PHONE_COUNTRY_RULES = [
 export default function SknApplicationForm({ orgId: propOrgId = null }) {
   const orgCtx = typeof useOrg === 'function' ? useOrg() : null;
 
-  // Rozpoznawanie organizacji: query params z URL -> prop -> currentOrg w kontekście -> localStorage -> default 'skn_seksuologii'
-  const initialOrgId = useMemo(() => {
+  // Rozpoznawanie organizacji oraz stanu blokady (czy formularz otwarto z dedykowanego linku koła)
+  const { initialOrgId, isOrgLocked } = useMemo(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const urlOrg = params.get('org') || params.get('organization_id') || params.get('kolo') || params.get('tenant');
       if (urlOrg) {
         const clean = urlOrg.toLowerCase().trim();
-        if (clean.includes('psycho')) return 'psychoonkologia';
-        if (clean.includes('uzalez') || clean === 'sknu') return 'uzaleznienia';
-        if (clean.includes('seks')) return 'skn_seksuologii';
-        if (clean.includes('test')) return 'test';
-        return clean;
+        if (clean.includes('psycho')) return { initialOrgId: 'psychoonkologia', isOrgLocked: true };
+        if (clean.includes('uzalez') || clean === 'sknu') return { initialOrgId: 'uzaleznienia', isOrgLocked: true };
+        if (clean.includes('seks')) return { initialOrgId: 'skn_seksuologii', isOrgLocked: true };
+        return { initialOrgId: clean, isOrgLocked: true };
       }
       if (window.location.hash) {
         const hash = window.location.hash.toLowerCase();
-        if (hash.includes('psycho')) return 'psychoonkologia';
-        if (hash.includes('uzalez') || hash.includes('sknu')) return 'uzaleznienia';
-        if (hash.includes('seks')) return 'skn_seksuologii';
-        if (hash.includes('test')) return 'test';
+        if (hash.includes('org=') || hash.includes('kolo=') || hash.includes('tenant=')) {
+          if (hash.includes('psycho')) return { initialOrgId: 'psychoonkologia', isOrgLocked: true };
+          if (hash.includes('uzalez') || hash.includes('sknu')) return { initialOrgId: 'uzaleznienia', isOrgLocked: true };
+          if (hash.includes('seks')) return { initialOrgId: 'skn_seksuologii', isOrgLocked: true };
+          return { initialOrgId: 'skn_seksuologii', isOrgLocked: true };
+        }
       }
     }
     if (propOrgId) {
       const clean = String(propOrgId).toLowerCase().trim();
-      if (clean.includes('psycho')) return 'psychoonkologia';
-      if (clean.includes('uzalez') || clean === 'sknu') return 'uzaleznienia';
-      if (clean.includes('seks')) return 'skn_seksuologii';
-      if (clean.includes('test')) return 'test';
-      return clean;
+      if (clean.includes('psycho')) return { initialOrgId: 'psychoonkologia', isOrgLocked: true };
+      if (clean.includes('uzalez') || clean === 'sknu') return { initialOrgId: 'uzaleznienia', isOrgLocked: true };
+      if (clean.includes('seks')) return { initialOrgId: 'skn_seksuologii', isOrgLocked: true };
+      return { initialOrgId: clean, isOrgLocked: true };
     }
-    if (orgCtx?.currentOrg?.id) {
-      return orgCtx.currentOrg.id;
-    }
-    const saved = typeof window !== 'undefined' ? localStorage.getItem('crm_active_org_id') : null;
-    if (saved) return saved;
 
-    return 'skn_seksuologii';
+    // Tryb ogólny (?form=rekrutacja bez podanego parametru &org=) -> formularz otwarty, użytkownik wybiera koło
+    const fallbackOrg = orgCtx?.currentOrg?.id || (typeof window !== 'undefined' ? localStorage.getItem('crm_active_org_id') : null) || 'skn_seksuologii';
+    const cleanFallback = fallbackOrg === 'test' ? 'skn_seksuologii' : fallbackOrg;
+    return { initialOrgId: cleanFallback, isOrgLocked: false };
   }, [propOrgId, orgCtx?.currentOrg?.id]);
 
   const [selectedOrgId, setSelectedOrgId] = useState(initialOrgId);
@@ -164,6 +162,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
   const targetOrgId = selectedOrgId || initialOrgId;
 
   const handleSelectOrg = (newOrgId) => {
+    if (isOrgLocked) return; // Jeśli formularz ma narzucone koło z linku, zablokuj zmianę
     setSelectedOrgId(newOrgId);
     if (typeof window !== 'undefined' && window.history?.replaceState) {
       const url = new URL(window.location.href);
@@ -175,20 +174,19 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
 
   const availableOrgs = useMemo(() => {
     const list = orgCtx?.organizations || DEFAULT_ORGS;
-    // Pokaż główne koła (seksuologia, uzależnienia, psychoonkologia, oraz test jeśli włączone)
-    return list;
+    // Wyłącznie rzeczywiste koła naukowe (brak instancji testowych)
+    return list.filter(o => o.id !== 'test' && !o.name?.toLowerCase().includes('test'));
   }, [orgCtx?.organizations]);
 
   const currentOrgMeta = useMemo(() => {
     return availableOrgs.find(o => o.id === targetOrgId) ||
-      DEFAULT_ORGS.find(o => o.id === targetOrgId) ||
+      availableOrgs[0] ||
       DEFAULT_ORGS[0];
   }, [targetOrgId, availableOrgs]);
 
   const isUzaleznienia = targetOrgId === 'uzaleznienia' || targetOrgId === 'sknu';
   const isPsychoonkologia = targetOrgId === 'psychoonkologia' || targetOrgId?.includes('psycho');
-  const isTest = targetOrgId === 'test';
-  const isSeksuologia = !isUzaleznienia && !isPsychoonkologia && !isTest;
+  const isSeksuologia = !isUzaleznienia && !isPsychoonkologia;
 
   // Nazwy i etykiety formalne organizacji
   const orgLine1 = 'Studenckie Koło Naukowe';
@@ -196,24 +194,18 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
     ? 'Zachowań Ryzykowych i Uzależnień'
     : isPsychoonkologia
       ? 'Psychoonkologii WSKZ'
-      : isTest
-        ? 'Testowe (Instancja Demonstracyjna)'
-        : 'Seksuologii WSKZ';
+      : 'Seksuologii WSKZ';
   const orgFullName = currentOrgMeta?.name || `${orgLine1} ${orgLine2}`;
   const orgGenitive = isUzaleznienia
     ? 'Studenckiego Koła Naukowego Zachowań Ryzykowych i Uzależnień'
     : isPsychoonkologia
       ? 'Studenckiego Koła Naukowego Psychoonkologii WSKZ'
-      : isTest
-        ? 'Studenckiego Koła Naukowego Testowego'
-        : 'Studenckiego Koła Naukowego Seksuologii WSKZ';
+      : 'Studenckiego Koła Naukowego Seksuologii WSKZ';
   const orgBoardName = isUzaleznienia
     ? 'Zarząd Koła Naukowego Zachowań Ryzykowych i Uzależnień'
     : isPsychoonkologia
       ? 'Zarząd Koła Naukowego Psychoonkologii WSKZ'
-      : isTest
-        ? 'Zarząd Koła Testowego'
-        : 'Zarząd SKN Seksuologii';
+      : 'Zarząd SKN Seksuologii';
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -849,19 +841,6 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
         successBadge: 'bg-purple-100 text-purple-800 border-purple-300',
       };
     }
-    if (isTest) {
-      return {
-        bg: 'bg-[#fffdf5] bg-gradient-to-b from-[#fffef7] via-[#fffbf0] to-[#fef3c7]/30 selection:bg-amber-600 selection:text-white',
-        card: 'shadow-amber-950/10 border border-amber-200/90 ring-1 ring-amber-900/5',
-        badge: 'bg-amber-50 text-amber-800 border border-amber-200/90',
-        title: 'text-amber-950',
-        accentBtn: 'bg-amber-600 hover:bg-amber-700 shadow-amber-200',
-        submitBtn: 'bg-gradient-to-r from-amber-600 via-amber-700 to-yellow-700 hover:from-amber-700 hover:to-yellow-800 shadow-xl shadow-amber-600/25 hover:shadow-amber-600/35',
-        successBox: 'bg-gradient-to-br from-amber-50/80 via-white to-yellow-50/50 border-amber-200 text-amber-950 shadow-amber-500/10',
-        successIcon: 'bg-gradient-to-tr from-amber-500 to-yellow-600 shadow-amber-500/30',
-        successBadge: 'bg-amber-100 text-amber-800 border-amber-300',
-      };
-    }
     // Domyślny: SKN Seksuologii
     return {
       bg: 'bg-[#eef4f8] bg-gradient-to-b from-[#f1f6fa] via-[#eef4f8] to-[#e4eef6] selection:bg-indigo-600 selection:text-white',
@@ -874,7 +853,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
       successIcon: 'bg-gradient-to-tr from-emerald-500 to-teal-500 shadow-emerald-500/30',
       successBadge: 'bg-emerald-100 text-emerald-800 border-emerald-300',
     };
-  }, [isUzaleznienia, isPsychoonkologia, isTest]);
+  }, [isUzaleznienia, isPsychoonkologia]);
 
   return (
     <div className={`min-h-screen w-full max-w-full overflow-x-hidden py-6 sm:py-12 md:py-16 px-3 sm:px-6 lg:px-8 flex items-center justify-center font-sans relative ${themeClasses.bg}`}>
@@ -904,30 +883,32 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
             Oficjalna Deklaracja Członkowska oraz Oświadczenia Formalne dla Studentów Psychologii WSKZ
           </p>
 
-          {/* Dedykowany selektor kół: umożliwia kandydatowi weryfikację lub natychmiastowe przełączenie koła */}
-          <div className="mt-5 inline-flex items-center gap-1.5 p-1 rounded-2xl bg-slate-100/90 border border-slate-200/90 shadow-inner max-w-full flex-wrap justify-center">
-            <span className="text-[10px] font-bold text-slate-500 uppercase px-2 tracking-wider">
-              Aplikujesz do:
-            </span>
-            {availableOrgs.map((o) => {
-              const isSelected = o.id === targetOrgId;
-              return (
-                <button
-                  key={o.id}
-                  type="button"
-                  onClick={() => handleSelectOrg(o.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    isSelected
-                      ? 'bg-white text-slate-900 shadow-sm border border-slate-300 scale-[1.02]'
-                      : 'text-slate-500 hover:text-slate-800 hover:bg-white/60'
-                  }`}
-                  title={`Przełącz formularz na ${o.name}`}
-                >
-                  {o.shortName || o.tag || o.name}
-                </button>
-              );
-            })}
-          </div>
+          {/* Dedykowany selektor kół: widoczny WYŁĄCZNIE w trybie ogólnym (?form=rekrutacja bez parametru &org=) */}
+          {!isOrgLocked && (
+            <div className="mt-5 inline-flex items-center gap-1.5 p-1 rounded-2xl bg-slate-100/90 border border-slate-200/90 shadow-inner max-w-full flex-wrap justify-center">
+              <span className="text-[10px] font-bold text-slate-500 uppercase px-2 tracking-wider">
+                Aplikujesz do:
+              </span>
+              {availableOrgs.map((o) => {
+                const isSelected = o.id === targetOrgId;
+                return (
+                  <button
+                    key={o.id}
+                    type="button"
+                    onClick={() => handleSelectOrg(o.id)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-white text-slate-900 shadow-sm border border-slate-300 scale-[1.02]'
+                        : 'text-slate-500 hover:text-slate-800 hover:bg-white/60'
+                    }`}
+                    title={`Przełącz formularz na ${o.name}`}
+                  >
+                    {o.shortName || o.tag || o.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {status.success ? (
@@ -958,7 +939,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
 
               <div className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
                 <span className="text-xl">
-                  {isPsychoonkologia ? '🎗️' : isUzaleznienia ? '🏷️' : isTest ? '🧪' : '💚'}
+                  {isPsychoonkologia ? '🎗️' : isUzaleznienia ? '🏷️' : '💚'}
                 </span>
                 <span>{submittedSummary?.orgName || orgFullName}</span>
               </div>
@@ -989,38 +970,39 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
               Twoje zgłoszenie trafiło do systemu kwarantanny koła <strong>{submittedSummary?.orgName || orgFullName}</strong> i oczekuje na weryfikację przez {submittedSummary?.boardName || orgBoardName}.
             </p>
 
-            {/* Sekcja szybkiej korekty koła, jeśli kandydat wybrał inne koło przez pomyłkę */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/90 border border-slate-200/90 max-w-lg mx-auto text-left space-y-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
-                <AlertCircle size={15} className="text-amber-500 shrink-0" />
-                <span>Chciałeś/-aś aplikować do innego Koła Naukowego?</span>
+            {/* Sekcja szybkiej korekty koła - widoczna WYŁĄCZNIE gdy formularz nie ma narzuconego koła w linku */}
+            {!isOrgLocked && (
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/90 border border-slate-200/90 max-w-lg mx-auto text-left space-y-3">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
+                  <AlertCircle size={15} className="text-amber-500 shrink-0" />
+                  <span>Chciałeś/-aś aplikować do innego Koła Naukowego?</span>
+                </div>
+                <p className="text-[11px] text-slate-600 leading-normal">
+                  Jeśli przez pomyłkę wybrano niewłaściwe koło, kliknij poniżej, aby natychmiast złożyć deklarację do właściwego koła (Twoje dane i zgody zostaną zachowane):
+                </p>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {availableOrgs
+                    .filter(o => o.id !== targetOrgId)
+                    .map(otherOrg => {
+                      const isOtherPsycho = otherOrg.id === 'psychoonkologia';
+                      const isOtherUzal = otherOrg.id === 'uzaleznienia';
+                      const icon = isOtherPsycho ? '🎗️' : isOtherUzal ? '🏷️' : '💚';
+                      return (
+                        <button
+                          key={otherOrg.id}
+                          type="button"
+                          onClick={() => handleSwitchOrgAfterSubmission(otherOrg.id)}
+                          className="px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 shadow-2xs transition-all cursor-pointer flex items-center gap-1.5"
+                        >
+                          <span>{icon}</span>
+                          <span>Złóż do {otherOrg.shortName || otherOrg.name}</span>
+                          <ArrowRight size={13} className="text-slate-400" />
+                        </button>
+                      );
+                    })}
+                </div>
               </div>
-              <p className="text-[11px] text-slate-600 leading-normal">
-                Jeśli przez pomyłkę wybrano niewłaściwe koło, kliknij poniżej, aby natychmiast złożyć deklarację do właściwego koła (Twoje dane i zgody zostaną zachowane):
-              </p>
-              <div className="flex flex-wrap gap-2 pt-1">
-                {availableOrgs
-                  .filter(o => o.id !== targetOrgId)
-                  .map(otherOrg => {
-                    const isOtherPsycho = otherOrg.id === 'psychoonkologia';
-                    const isOtherUzal = otherOrg.id === 'uzaleznienia';
-                    const isOtherTest = otherOrg.id === 'test';
-                    const icon = isOtherPsycho ? '🎗️' : isOtherUzal ? '🏷️' : isOtherTest ? '🧪' : '💚';
-                    return (
-                      <button
-                        key={otherOrg.id}
-                        type="button"
-                        onClick={() => handleSwitchOrgAfterSubmission(otherOrg.id)}
-                        className="px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 shadow-2xs transition-all cursor-pointer flex items-center gap-1.5"
-                      >
-                        <span>{icon}</span>
-                        <span>Złóż do {otherOrg.shortName || otherOrg.name}</span>
-                        <ArrowRight size={13} className="text-slate-400" />
-                      </button>
-                    );
-                  })}
-              </div>
-            </div>
+            )}
 
             <div className="pt-2 flex items-center justify-center gap-3 flex-wrap">
               <button
@@ -1044,89 +1026,86 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
               </div>
             )}
 
-            {/* 1. Wybór Koła Naukowego */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-black flex items-center gap-2">
-                  <ShieldCheck size={16} className={isPsychoonkologia ? 'text-purple-600' : isUzaleznienia ? 'text-teal-600' : isTest ? 'text-amber-600' : 'text-indigo-600'} />
-                  <span>1. Wybierz Koło Naukowe, do którego aplikujesz *</span>
-                </h2>
-                <span className="text-[11px] text-slate-500 font-medium">Kliknij wybrane koło</span>
-              </div>
+            {/* 1. Wybór Koła Naukowego - widoczny WYŁĄCZNIE w trybie ogólnym (?form=rekrutacja bez &org=) */}
+            {!isOrgLocked && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                  <h2 className="text-xs font-semibold uppercase tracking-wider text-black flex items-center gap-2">
+                    <ShieldCheck size={16} className={isPsychoonkologia ? 'text-purple-600' : isUzaleznienia ? 'text-teal-600' : 'text-indigo-600'} />
+                    <span>1. Wybierz Koło Naukowe, do którego aplikujesz *</span>
+                  </h2>
+                  <span className="text-[11px] text-slate-500 font-medium">Kliknij wybrane koło</span>
+                </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {availableOrgs.map((org) => {
-                  const isSelected = org.id === targetOrgId;
-                  const isPsycho = org.id === 'psychoonkologia';
-                  const isUzal = org.id === 'uzaleznienia';
-                  const isTestOrg = org.id === 'test';
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {availableOrgs.map((org) => {
+                    const isSelected = org.id === targetOrgId;
+                    const isPsycho = org.id === 'psychoonkologia';
+                    const isUzal = org.id === 'uzaleznienia';
 
-                  const icon = isPsycho ? '🎗️' : isUzal ? '🏷️' : isTestOrg ? '🧪' : '💚';
-                  const activeCardClass = isPsycho
-                    ? 'border-purple-500 bg-purple-50/70 ring-2 ring-purple-400/40 shadow-md shadow-purple-500/10'
-                    : isUzal
-                      ? 'border-teal-500 bg-teal-50/70 ring-2 ring-teal-400/40 shadow-md shadow-teal-500/10'
-                      : isTestOrg
-                        ? 'border-amber-500 bg-amber-50/70 ring-2 ring-amber-400/40 shadow-md shadow-amber-500/10'
+                    const icon = isPsycho ? '🎗️' : isUzal ? '🏷️' : '💚';
+                    const activeCardClass = isPsycho
+                      ? 'border-purple-500 bg-purple-50/70 ring-2 ring-purple-400/40 shadow-md shadow-purple-500/10'
+                      : isUzal
+                        ? 'border-teal-500 bg-teal-50/70 ring-2 ring-teal-400/40 shadow-md shadow-teal-500/10'
                         : 'border-indigo-500 bg-indigo-50/70 ring-2 ring-indigo-400/40 shadow-md shadow-indigo-500/10';
 
-                  return (
-                    <button
-                      key={org.id}
-                      type="button"
-                      onClick={() => handleSelectOrg(org.id)}
-                      className={`relative p-3.5 rounded-2xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between ${
-                        isSelected
-                          ? activeCardClass
-                          : 'border-slate-200 bg-white hover:bg-slate-50/80 hover:border-slate-300'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <span className="text-xl leading-none">{icon}</span>
-                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
+                    return (
+                      <button
+                        key={org.id}
+                        type="button"
+                        onClick={() => handleSelectOrg(org.id)}
+                        className={`relative p-3.5 rounded-2xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between ${
                           isSelected
-                            ? isPsycho
-                              ? 'bg-purple-600 border-purple-600 text-white'
-                              : isUzal
-                                ? 'bg-teal-600 border-teal-600 text-white'
-                                : isTestOrg
-                                  ? 'bg-amber-600 border-amber-600 text-white'
+                            ? activeCardClass
+                            : 'border-slate-200 bg-white hover:bg-slate-50/80 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <span className="text-xl leading-none">{icon}</span>
+                          <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
+                            isSelected
+                              ? isPsycho
+                                ? 'bg-purple-600 border-purple-600 text-white'
+                                : isUzal
+                                  ? 'bg-teal-600 border-teal-600 text-white'
                                   : 'bg-indigo-600 border-indigo-600 text-white'
-                            : 'border-slate-300 bg-white'
-                        }`}>
-                          {isSelected && <Check size={12} strokeWidth={3} />}
+                              : 'border-slate-300 bg-white'
+                          }`}>
+                            {isSelected && <Check size={12} strokeWidth={3} />}
+                          </div>
                         </div>
-                      </div>
 
-                      <div>
-                        <div className="text-xs font-bold text-slate-900 leading-tight">
-                          {org.shortName || org.tag || org.name}
+                        <div>
+                          <div className="text-xs font-bold text-slate-900 leading-tight">
+                            {org.shortName || org.tag || org.name}
+                          </div>
+                          <div className="text-[11px] text-slate-600 mt-1 line-clamp-2 leading-snug">
+                            {org.name}
+                          </div>
                         </div>
-                        <div className="text-[11px] text-slate-600 mt-1 line-clamp-2 leading-snug">
-                          {org.name}
-                        </div>
-                      </div>
 
-                      {isSelected && (
-                        <div className="mt-2.5 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
-                          <span className={isPsycho ? 'text-purple-700' : isUzal ? 'text-teal-700' : isTestOrg ? 'text-amber-700' : 'text-indigo-700'}>
-                            Wybrane koło
-                          </span>
-                          <span className="text-slate-400">Aktywne</span>
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
+                        {isSelected && (
+                          <div className="mt-2.5 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
+                            <span className={isPsycho ? 'text-purple-700' : isUzal ? 'text-teal-700' : 'text-indigo-700'}>
+                              Wybrane koło
+                            </span>
+                            <span className="text-slate-400">Aktywne</span>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Dane Osobowe */}
             <div className="space-y-6">
               <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-black flex items-center gap-2">
-                  <GraduationCap size={16} className="text-indigo-600" />
-                  <span>2. Dane kandydata / studenta</span>
+                  <GraduationCap size={16} className={isPsychoonkologia ? 'text-purple-600' : isUzaleznienia ? 'text-teal-600' : 'text-indigo-600'} />
+                  <span>{isOrgLocked ? '1. Dane kandydata / studenta' : '2. Dane kandydata / studenta'}</span>
                 </h2>
                 <span className="text-[11px] text-slate-500 font-medium">* Pola wymagane</span>
               </div>
@@ -1134,7 +1113,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
               {/* Informacyjny boks z wybraną organizacją */}
               <div className="p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 flex items-center justify-between gap-3 text-xs">
                 <div className="flex items-center gap-2">
-                  <span className="text-base">{isPsychoonkologia ? '🎗️' : isUzaleznienia ? '🏷️' : isTest ? '🧪' : '💚'}</span>
+                  <span className="text-base">{isPsychoonkologia ? '🎗️' : isUzaleznienia ? '🏷️' : '💚'}</span>
                   <span className="text-slate-600">
                     Aplikujesz do: <strong className="text-slate-900">{orgFullName}</strong>
                   </span>
@@ -1384,8 +1363,8 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
             <div className="space-y-4 pt-2">
               <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-black flex items-center gap-2">
-                  <ShieldCheck size={16} className={isPsychoonkologia ? 'text-purple-600' : isUzaleznienia ? 'text-teal-600' : isTest ? 'text-amber-600' : 'text-indigo-600'} />
-                  <span>3. Oświadczenia formalne i regulaminowe (Wszystkie wymagane)</span>
+                  <ShieldCheck size={16} className={isPsychoonkologia ? 'text-purple-600' : isUzaleznienia ? 'text-teal-600' : 'text-indigo-600'} />
+                  <span>{isOrgLocked ? '2. Oświadczenia formalne i regulaminowe (Wszystkie wymagane)' : '3. Oświadczenia formalne i regulaminowe (Wszystkie wymagane)'}</span>
                 </h2>
                 <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${
                   isUzaleznienia
