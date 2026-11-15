@@ -247,9 +247,20 @@ export default function ReportsTab({
     return WSKZ_ORGANIZATIONS.filter(o => o.orgId === activeInterClubOrgId);
   }, [activeInterClubOrgId]);
 
+  // Pomocnik weryfikujący poprawny format daty i realistyczny zakres lat (zapobiega zapytaniom do API dla lat 0001, 0002 przy pisaniu z klawiatury)
+  const isValidReportDate = (dStr) => {
+    if (!dStr || typeof dStr !== 'string' || dStr.length !== 10) return false;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dStr)) return false;
+    const yr = parseInt(dStr.slice(0, 4), 10);
+    return yr >= 2020 && yr <= 2035;
+  };
+
   const handleFetchInterClubReport = useCallback(async (customStart = null, customEnd = null) => {
-    const sDate = customStart || interClubStartDate;
-    const eDate = customEnd || interClubEndDate;
+    // Zabezpieczenie przed przekazaniem obiektu zdarzenia e (onClick) jako customStart
+    const validStart = typeof customStart === 'string' && isValidReportDate(customStart) ? customStart : null;
+    const validEnd = typeof customEnd === 'string' && isValidReportDate(customEnd) ? customEnd : null;
+    const sDate = validStart || (isValidReportDate(interClubStartDate) ? interClubStartDate : '2026-10-01');
+    const eDate = validEnd || (isValidReportDate(interClubEndDate) ? interClubEndDate : new Date().toISOString().slice(0, 10));
     if (!sDate || !eDate) return;
 
     setIsLoadingInterClub(true);
@@ -300,11 +311,11 @@ export default function ReportsTab({
     }
   }, [selectedDocType, interClubData, isLoadingInterClub, handleFetchInterClubReport]);
 
-  // Ręczna zmiana dat przez użytkownika (input date)
+  // Ręczna zmiana dat przez użytkownika (input date z walidacją roku >= 2020)
   const handleStartDateChange = (val) => {
     setInterClubStartDate(val);
-    if (val && val.length === 10 && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
-      const effectiveEnd = interClubEndDate && interClubEndDate >= val ? interClubEndDate : val;
+    if (isValidReportDate(val)) {
+      const effectiveEnd = isValidReportDate(interClubEndDate) && interClubEndDate >= val ? interClubEndDate : val;
       if (effectiveEnd !== interClubEndDate) {
         setInterClubEndDate(effectiveEnd);
       }
@@ -314,8 +325,8 @@ export default function ReportsTab({
 
   const handleEndDateChange = (val) => {
     setInterClubEndDate(val);
-    if (val && val.length === 10 && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
-      const effectiveStart = interClubStartDate && interClubStartDate <= val ? interClubStartDate : val;
+    if (isValidReportDate(val)) {
+      const effectiveStart = isValidReportDate(interClubStartDate) && interClubStartDate <= val ? interClubStartDate : val;
       if (effectiveStart !== interClubStartDate) {
         setInterClubStartDate(effectiveStart);
       }
@@ -1533,7 +1544,7 @@ export default function ReportsTab({
                 {/* Przycisk Generuj / Odśwież Zestawienie */}
                 <button
                   type="button"
-                  onClick={handleFetchInterClubReport}
+                  onClick={() => handleFetchInterClubReport()}
                   disabled={isLoadingInterClub || selectedInterClubOrgIds.length === 0}
                   className="w-full py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition disabled:opacity-50 cursor-pointer"
                 >

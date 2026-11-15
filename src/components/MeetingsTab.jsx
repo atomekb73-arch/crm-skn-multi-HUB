@@ -2139,7 +2139,12 @@ export default function MeetingsTab({
                 name="customStartDate"
                 type="date"
                 value={customStartDate}
-                onChange={e => onCustomDateChange(e.target.value, customEndDate)}
+                onChange={e => {
+                  const val = e.target.value;
+                  if (val && val.length === 10 && /^\d{4}-\d{2}-\d{2}$/.test(val) && parseInt(val.slice(0, 4), 10) >= 2020) {
+                    onCustomDateChange(val, customEndDate);
+                  }
+                }}
                 className="text-xs border border-slate-200 rounded-lg px-2.5 py-1.5 bg-white text-slate-700 font-medium"
               />
             </div>
@@ -2150,7 +2155,12 @@ export default function MeetingsTab({
                 name="customEndDate"
                 type="date"
                 value={customEndDate}
-                onChange={e => onCustomDateChange(customStartDate, e.target.value)}
+                onChange={e => {
+                  const val = e.target.value;
+                  if (val && val.length === 10 && /^\d{4}-\d{2}-\d{2}$/.test(val) && parseInt(val.slice(0, 4), 10) >= 2020) {
+                    onCustomDateChange(customStartDate, val);
+                  }
+                }}
                 className="text-xs border border-slate-200 rounded-lg px-2.5 py-1.5 bg-white text-slate-700 font-medium"
               />
             </div>

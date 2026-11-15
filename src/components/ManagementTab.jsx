@@ -92,18 +92,22 @@ export default function ManagementTab({
   };
 
   const handleCustomStartChange = (val) => {
-    if (onCustomDateChange) {
-      onCustomDateChange(val, customEndDate);
-    } else {
-      academicYearCtx.setCustomStartDate(val);
+    if (val && val.length === 10 && /^\d{4}-\d{2}-\d{2}$/.test(val) && parseInt(val.slice(0, 4), 10) >= 2020) {
+      if (onCustomDateChange) {
+        onCustomDateChange(val, customEndDate);
+      } else {
+        academicYearCtx.setCustomStartDate(val);
+      }
     }
   };
 
   const handleCustomEndChange = (val) => {
-    if (onCustomDateChange) {
-      onCustomDateChange(customStartDate, val);
-    } else {
-      academicYearCtx.setCustomEndDate(val);
+    if (val && val.length === 10 && /^\d{4}-\d{2}-\d{2}$/.test(val) && parseInt(val.slice(0, 4), 10) >= 2020) {
+      if (onCustomDateChange) {
+        onCustomDateChange(customStartDate, val);
+      } else {
+        academicYearCtx.setCustomEndDate(val);
+      }
     }
   };
 

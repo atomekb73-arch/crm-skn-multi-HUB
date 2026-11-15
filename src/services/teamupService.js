@@ -99,6 +99,12 @@ export async function fetchTeamupEvents({
     return isBypass ? [] : (getCachedTeamupEvents(targetSubId, yearPrefix) || []);
   }
 
+  // Twarda walidacja zakresu dat - odrzucamy niepoprawne formaty (np. [object Object], lata 0001 itp. przy wpisywaniu z klawiatury)
+  const isValidDateStr = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s.trim()) && parseInt(s.trim().slice(0, 4), 10) >= 2020;
+  if (!isValidDateStr(startDate) || !isValidDateStr(endDate)) {
+    return (isBypass || isMulti) ? [] : (getCachedTeamupEvents(targetSubId, yearPrefix) || []);
+  }
+
   // Jeśli nie wymuszono bypassCache/force i to pojedynczy kalendarz, spróbuj najpierw odczytać cache
   if (!isBypass && !isMulti) {
     const cached = getCachedTeamupEvents(targetSubId, yearPrefix);
@@ -116,8 +122,8 @@ export async function fetchTeamupEvents({
 
   try {
     const params = new URLSearchParams({
-      startDate,
-      endDate,
+      startDate: String(startDate).trim(),
+      endDate: String(endDate).trim(),
     });
 
     if (isMulti) {
@@ -135,10 +141,12 @@ export async function fetchTeamupEvents({
       params.append('_t', Date.now().toString());
     }
 
-    const urlsToTry = [
-      `/api-teamup/${calId}/events?${params.toString()}`,
-      `https://api.teamup.com/${calId}/events?${params.toString()}`,
-    ];
+    // W przeglądarce korzystamy WYŁĄCZNIE z proxy /api-teamup (bezpośredni strzał do api.teamup.com jest blokowany przez CORS).
+    // Bezpośredni adres https://api.teamup.com stosujemy wyłącznie w środowisku Node.js (SSR / testy).
+    const isBrowser = typeof window !== 'undefined';
+    const urlsToTry = isBrowser
+      ? [`/api-teamup/${calId}/events?${params.toString()}`]
+      : [`https://api.teamup.com/${calId}/events?${params.toString()}`];
 
     let eventsData = null;
 
