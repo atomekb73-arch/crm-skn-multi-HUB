@@ -160,14 +160,15 @@ export function getAutoMeetingType(meeting) {
     return 'internal';
   }
 
-  // 3. Spotkania projektowe / techniczne
+  // 3. Zamknięte spotkania robocze i zespoły projektowe -> project (Tabela B)
+  // Wyłącznie zamknięte prace zespołowe: "spotkanie robocze", "grupa projektowa", "zespół projektowy", "(zamknięte)"
   if (
-    title.includes('projektow') ||
-    title.includes('techniczn') ||
+    title.includes('spotkanie robocze') ||
+    title.includes('grupa projektowa') ||
     title.includes('zespół projektowy') ||
     title.includes('zespol projektowy') ||
-    title.includes('grupa robocza') ||
-    title.includes('organizacja konferencji')
+    title.includes('(zamknięte)') ||
+    title.includes('(zamkniete)')
   ) {
     return 'project';
   }
@@ -194,13 +195,16 @@ export function getAutoMeetingType(meeting) {
     return 'trigger_warning';
   }
 
-  // 4. Nieobowiązkowe / Otwarte / Komisja
+  // 5. Ogólne spotkania otwarte cyklu koła / warsztaty / komisje / prelekcje projektowe
+  // np. "Spotkanie Projektowe SKNS (1/2) - Zarezerwuj termin!" -> optional (Tabela A)
   if (
     title.includes('komisj') ||
     title.includes('otwart') ||
     title.includes('warsztat') ||
     title.includes('dodatkow') ||
-    title.includes('dyskusyjn')
+    title.includes('dyskusyjn') ||
+    title.includes('projekt') ||
+    title.includes('techniczn')
   ) {
     return 'optional';
   }

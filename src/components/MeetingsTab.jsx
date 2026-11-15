@@ -1006,6 +1006,9 @@ export default function MeetingsTab({
       localStorage.setItem(getStorageKey('crm_meeting_types'), JSON.stringify(updatedCustomTypes));
       localStorage.setItem('crm_meeting_types', JSON.stringify(updatedCustomTypes));
     } catch {}
+
+    // Natychmiastowa synchronizacja z tabelą meeting_metadata w Supabase
+    handlePatchSelectedMeetingMetadata({ meeting_type: typeId });
   };
 
   const handleSelectMeetingType = (typeIdOrEvent, maybeTypeKey) => {
@@ -2451,24 +2454,11 @@ export default function MeetingsTab({
                   {selectedTypeConfig.description}
                 </p>
 
-
                 {/* ── Meeting Categorization Selector ── */}
                 <div className="space-y-2.5 pt-1">
-                  <div className="flex items-center justify-between">
-                    <span className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
-                      Charakter / Kategoria Spotkania:
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-medium">
-                      Wybierz typ wpływający na zaliczenia
-                    </span>
-                  </div>
-
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch">
                     {/* LEWA GRUPA: Wskaźniki statusu / charakteru spotkania (4 puste kółka wektorowe) */}
                     <div className="lg:col-span-7 flex flex-col gap-1.5">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-0.5">
-                        Status / Charakter spotkania
-                      </span>
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-2 flex-1">
                         {Object.entries(MEETING_TYPES)
                           .filter(([, cfg]) => cfg.group === 'status')
@@ -3150,23 +3140,29 @@ export default function MeetingsTab({
           // Automatyczna synchronizacja metadanych frekwencji do Supabase (meeting_metadata)
           const meetKey = getNormalizedMeetingKey(targetMeeting || { id: meetingId });
           const currentMeta = (meetingMetadataMap && meetingMetadataMap[meetKey]) || {};
-          const confirmedCount = Array.isArray(confirmedIndexes) ? confirmedIndexes.length : 0;
-          const totalHeadcount = currentMeta.total_participants && currentMeta.total_participants > confirmedCount
-            ? currentMeta.total_participants
+          const confirmedCount = Array.isArray(confirmedIndexes) ? confirmedIndexes.length : (Array.isArray(updatedParticipants) ? updatedParticipants.length : 0);
+          const totalHeadcount = currentMeta.total_participants && Number(currentMeta.total_participants) > confirmedCount
+            ? Number(currentMeta.total_participants)
             : confirmedCount;
+          const currentMeetingType = getMeetingType(targetMeeting || { id: meetingId }, customTypes) || currentMeta.meeting_type || targetMeeting?.type || 'mandatory';
 
           saveMeetingMetadataToSupabase({
             organization_id: activeOrgId,
             meeting_key: meetKey,
-            title: targetMeeting?.title || '',
-            meeting_date: targetMeeting?.date || null,
-            meeting_type: targetMeeting?.type || 'mandatory',
+            title: targetMeeting?.title || currentMeta.title || '',
+            meeting_date: targetMeeting?.date || currentMeta.meeting_date || null,
+            meeting_type: currentMeetingType,
             total_participants: totalHeadcount,
             co_organizers: currentMeta.co_organizers || [],
             custom_payload: currentMeta.custom_payload || {}
           }).then(savedMeta => {
             if (savedMeta) {
-              setMeetingMetadataMap(prev => ({ ...prev, [meetKey]: savedMeta }));
+              setMeetingMetadataMap(prev => ({
+                ...prev,
+                [meetKey]: savedMeta,
+                ...(targetMeeting?.code ? { [targetMeeting.code]: savedMeta } : {}),
+                ...(targetMeeting?.id ? { [targetMeeting.id]: savedMeta } : {}),
+              }));
             }
           }).catch(err => console.warn('Błąd zapisu meeting_metadata:', err));
 

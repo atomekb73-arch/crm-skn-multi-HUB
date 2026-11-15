@@ -3,7 +3,7 @@ import { fetchMeetingMetadata } from './meetingMetadataService.js';
 import { WSKZ_ORGANIZATIONS, getWskzOrgById, getWskzOrgBySubcalendarId, isSubcalendarExcluded } from '../config/wskzRegistry.js';
 import { fetchTeamupEvents } from './teamupService.js';
 import { getAutoMeetingType } from '../utils/meetingTypes.js';
-import { getOrgKey } from '../utils/storage.js';
+import { getOrgKey, getMeetingAttendanceStorageKeys } from '../utils/storage.js';
 
 /**
  * Normalizuje tytuł spotkania do porównywania i deduplikacji wydarzeń wspólnych
@@ -97,14 +97,14 @@ export async function fetchInterClubReportData({
 
   // 4. Pobieranie obecności z Supabase (attendance) dla każdego koła z właściwym nagłówkiem tenant + fallback localStorage
   const attendanceCountMap = {}; // klucz: `${orgId}__${meeting_code}` -> liczba unikalnych obecnych
-  const SYSTEM_PREFIX_RE = /^\[(?:SETTINGS|DOROBEK|BOARD_TERM|KORESPONDENCJA|MEETING_META|EMAIL_CONFIG|ACCESS_USER|DOKUMENT)\]/i;
+  const SYSTEM_PREFIX_RE = /^\[(?:SETTINGS|DOROBEK|BOARD_TERM|KORESPONDENCJA|MEETING_META|EMAIL_CONFIG|ACCESS_USER|DOKUMENT|OPIEKUN)\]/i;
   try {
     const attResults = await Promise.allSettled(
       activeOrgIds.map(async (orgId) => {
         const { data, error } = await fetchAllTenantRows(
           'attendance',
           orgId,
-          'organization_id, meeting_code, index_number, role'
+          { select: 'organization_id, meeting_code, meeting_date, index_number, role' }
         );
         if (error) {
           console.warn(`[interClubReport] Błąd pobierania attendance dla ${orgId}:`, error);
@@ -126,12 +126,19 @@ export async function fetchInterClubReportData({
         const idx = String(row.index_number || '').trim();
 
         const addKey = (k) => {
+          if (!k) return;
           if (!uniqueAttendees[k]) uniqueAttendees[k] = new Set();
           if (idx) uniqueAttendees[k].add(idx);
         };
 
         addKey(`${org}__${code}`);
         if (cleanCode && cleanCode !== code) addKey(`${org}__${cleanCode}`);
+        addKey(`${org}__${code.replace(/[\[\]]/g, '').trim()}`);
+        addKey(`${org}__${code.replace(/\s+/g, '')}`);
+        addKey(`${org}__${cleanCode.replace(/\s+/g, '')}`);
+        if (row.meeting_date) {
+          addKey(`${org}__${String(row.meeting_date).trim()}`);
+        }
       });
     });
 
@@ -142,7 +149,7 @@ export async function fetchInterClubReportData({
     console.warn('[interClubReport] Błąd pobierania attendance z Supabase:', err);
   }
 
-  // Fallback z localStorage crm_ewidencja
+  // Uzupełnienie frekwencji z localStorage (dla każdego aktywnego koła)
   if (typeof window !== 'undefined' && window.localStorage) {
     activeOrgIds.forEach(orgId => {
       try {
@@ -168,6 +175,39 @@ export async function fetchInterClubReportData({
                 attendanceCountMap[k] = s.size;
               }
             });
+          }
+        }
+
+        // Skanowanie bezpośrednich rekordów obecności w localStorage
+        for (let i = 0; i < localStorage.length; i++) {
+          const lk = localStorage.key(i);
+          if (lk && lk.includes('attendance') && lk.includes(orgId)) {
+            try {
+              const val = JSON.parse(localStorage.getItem(lk) || '{}');
+              const confirmedCount = val?.confirmedCount ||
+                (Array.isArray(val?.confirmedIndexes) ? val.confirmedIndexes.length : (Array.isArray(val?.attendees) ? val.attendees.length : 0));
+              if (confirmedCount > 0) {
+                const mCode = String(val?.meetingCode || val?.code || '').trim().toUpperCase();
+                const cleanMCode = mCode.replace(/^\[.*?\]\s*/, '');
+                const mDate = String(val?.meetingDate || val?.date || '').trim();
+                const mId = String(val?.meetingId || val?.id || '').trim();
+
+                const setMax = (k, count) => {
+                  if (k && (!attendanceCountMap[k] || attendanceCountMap[k] < count)) {
+                    attendanceCountMap[k] = count;
+                  }
+                };
+
+                if (mCode) {
+                  setMax(`${orgId}__${mCode}`, confirmedCount);
+                  setMax(`${orgId}__${cleanMCode}`, confirmedCount);
+                  setMax(`${orgId}__${mCode.replace(/\s+/g, '')}`, confirmedCount);
+                  setMax(`${orgId}__${cleanMCode.replace(/\s+/g, '')}`, confirmedCount);
+                }
+                if (mDate) setMax(`${orgId}__${mDate}`, confirmedCount);
+                if (mId) setMax(`${orgId}__${mId}`, confirmedCount);
+              }
+            } catch {}
           }
         }
       } catch {}
@@ -215,26 +255,75 @@ export async function fetchInterClubReportData({
     // Ustalanie kategorii: 'project' (zespoły projektowe) vs 'substantive' (merytoryczne/warsztaty)
     const detectedType = matchedMeta?.meeting_type || getAutoMeetingType(evt);
     const titleLower = (evt.title || '').toLowerCase();
-    const isProject = detectedType === 'project' ||
-      titleLower.includes('projekt') ||
-      titleLower.includes('techniczn') ||
-      titleLower.includes('robocz') ||
-      titleLower.includes('zarząd') ||
-      titleLower.includes('zarzad');
+
+    // Typ 'project' (Tabela B) wyłącznie dla zamkniętych prac zespołowych / roboczych
+    const isProject = detectedType === 'project' || (
+      detectedType !== 'mandatory' && detectedType !== 'optional' && (
+        titleLower.includes('spotkanie robocze') ||
+        titleLower.includes('grupa projektowa') ||
+        titleLower.includes('zespół projektowy') ||
+        titleLower.includes('zespol projektowy') ||
+        titleLower.includes('(zamknięte)') ||
+        titleLower.includes('(zamkniete)')
+      )
+    );
 
     const reportCategory = isProject ? 'project' : 'substantive';
 
-    // Frekwencja z gośćmi
+    // Frekwencja z gośćmi - Twarda hierarchia odczytu:
+    // 1. meeting_metadata.total_participants (jeśli > 0)
+    // 2. Liczba zweryfikowanych uczestników z attendance (lub meeting.attendees)
+    // 3. Sprawdzenie kluczy localStorage dla spotkania
     let totalParticipants = 0;
     if (matchedMeta && Number(matchedMeta.total_participants) > 0) {
       totalParticipants = Number(matchedMeta.total_participants);
-    } else {
-      // Pobierz sumę z attendanceCountMap
-      const rawCode = String(evt.code || evt.id || '').toUpperCase();
-      const cleanCode = rawCode.replace(/^\[.*?\]\s*/, '');
-      const countPrimary = attendanceCountMap[`${primaryOrgId}__${rawCode}`] ||
-        attendanceCountMap[`${primaryOrgId}__${cleanCode}`] || 0;
-      totalParticipants = countPrimary;
+    }
+
+    // Sprawdzenie attendanceCountMap po kodzie, dacie, ID
+    const rawCode = String(evt.code || evt.id || '').trim().toUpperCase();
+    const cleanCode = rawCode.replace(/^\[.*?\]\s*/, '').trim();
+    const noBracketsCode = rawCode.replace(/[\[\]]/g, '').trim();
+    const candidateCodes = [
+      rawCode,
+      cleanCode,
+      noBracketsCode,
+      String(evt.id || ''),
+      String(rawDate || ''),
+      rawCode.replace(/\s+/g, ''),
+      cleanCode.replace(/\s+/g, ''),
+    ];
+
+    for (const codeCandidate of candidateCodes) {
+      if (!codeCandidate) continue;
+      const count = attendanceCountMap[`${primaryOrgId}__${codeCandidate.toUpperCase()}`] ||
+        attendanceCountMap[`${primaryOrgId}__${codeCandidate}`];
+      if (count && count > totalParticipants) {
+        totalParticipants = count;
+      }
+    }
+
+    // Bezpośrednie sprawdzenie w localStorage storageKeys dla danego wydarzenia
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const storageKeys = getMeetingAttendanceStorageKeys(primaryOrgId, evt);
+        for (const sk of storageKeys) {
+          const raw = localStorage.getItem(sk);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            const c = parsed?.confirmedCount ||
+              (Array.isArray(parsed?.confirmedIndexes) ? parsed.confirmedIndexes.length : (Array.isArray(parsed?.attendees) ? parsed.attendees.length : 0));
+            if (c > totalParticipants) totalParticipants = c;
+          }
+        }
+      } catch {}
+    }
+
+    // Sprawdzenie evt.attendeesCount / evt.attendees / evt.participantRecords
+    const evtAttendeesCount = evt.attendeesCount ||
+      (Array.isArray(evt.attendees) ? evt.attendees.length : 0) ||
+      (Array.isArray(evt.participantRecords) ? evt.participantRecords.length : 0);
+    if (evtAttendeesCount > totalParticipants) {
+      totalParticipants = evtAttendeesCount;
     }
 
     // Klucz deduplikacji: data + znormalizowany tytuł (lub ID Teamup)
@@ -286,6 +375,18 @@ export async function fetchInterClubReportData({
   const substantiveAvgAttendees = substantiveMeetings.length > 0
     ? Math.round(substantiveTotalAttendees / substantiveMeetings.length)
     : 0;
+
+  const projectTotalAttendees = projectMeetings.reduce((sum, m) => sum + (Number(m.totalParticipants) || 0), 0);
+  const projectAvgAttendees = projectMeetings.length > 0
+    ? Math.round(projectTotalAttendees / projectMeetings.length)
+    : 0;
+
+  const totalAllAttendees = substantiveTotalAttendees + projectTotalAttendees;
+  const totalAllMeetingsCount = substantiveMeetings.length + projectMeetings.length;
+  const totalAllAvgAttendees = totalAllMeetingsCount > 0
+    ? Math.round(totalAllAttendees / totalAllMeetingsCount)
+    : 0;
+
   const jointEventsCount = allProcessedEvents.filter(e => e.isJointEvent).length;
 
   // Statystyki per koło (wszystkie 14 kół)
@@ -326,6 +427,10 @@ export async function fetchInterClubReportData({
       substantiveTotalAttendees,
       substantiveAvgAttendees,
       projectEventsCount: projectMeetings.length,
+      projectTotalAttendees,
+      projectAvgAttendees,
+      totalAllAttendees,
+      totalAllAvgAttendees,
       jointEventsCount,
     },
     byOrgStats,

@@ -42,13 +42,29 @@ export default function InterClubSummaryTemplate({
     : 'Koła Naukowego';
   const activeOrgName = cleanOrgName(rawActiveOrgName);
 
-  // Obliczenie łącznej frekwencji i średniej na spotkaniach projektowych
+  // Obliczenie łącznej frekwencji i średniej na spotkaniach merytorycznych (Tabela A)
+  const substantiveTotalAttendees = substantiveMeetings.reduce(
+    (acc, m) => acc + (Number(m.totalParticipants) || 0),
+    0
+  );
+  const substantiveAvgAttendees = substantiveMeetings.length > 0
+    ? (Math.round((substantiveTotalAttendees / substantiveMeetings.length) * 10) / 10).toFixed(1)
+    : '0.0';
+
+  // Obliczenie łącznej frekwencji i średniej na spotkaniach projektowych (Tabela B)
   const projectTotalAttendees = projectMeetings.reduce(
     (acc, m) => acc + (Number(m.totalParticipants) || 0),
     0
   );
   const projectAvgAttendees = projectMeetings.length > 0
     ? (Math.round((projectTotalAttendees / projectMeetings.length) * 10) / 10).toFixed(1)
+    : '0.0';
+
+  // Całkowita frekwencja z obu tabel (Tabela A + Tabela B) dla kafelka "Łączna frekwencja z gośćmi"
+  const totalAllAttendees = substantiveTotalAttendees + projectTotalAttendees;
+  const totalAllMeetingsCount = substantiveMeetings.length + projectMeetings.length;
+  const totalAllAvgAttendees = totalAllMeetingsCount > 0
+    ? (Math.round((totalAllAttendees / totalAllMeetingsCount) * 10) / 10).toFixed(1)
     : '0.0';
 
   return (
@@ -176,10 +192,10 @@ export default function InterClubSummaryTemplate({
               Łączna Frekwencja z Gośćmi
             </span>
             <div className="text-[19px] leading-tight font-bold text-indigo-950 mt-0.5 font-mono">
-              {summaryStats.substantiveTotalAttendees || 0} <span className="text-xs font-sans font-normal text-indigo-700">osób</span>
+              {totalAllAttendees} <span className="text-xs font-sans font-normal text-indigo-700">osób</span>
             </div>
             <span className="text-[9px] text-indigo-700 mt-0.5 block leading-tight">
-              Średnio ~{summaryStats.substantiveAvgAttendees || 0} os./spotkanie
+              Średnio ~{totalAllAvgAttendees} os./spotkanie
             </span>
           </div>
         </div>
@@ -192,7 +208,7 @@ export default function InterClubSummaryTemplate({
               A. Spotkania Merytoryczne, Warsztaty i Otwarte Prelekcje ({substantiveMeetings.length})
             </h2>
             <span className="text-[10.5px] font-mono text-slate-500">
-              Łączna frekwencja: <strong>{summaryStats.substantiveTotalAttendees}</strong> uczestników
+              Łączna frekwencja: <strong>{substantiveTotalAttendees}</strong> uczestników
             </span>
           </div>
 
@@ -201,10 +217,10 @@ export default function InterClubSummaryTemplate({
               <colgroup>
                 <col style={{ width: '4%' }} />
                 <col style={{ width: '11%' }} />
-                <col style={{ width: '16%' }} />
+                <col style={{ width: '18%' }} />
                 <col style={{ width: '13%' }} />
                 <col style={{ width: '20%' }} />
-                <col style={{ width: '27%' }} />
+                <col style={{ width: '25%' }} />
                 <col style={{ width: '9%' }} />
               </colgroup>
               <thead>
@@ -225,7 +241,7 @@ export default function InterClubSummaryTemplate({
                       <td className="p-2 text-center font-mono text-slate-500 font-semibold">{idx + 1}</td>
                       <td className="p-2 text-center text-slate-700 whitespace-nowrap text-[10px]">{m.date}</td>
                       <td className="p-2">
-                        <span className="font-semibold text-slate-900 block truncate" title={m.primaryOrg?.name}>
+                        <span className="font-semibold text-slate-900 block break-words" title={m.primaryOrg?.name}>
                           {cleanOrgName(m.primaryOrg?.shortName || m.primaryOrg?.name)}
                         </span>
                       </td>
@@ -281,10 +297,10 @@ export default function InterClubSummaryTemplate({
               <colgroup>
                 <col style={{ width: '4%' }} />
                 <col style={{ width: '11%' }} />
-                <col style={{ width: '16%' }} />
+                <col style={{ width: '18%' }} />
                 <col style={{ width: '13%' }} />
                 <col style={{ width: '20%' }} />
-                <col style={{ width: '27%' }} />
+                <col style={{ width: '25%' }} />
                 <col style={{ width: '9%' }} />
               </colgroup>
               <thead>
@@ -305,7 +321,7 @@ export default function InterClubSummaryTemplate({
                       <td className="p-2 text-center font-mono text-slate-500 font-semibold">{idx + 1}</td>
                       <td className="p-2 text-center text-slate-700 whitespace-nowrap text-[10px]">{m.date}</td>
                       <td className="p-2">
-                        <span className="font-semibold text-slate-900 block truncate">
+                        <span className="font-semibold text-slate-900 block break-words">
                           {cleanOrgName(m.primaryOrg?.shortName || m.primaryOrg?.name)}
                         </span>
                       </td>
@@ -435,7 +451,7 @@ export default function InterClubSummaryTemplate({
                     {summaryStats.substantiveEventsCount || 0}
                   </td>
                   <td className="p-2 text-center font-mono text-indigo-950 whitespace-nowrap">
-                    {summaryStats.substantiveTotalAttendees || 0} os.
+                    {substantiveTotalAttendees} os.
                   </td>
                   <td className="p-2 text-center font-mono text-cyan-900">
                     {summaryStats.projectEventsCount || 0}
