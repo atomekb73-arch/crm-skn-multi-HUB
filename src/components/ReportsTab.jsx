@@ -225,11 +225,6 @@ export default function ReportsTab({
   // Stan oficjalnego modala A4 (Portal)
   const [isA4ModalOpen, setIsA4ModalOpen] = useState(false);
 
-  const isMultiPageDoc = useMemo(() => {
-    if (isPrintingProtocol) return true;
-    return selectedDocType !== 'membership' && selectedDocType !== 'speaker' && selectedDocType !== 'board';
-  }, [isPrintingProtocol, selectedDocType]);
-
   // Stan dla Generatora Zestawień Międzykołowych dla Władz Uczelni (Ścisła izolacja do aktywnego koła)
   const [interClubStartDate, setInterClubStartDate] = useState(() => {
     return getInterClubDefaultDateRange(academicYear).startDate;
@@ -491,6 +486,11 @@ export default function ReportsTab({
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
   const [isPrintingProtocol, setIsPrintingProtocol] = useState(false);
+
+  const isMultiPageDoc = useMemo(() => {
+    if (isPrintingProtocol) return true;
+    return selectedDocType !== 'membership' && selectedDocType !== 'speaker' && selectedDocType !== 'board';
+  }, [isPrintingProtocol, selectedDocType]);
   const [manualForm, setManualForm] = useState({
     id: '',
     type: 'Zaświadczenie Członka',
