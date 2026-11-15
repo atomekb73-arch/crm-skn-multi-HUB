@@ -47,6 +47,7 @@ import { materials, initialMembers, initialMeetings } from './data/mockData';
 import { getRecordKey, getAcademicYearFromDate } from './utils/helpers';
 import { getAcademicYearKey, getCurrentAcademicYear } from './utils/academicYear';
 import { getCanonicalMeetingsForOrg, filterLegitimateMeetings } from './utils/canonicalMeetings';
+import { getWskzOrgById } from './config/wskzRegistry';
 import { getMeetingType, calculateCategorizedFrequency, calculateMemberStats, isMeetingEligibleForDenominator, MEETING_TYPES, hasMeetingAttendanceLogs } from './utils/meetingTypes';
 import { isMemberActive, isMemberGuest, isMemberInactive, isMemberArchived, hasMailingConsent } from './utils/memberFilters';
 import { normalizeDiacritics, isFacultySupervisor } from './utils/specialRoles';
@@ -551,7 +552,9 @@ export default function App() {
     let meetingMetadataMap = {};
     try {
       const { startDate, endDate, yearPrefix } = getRangeForYear(yr, cStart, cEnd);
-      const effectiveSubId = currentOrg?.subcalendarId || subId || DEFAULT_SUBCALENDAR_ID || '14518766';
+      const wskzOrg = getWskzOrgById(targetOrgId);
+      const canonicalSubId = wskzOrg?.subcalendarId ? String(wskzOrg.subcalendarId) : String(currentOrg?.subcalendarId || DEFAULT_SUBCALENDAR_ID || '14518766');
+      const effectiveSubId = canonicalSubId;
       const effectiveCalId = currentOrg?.calendarKey || currentOrg?.calendarId || 'ks9aiux4jiza1ronpd';
       const effectiveToken = currentOrg?.teamupApiKey || currentOrg?.teamupToken || '20dc4242d0d74be314e5ee108dc618cf3f6fbcb7647865568775fe4d9a89c112';
 
@@ -572,9 +575,22 @@ export default function App() {
         return;
       }
 
+      // Ścisła izolacja: dla aktywnej instancji pobieraj i pozostawiaj WYŁĄCZNIE zdarzenia
+      // przypisane do jej własnego subcalendarId (z wskzRegistry.js, np. 14518766 dla Seksuologii)
+      const strictlyFiltered = (fetchedMeetings || []).filter(m => {
+        const pSub = m.subcalendar_id ? String(m.subcalendar_id) : '';
+        const allSubs = Array.isArray(m.subcalendar_ids) && m.subcalendar_ids.length > 0
+          ? m.subcalendar_ids.map(String)
+          : (pSub ? [pSub] : []);
+        if (allSubs.length > 0 && !allSubs.includes(String(canonicalSubId))) {
+          return false;
+        }
+        return true;
+      });
+
       let legitimateMeetings = [];
-      if (fetchedMeetings && fetchedMeetings.length > 0) {
-        legitimateMeetings = filterLegitimateMeetings(fetchedMeetings, currentOrg.id);
+      if (strictlyFiltered && strictlyFiltered.length > 0) {
+        legitimateMeetings = filterLegitimateMeetings(strictlyFiltered, currentOrg.id);
       } else {
         legitimateMeetings = getCanonicalMeetingsForOrg(currentOrg.id);
       }
@@ -597,7 +613,11 @@ export default function App() {
         ...ignored.map(id => String(id).trim().replace(/[\[\]]/g, ''))
       ].filter(Boolean));
 
-      const customMeetings = getCustomMeetings(currentOrg.id);
+      // Filtruj spotkania własne (custom_meetings) ściśle do bieżącej organizacji
+      const customMeetings = getCustomMeetings(currentOrg.id).filter(cm => {
+        const cOrg = cm.organization_id ? String(cm.organization_id).trim().toLowerCase() : '';
+        return !cOrg || cOrg === targetOrgId || cOrg === currentOrg.id;
+      });
       const overrides = getMeetingOverrides(currentOrg.id);
 
       // Scal ze spotkaniami dodanymi ręcznie
@@ -931,7 +951,9 @@ export default function App() {
       const orgSheetId = currentOrg?.sheetId;
       const orgId = (currentOrg?.id === 'skn-template' ? 'skn_seksuologii' : currentOrg?.id) || 'skn_seksuologii';
       const { startDate, endDate, yearPrefix } = getRangeForYear(academicYear, customStartDate, customEndDate);
-      const effectiveSubId = currentOrg?.subcalendarId || DEFAULT_SUBCALENDAR_ID || '14518766';
+      const wskzOrg = getWskzOrgById(orgId);
+      const canonicalSubId = wskzOrg?.subcalendarId ? String(wskzOrg.subcalendarId) : String(currentOrg?.subcalendarId || DEFAULT_SUBCALENDAR_ID || '14518766');
+      const effectiveSubId = canonicalSubId;
       const effectiveCalId = currentOrg?.calendarKey || currentOrg?.calendarId || 'ks9aiux4jiza1ronpd';
       const effectiveToken = currentOrg?.teamupApiKey || currentOrg?.teamupToken || '20dc4242d0d74be314e5ee108dc618cf3f6fbcb7647865568775fe4d9a89c112';
 

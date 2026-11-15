@@ -30,8 +30,49 @@ export default function InterClubSummaryTemplate({
     ? docDate.toLocaleDateString('pl-PL', { year: 'numeric', month: 'long', day: 'numeric' })
     : String(docDate);
 
+  const activeOrgName = selectedOrgs.length > 0
+    ? (selectedOrgs[0]?.name || selectedOrgs[0]?.shortName || 'Koła Naukowego')
+    : 'Koła Naukowego';
+
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-6 print:space-y-4 print:max-w-none text-slate-900 font-sans">
+    <div className="w-full max-w-5xl mx-auto space-y-6 print:space-y-4 print:w-full print:max-w-[186mm] print:mx-auto print:box-border text-slate-900 font-sans inter-club-report-print">
+      <style>{`
+        @page {
+          size: A4 portrait;
+          margin: 12mm;
+        }
+        @media print {
+          .inter-club-report-print {
+            width: 100% !important;
+            max-width: 186mm !important;
+            margin: 0 auto !important;
+            box-sizing: border-box !important;
+            padding: 0 !important;
+          }
+          .inter-club-report-print table {
+            table-layout: fixed !important;
+            width: 100% !important;
+            word-wrap: break-word !important;
+            font-size: 9.5px !important;
+          }
+          .inter-club-report-print th,
+          .inter-club-report-print td {
+            padding: 4px 5px !important;
+            word-break: break-word !important;
+            overflow-wrap: break-word !important;
+            font-size: 9.5px !important;
+            line-height: 1.25 !important;
+          }
+          .inter-club-report-print tr {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          .inter-club-kpi-card {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+        }
+      `}</style>
       {/* ── Nagłówek Urzędowy WSKZ (Dla Władz Uczelni) ── */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 print:p-0 print:border-none print:shadow-none print:rounded-none">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-slate-200 print:pb-4">
@@ -42,12 +83,14 @@ export default function InterClubSummaryTemplate({
                 Wyższa Szkoła Kształcenia Zawodowego • Wydział Psychologii
               </span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1">
-              Sprawozdanie Zbiorcze Aktywności Kół Naukowych
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1 leading-tight">
+              <div>Sprawozdanie Zbiorcze Aktywności</div>
+              <div className="text-indigo-800 font-extrabold">{activeOrgName}</div>
             </h1>
-            <p className="text-xs text-slate-600 mt-1">
-              Ustandaryzowane zestawienie dla Władz Uczelni (Dziekanat, Kolegium Dziekańskie, PKA)
-            </p>
+            <div className="text-xs text-slate-600 mt-1 leading-relaxed">
+              <div>Ustandaryzowane zestawienie dla Władz Uczelni</div>
+              <div>(Dziekanat, Kolegium Dziekańskie, PKA)</div>
+            </div>
           </div>
 
           <div className="text-left sm:text-right shrink-0">
@@ -58,26 +101,15 @@ export default function InterClubSummaryTemplate({
               Data wygenerowania: <strong>{formattedDocDate}</strong>
             </div>
             <div className="text-[10px] text-slate-500">
-              Liczba objętych kół: <strong>{selectedOrgs.length} / 14</strong>
+              Koło sprawozdawcze: <strong>{activeOrgName}</strong>
             </div>
           </div>
         </div>
 
-        {/* ── Kafelki Syntetyczne (KPI Podsumowanie) ── */}
+        {/* ── Kafelki Syntetyczne (KPI Podsumowanie - Kolejność: 1. Merytoryczne, 2. Projektowe, 3. Łącznie, 4. Frekwencja) ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 my-6 print:my-4">
-          <div className="bg-slate-50/90 rounded-xl p-3.5 border border-slate-200/90 print:border-slate-300">
-            <span className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wide block">
-              Łącznie Wydarzeń
-            </span>
-            <div className="text-2xl font-black text-slate-900 mt-0.5 font-mono">
-              {summaryStats.totalEvents || 0}
-            </div>
-            <span className="text-[10px] text-slate-500 mt-0.5 block">
-              W tym {summaryStats.jointEventsCount || 0} międzykołowych
-            </span>
-          </div>
-
-          <div className="bg-emerald-50/70 rounded-xl p-3.5 border border-emerald-200/80 print:border-slate-300">
+          {/* KAFELEK 1: Spotkania Merytoryczne */}
+          <div className="inter-club-kpi-card bg-emerald-50/70 rounded-xl p-3.5 border border-emerald-200/80 print:border-slate-300">
             <span className="text-[10.5px] font-bold text-emerald-800 uppercase tracking-wide block">
               Spotkania Merytoryczne
             </span>
@@ -89,7 +121,34 @@ export default function InterClubSummaryTemplate({
             </span>
           </div>
 
-          <div className="bg-indigo-50/70 rounded-xl p-3.5 border border-indigo-200/80 print:border-slate-300">
+          {/* KAFELEK 2: Prace Projektowe */}
+          <div className="inter-club-kpi-card bg-cyan-50/70 rounded-xl p-3.5 border border-cyan-200/80 print:border-slate-300">
+            <span className="text-[10.5px] font-bold text-cyan-800 uppercase tracking-wide block">
+              Prace Projektowe &amp; Tech.
+            </span>
+            <div className="text-2xl font-black text-cyan-950 mt-0.5 font-mono">
+              {summaryStats.projectEventsCount || 0}
+            </div>
+            <span className="text-[10px] text-cyan-700 mt-0.5 block">
+              Zespoły badawcze i wdrożenia
+            </span>
+          </div>
+
+          {/* KAFELEK 3: Łącznie Wydarzeń */}
+          <div className="inter-club-kpi-card bg-slate-50/90 rounded-xl p-3.5 border border-slate-200/90 print:border-slate-300">
+            <span className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wide block">
+              Łącznie Wydarzeń
+            </span>
+            <div className="text-2xl font-black text-slate-900 mt-0.5 font-mono">
+              {summaryStats.totalEvents || 0}
+            </div>
+            <span className="text-[10px] text-slate-500 mt-0.5 block">
+              w tym {summaryStats.jointEventsCount || 0} międzykołowe
+            </span>
+          </div>
+
+          {/* KAFELEK 4: Łączna Frekwencja z Gośćmi */}
+          <div className="inter-club-kpi-card bg-indigo-50/70 rounded-xl p-3.5 border border-indigo-200/80 print:border-slate-300">
             <span className="text-[10.5px] font-bold text-indigo-800 uppercase tracking-wide block">
               Łączna Frekwencja z Gośćmi
             </span>
@@ -98,18 +157,6 @@ export default function InterClubSummaryTemplate({
             </div>
             <span className="text-[10px] text-indigo-700 mt-0.5 block">
               Średnio ~{summaryStats.substantiveAvgAttendees || 0} os./spotkanie
-            </span>
-          </div>
-
-          <div className="bg-cyan-50/70 rounded-xl p-3.5 border border-cyan-200/80 print:border-slate-300">
-            <span className="text-[10.5px] font-bold text-cyan-800 uppercase tracking-wide block">
-              Prace Projektowe & Tech.
-            </span>
-            <div className="text-2xl font-black text-cyan-950 mt-0.5 font-mono">
-              {summaryStats.projectEventsCount || 0}
-            </div>
-            <span className="text-[10px] text-cyan-700 mt-0.5 block">
-              Zespoły badawcze i wdrożenia
             </span>
           </div>
         </div>
@@ -127,30 +174,39 @@ export default function InterClubSummaryTemplate({
           </div>
 
           <div className="overflow-x-auto rounded-xl border border-slate-200 print:rounded-none">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left text-xs border-collapse table-fixed">
+              <colgroup>
+                <col style={{ width: '5%' }} />
+                <col style={{ width: '13%' }} />
+                <col style={{ width: '18%' }} />
+                <col style={{ width: '16%' }} />
+                <col style={{ width: '26%' }} />
+                <col style={{ width: '14%' }} />
+                <col style={{ width: '8%' }} />
+              </colgroup>
               <thead>
-                <tr className="bg-slate-100/90 text-slate-700 font-bold border-b border-slate-200 text-[11px]">
-                  <th className="p-2.5 w-10 text-center">Lp.</th>
-                  <th className="p-2.5 w-24">Data</th>
-                  <th className="p-2.5 w-44">Koło wiodące</th>
-                  <th className="p-2.5 w-48">Współorganizatorzy</th>
-                  <th className="p-2.5">Temat / Tytuł spotkania</th>
-                  <th className="p-2.5 w-40">Prelegent / Prowadzący</th>
-                  <th className="p-2.5 w-28 text-center bg-emerald-50/70">Frekwencja</th>
+                <tr className="bg-slate-100/90 text-slate-700 font-bold border-b border-slate-200 text-[10.5px]">
+                  <th className="p-2 text-center">Lp.</th>
+                  <th className="p-2">Data</th>
+                  <th className="p-2">Koło wiodące</th>
+                  <th className="p-2">Współorganizatorzy</th>
+                  <th className="p-2">Temat / Tytuł spotkania</th>
+                  <th className="p-2">Prelegent / Prowadzący</th>
+                  <th className="p-2 text-center bg-emerald-50/70">Frekwencja</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 text-slate-800">
                 {substantiveMeetings.length > 0 ? (
                   substantiveMeetings.map((m, idx) => (
-                    <tr key={m.id || idx} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="p-2.5 text-center font-mono text-slate-500 font-semibold">{idx + 1}</td>
-                      <td className="p-2.5 font-mono text-slate-700 whitespace-nowrap">{m.date}</td>
-                      <td className="p-2.5">
+                    <tr key={m.id || idx} className="hover:bg-slate-50/80 transition-colors break-inside-avoid print:break-inside-avoid">
+                      <td className="p-2 text-center font-mono text-slate-500 font-semibold">{idx + 1}</td>
+                      <td className="p-2 font-mono text-slate-700 whitespace-nowrap">{m.date}</td>
+                      <td className="p-2">
                         <span className="font-semibold text-slate-900 block truncate" title={m.primaryOrg?.name}>
                           {m.primaryOrg?.shortName || m.primaryOrg?.name}
                         </span>
                       </td>
-                      <td className="p-2.5">
+                      <td className="p-2">
                         {m.coOrgs && m.coOrgs.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {m.coOrgs.map(co => (
@@ -166,9 +222,9 @@ export default function InterClubSummaryTemplate({
                           <span className="text-slate-400 text-[10.5px]">—</span>
                         )}
                       </td>
-                      <td className="p-2.5 font-medium text-slate-900">{m.title}</td>
-                      <td className="p-2.5 text-slate-600 text-[11px]">{m.speaker}</td>
-                      <td className="p-2.5 text-center font-mono font-bold text-emerald-800 bg-emerald-50/40">
+                      <td className="p-2 font-medium text-slate-900 break-words">{m.title}</td>
+                      <td className="p-2 text-slate-600 text-[11px] break-words">{m.speaker}</td>
+                      <td className="p-2 text-center font-mono font-bold text-emerald-800 bg-emerald-50/40">
                         {m.totalParticipants > 0 ? `${m.totalParticipants} os.` : '—'}
                       </td>
                     </tr>
@@ -198,29 +254,37 @@ export default function InterClubSummaryTemplate({
           </div>
 
           <div className="overflow-x-auto rounded-xl border border-slate-200 print:rounded-none">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left text-xs border-collapse table-fixed">
+              <colgroup>
+                <col style={{ width: '5%' }} />
+                <col style={{ width: '13%' }} />
+                <col style={{ width: '18%' }} />
+                <col style={{ width: '16%' }} />
+                <col style={{ width: '34%' }} />
+                <col style={{ width: '14%' }} />
+              </colgroup>
               <thead>
-                <tr className="bg-slate-100/90 text-slate-700 font-bold border-b border-slate-200 text-[11px]">
-                  <th className="p-2.5 w-10 text-center">Lp.</th>
-                  <th className="p-2.5 w-24">Data</th>
-                  <th className="p-2.5 w-44">Koło wiodące</th>
-                  <th className="p-2.5 w-48">Współorganizatorzy</th>
-                  <th className="p-2.5">Temat / Cel prac projektowych</th>
-                  <th className="p-2.5 w-44">Koordynator / Prelegent</th>
+                <tr className="bg-slate-100/90 text-slate-700 font-bold border-b border-slate-200 text-[10.5px]">
+                  <th className="p-2 text-center">Lp.</th>
+                  <th className="p-2">Data</th>
+                  <th className="p-2">Koło wiodące</th>
+                  <th className="p-2">Współorganizatorzy</th>
+                  <th className="p-2">Temat / Cel prac projektowych</th>
+                  <th className="p-2">Koordynator / Prelegent</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 text-slate-800">
                 {projectMeetings.length > 0 ? (
                   projectMeetings.map((m, idx) => (
-                    <tr key={m.id || idx} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="p-2.5 text-center font-mono text-slate-500 font-semibold">{idx + 1}</td>
-                      <td className="p-2.5 font-mono text-slate-700 whitespace-nowrap">{m.date}</td>
-                      <td className="p-2.5">
+                    <tr key={m.id || idx} className="hover:bg-slate-50/80 transition-colors break-inside-avoid print:break-inside-avoid">
+                      <td className="p-2 text-center font-mono text-slate-500 font-semibold">{idx + 1}</td>
+                      <td className="p-2 font-mono text-slate-700 whitespace-nowrap">{m.date}</td>
+                      <td className="p-2">
                         <span className="font-semibold text-slate-900 block truncate">
                           {m.primaryOrg?.shortName || m.primaryOrg?.name}
                         </span>
                       </td>
-                      <td className="p-2.5">
+                      <td className="p-2">
                         {m.coOrgs && m.coOrgs.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {m.coOrgs.map(co => (
@@ -236,8 +300,8 @@ export default function InterClubSummaryTemplate({
                           <span className="text-slate-400 text-[10.5px]">—</span>
                         )}
                       </td>
-                      <td className="p-2.5 font-medium text-slate-900">{m.title}</td>
-                      <td className="p-2.5 text-slate-600 text-[11px]">{m.speaker}</td>
+                      <td className="p-2 font-medium text-slate-900 break-words">{m.title}</td>
+                      <td className="p-2 text-slate-600 text-[11px] break-words">{m.speaker}</td>
                     </tr>
                   ))
                 ) : (
@@ -282,7 +346,7 @@ export default function InterClubSummaryTemplate({
                 {byOrgStats.map((item, idx) => {
                   const org = item.org;
                   return (
-                    <tr key={org.orgId || idx} className="hover:bg-slate-50/80 transition-colors">
+                    <tr key={org.orgId || idx} className="hover:bg-slate-50/80 transition-colors break-inside-avoid print:break-inside-avoid">
                       <td className="p-2.5 text-center font-mono text-slate-500 font-semibold">{idx + 1}</td>
                       <td className="p-2.5 text-center font-mono font-bold text-slate-700">
                         <span className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-[10px]">

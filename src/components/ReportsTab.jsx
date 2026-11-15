@@ -219,18 +219,27 @@ export default function ReportsTab({
     }
   }, [currentOrg?.name]);
 
-  // Stan dla Generatora Zestawień Międzykołowych dla Władz Uczelni
+  // Stan dla Generatora Zestawień Międzykołowych dla Władz Uczelni (Ścisła izolacja do aktywnego koła)
   const [interClubStartDate, setInterClubStartDate] = useState('2026-10-01');
   const [interClubEndDate, setInterClubEndDate] = useState('2027-09-30');
-  const [selectedInterClubOrgIds, setSelectedInterClubOrgIds] = useState(() =>
-    WSKZ_ORGANIZATIONS.map(o => o.orgId)
-  );
+  const activeInterClubOrgId = useMemo(() => {
+    return (currentOrg?.id === 'skn-template' ? 'skn_seksuologii' : currentOrg?.id) || 'skn_seksuologii';
+  }, [currentOrg?.id]);
+
+  const [selectedInterClubOrgIds, setSelectedInterClubOrgIds] = useState(() => [
+    (currentOrg?.id === 'skn-template' ? 'skn_seksuologii' : currentOrg?.id) || 'skn_seksuologii'
+  ]);
   const [interClubData, setInterClubData] = useState(null);
   const [isLoadingInterClub, setIsLoadingInterClub] = useState(false);
 
+  // Synchronizacja wybranego koła przy zmianie aktywnej organizacji
+  useEffect(() => {
+    setSelectedInterClubOrgIds([activeInterClubOrgId]);
+  }, [activeInterClubOrgId]);
+
   const selectedInterClubOrgs = useMemo(() => {
-    return WSKZ_ORGANIZATIONS.filter(o => selectedInterClubOrgIds.includes(o.orgId));
-  }, [selectedInterClubOrgIds]);
+    return WSKZ_ORGANIZATIONS.filter(o => o.orgId === activeInterClubOrgId);
+  }, [activeInterClubOrgId]);
 
   const handleFetchInterClubReport = useCallback(async () => {
     setIsLoadingInterClub(true);
@@ -238,7 +247,7 @@ export default function ReportsTab({
       const result = await fetchInterClubReportData({
         startDate: interClubStartDate,
         endDate: interClubEndDate,
-        selectedOrgIds: selectedInterClubOrgIds,
+        selectedOrgIds: [activeInterClubOrgId],
       });
       setInterClubData(result);
     } catch (err) {
@@ -247,7 +256,7 @@ export default function ReportsTab({
     } finally {
       setIsLoadingInterClub(false);
     }
-  }, [interClubStartDate, interClubEndDate, selectedInterClubOrgIds]);
+  }, [interClubStartDate, interClubEndDate, activeInterClubOrgId]);
 
   useEffect(() => {
     if (selectedDocType === 'inter_club_summary' && !interClubData && !isLoadingInterClub) {
@@ -255,22 +264,20 @@ export default function ReportsTab({
     }
   }, [selectedDocType, interClubData, isLoadingInterClub, handleFetchInterClubReport]);
 
-  const handleToggleInterClubOrg = (orgId) => {
-    setSelectedInterClubOrgIds(prev =>
-      prev.includes(orgId) ? prev.filter(id => id !== orgId) : [...prev, orgId]
-    );
+  const handleToggleInterClubOrg = (_orgId) => {
+    setSelectedInterClubOrgIds([activeInterClubOrgId]);
   };
 
   const handleSelectAllInterClubOrgs = () => {
-    setSelectedInterClubOrgIds(WSKZ_ORGANIZATIONS.map(o => o.orgId));
+    setSelectedInterClubOrgIds([activeInterClubOrgId]);
   };
 
   const handleSelectActiveCrmInterClubOrgs = () => {
-    setSelectedInterClubOrgIds(WSKZ_ORGANIZATIONS.filter(o => o.hasActiveCrm).map(o => o.orgId));
+    setSelectedInterClubOrgIds([activeInterClubOrgId]);
   };
 
   const handleClearInterClubOrgs = () => {
-    setSelectedInterClubOrgIds([]);
+    setSelectedInterClubOrgIds([activeInterClubOrgId]);
   };
 
   const handleExportInterClubToExcel = async () => {
@@ -815,10 +822,13 @@ export default function ReportsTab({
           #reports-print-container {
             position: absolute !important;
             left: 0 !important;
+            right: 0 !important;
             top: 0 !important;
             width: 100% !important;
-            margin: 0 !important;
+            max-width: 186mm !important;
+            margin: 0 auto !important;
             padding: 0 !important;
+            box-sizing: border-box !important;
             box-shadow: none !important;
             border: none !important;
             display: block !important;
@@ -898,7 +908,7 @@ export default function ReportsTab({
           }
           @page {
             size: A4 portrait;
-            margin: 8mm 8mm 8mm 8mm;
+            margin: 12mm;
           }
         }
       `}</style>
@@ -1374,71 +1384,56 @@ export default function ReportsTab({
                   </button>
                 </div>
 
-                {/* Wybór Kół Naukowych */}
+                {/* Wybór Kół Naukowych (Ścisła izolacja do aktywnego koła) */}
                 <div className="space-y-2 pt-2 border-t border-slate-100">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                       <Building2 size={14} className="text-indigo-600" />
-                      <span>Koła Naukowe ({selectedInterClubOrgIds.length} / {WSKZ_ORGANIZATIONS.length}):</span>
+                      <span>Koło Naukowe:</span>
                     </label>
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={handleSelectAllInterClubOrgs}
-                        className="text-[10px] font-bold text-indigo-600 hover:underline px-1 cursor-pointer"
-                      >
-                        Wszystkie (14)
-                      </button>
-                      <span className="text-slate-300">•</span>
-                      <button
-                        type="button"
-                        onClick={handleSelectActiveCrmInterClubOrgs}
-                        className="text-[10px] font-bold text-indigo-600 hover:underline px-1 cursor-pointer"
-                      >
-                        Z CRM (3)
-                      </button>
-                      <span className="text-slate-300">•</span>
-                      <button
-                        type="button"
-                        onClick={handleClearInterClubOrgs}
-                        className="text-[10px] font-bold text-slate-500 hover:underline px-1 cursor-pointer"
-                      >
-                        Wyczyść
-                      </button>
-                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      Izolacja instancji
+                    </span>
                   </div>
 
                   <div className="max-h-52 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50/50 p-2 space-y-1">
                     {WSKZ_ORGANIZATIONS.map(org => {
-                      const isSelected = selectedInterClubOrgIds.includes(org.orgId);
+                      const isCurrentActive = org.orgId === activeInterClubOrgId;
                       return (
-                        <label
+                        <div
                           key={org.orgId}
-                          className={`flex items-center justify-between p-1.5 rounded-lg text-xs cursor-pointer transition select-none ${
-                            isSelected ? 'bg-white font-bold text-slate-900 shadow-2xs border border-slate-200' : 'hover:bg-slate-100/70 text-slate-600'
+                          className={`flex items-center justify-between p-1.5 rounded-lg text-xs select-none transition ${
+                            isCurrentActive
+                              ? 'bg-white font-bold text-slate-900 shadow-2xs border border-indigo-300 ring-1 ring-indigo-200'
+                              : 'opacity-40 bg-slate-100/40 text-slate-400 cursor-not-allowed'
                           }`}
+                          title={isCurrentActive ? 'Aktywna instancja koła' : 'Zablokowane: sprawozdawczość ograniczona do aktywnego koła'}
                         >
                           <div className="flex items-center gap-2 truncate pr-1">
                             <input
                               type="checkbox"
-                              checked={isSelected}
-                              onChange={() => handleToggleInterClubOrg(org.orgId)}
-                              className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5"
+                              checked={isCurrentActive}
+                              disabled={true}
+                              readOnly
+                              className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-not-allowed"
                             />
                             <span className="font-mono text-[10px] px-1 py-0.2 rounded bg-slate-100 border border-slate-200 text-slate-600">
                               {org.number}
                             </span>
                             <span className="truncate">{org.name}</span>
                           </div>
-                          {org.hasActiveCrm && (
-                            <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200 shrink-0">
-                              CRM
+                          {isCurrentActive && (
+                            <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 shrink-0">
+                              AKTYWNE
                             </span>
                           )}
-                        </label>
+                        </div>
                       );
                     })}
                   </div>
+                  <p className="text-[10px] text-slate-500 italic mt-1 leading-tight">
+                    Sprawozdanie jest ściśle izolowane do aktywnego koła ({currentOrg?.shortName || currentOrg?.name || 'Seksuologia'}). Zestawienia wielokołowe są dostępne wyłącznie w CRM Kancelarii Samorządu.
+                  </p>
                 </div>
 
                 {/* Przycisk Generuj / Odśwież Zestawienie */}

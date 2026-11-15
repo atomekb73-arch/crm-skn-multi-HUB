@@ -182,9 +182,13 @@ export async function fetchTeamupEvents({
       if (allSubs.every(s => isSubcalendarExcluded(s))) return false;
 
       if (!isMulti && targetSubId) {
-        const subIdMatches = String(evt.subcalendar_id) === String(targetSubId);
-        const subIdsMatches = Array.isArray(evt.subcalendar_ids) && evt.subcalendar_ids.some(id => String(id) === String(targetSubId));
-        if (!subIdMatches && !subIdsMatches) return false;
+        const pSub = evt.subcalendar_id ? String(evt.subcalendar_id) : '';
+        const allEvtSubs = Array.isArray(evt.subcalendar_ids) && evt.subcalendar_ids.length > 0
+          ? evt.subcalendar_ids.map(String)
+          : (pSub ? [pSub] : []);
+        if (allEvtSubs.length > 0 && !allEvtSubs.includes(String(targetSubId))) {
+          return false;
+        }
       }
 
       const evtDate = evt.start_dt ? evt.start_dt.split('T')[0] : (evt.startDate || '');

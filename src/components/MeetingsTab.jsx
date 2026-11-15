@@ -48,7 +48,7 @@ import { matchMemberExact, matchSupervisorExact, resolveParticipantFromSavedInde
 import { useAuth } from '../context/AuthContext';
 import { useOrg } from '../context/OrgContext';
 import { getMeetingAttendanceStorageKeys } from '../utils/storage';
-import { WSKZ_ORGANIZATIONS } from '../config/wskzRegistry';
+import { WSKZ_ORGANIZATIONS, getWskzOrgById } from '../config/wskzRegistry';
 import {
   saveMeetingMetadataToSupabase,
   fetchMeetingMetadata,
@@ -486,11 +486,29 @@ export default function MeetingsTab({
     setMeetingOverrides(getMeetingOverrides(orgId));
   }, [currentOrg?.id]);
 
-  // Compute all effective meetings combining props + custom meetings + overrides
+  // Compute all effective meetings combining props + custom meetings + overrides with strict subcalendar isolation
   const allEffectiveMeetings = useMemo(() => {
-    const combined = [...meetings];
+    const orgId = (currentOrg?.id === 'skn-template' ? 'skn_seksuologii' : currentOrg?.id) || 'skn_seksuologii';
+    const wskzOrg = getWskzOrgById(orgId);
+    const canonicalSubId = wskzOrg?.subcalendarId ? String(wskzOrg.subcalendarId) : String(currentOrg?.subcalendarId || DEFAULT_CALENDAR_SUB_ID);
+
+    // Ścisła izolacja: odrzuć zdarzenia Teamup z innych podkalendarzy
+    const strictlyFilteredProps = (meetings || []).filter(m => {
+      const pSub = m.subcalendar_id ? String(m.subcalendar_id) : '';
+      const allSubs = Array.isArray(m.subcalendar_ids) && m.subcalendar_ids.length > 0
+        ? m.subcalendar_ids.map(String)
+        : (pSub ? [pSub] : []);
+      if (allSubs.length > 0 && !allSubs.includes(String(canonicalSubId))) {
+        return false;
+      }
+      return true;
+    });
+
+    const combined = [...strictlyFilteredProps];
 
     customMeetings.forEach(cm => {
+      const cOrg = cm.organization_id ? String(cm.organization_id).trim().toLowerCase() : '';
+      if (cOrg && cOrg !== orgId && cOrg !== currentOrg?.id) return;
       const idx = combined.findIndex(m => m.id === cm.id || (m.code && cm.code && m.code === cm.code));
       if (idx >= 0) {
         combined[idx] = { ...combined[idx], ...cm };
@@ -511,7 +529,7 @@ export default function MeetingsTab({
       }
       return m;
     });
-  }, [meetings, customMeetings, meetingOverrides]);
+  }, [meetings, customMeetings, meetingOverrides, currentOrg?.id, currentOrg?.subcalendarId]);
 
   const trashKeySet = useMemo(() => {
     const s = new Set();
