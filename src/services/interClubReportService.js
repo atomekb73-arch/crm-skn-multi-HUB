@@ -260,11 +260,9 @@ export async function fetchInterClubReportData({
     const isProject = detectedType === 'project' || (
       detectedType !== 'mandatory' && detectedType !== 'optional' && (
         titleLower.includes('spotkanie robocze') ||
-        titleLower.includes('grupa projektowa') ||
-        titleLower.includes('zespół projektowy') ||
-        titleLower.includes('zespol projektowy') ||
-        titleLower.includes('(zamknięte)') ||
-        titleLower.includes('(zamkniete)')
+        titleLower.includes('robocz') ||
+        titleLower.includes('zamkni') ||
+        (titleLower.includes('projekt') && (titleLower.includes('grup') || titleLower.includes('zesp') || titleLower.includes('techniczn')))
       )
     );
 

@@ -1279,6 +1279,9 @@ export default function EditMemberModal({
                   } else if (isMand) {
                     tileStyle = 'bg-rose-50 text-rose-700 border-rose-200 font-semibold';
                     tileTooltip = `${m.title || code} (${m.date || 'Brak daty'}) - Nieobecność (spotkanie obowiązkowe)`;
+                  } else if (typeId === 'project') {
+                    tileStyle = 'bg-slate-100 text-slate-500 border-slate-200 font-medium';
+                    tileTooltip = `${m.title || code} (${m.date || 'Brak daty'}) - Nie dotyczy (projektowe / dodatkowe)`;
                   } else if (typeId === 'internal') {
                     tileStyle = 'bg-blue-50 text-blue-700 border-blue-200 font-medium';
                     tileTooltip = `${m.title || code} (${m.date || 'Brak daty'}) - Wewnętrzne Zarządu (nie obniża frekwencji)`;
@@ -1290,7 +1293,7 @@ export default function EditMemberModal({
                     tileTooltip = `${m.title || code} (${m.date || 'Brak daty'}) - Nieobowiązkowe (nie obniża frekwencji)`;
                   } else {
                     tileStyle = 'bg-slate-100 text-slate-500 border-slate-200 font-medium';
-                    tileTooltip = `${m.title || code} (${m.date || 'Brak daty'}) - Brak listy w bazie (nie obniża frekwencji)`;
+                    tileTooltip = `${m.title || code} (${m.date || 'Brak daty'}) - Nie dotyczy (projektowe / dodatkowe)`;
                   }
 
                   return (
@@ -1393,6 +1396,10 @@ export default function EditMemberModal({
                               <XCircle size={14} strokeWidth={2.2} className="text-rose-500" />
                               <span>Nieobecność</span>
                             </span>
+                          ) : m.typeId === 'project' ? (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200" title="Spotkanie projektowe / techniczne - nie obniża frekwencji">
+                              <span>Nie dotyczy (projektowe / dodatkowe)</span>
+                            </span>
                           ) : m.typeId === 'internal' ? (
                             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200" title="Spotkanie wewnętrzne zarządu - nie obniża frekwencji">
                               <span>Zarząd (nie obniża %)</span>
@@ -1406,8 +1413,8 @@ export default function EditMemberModal({
                               <span>Nieobowiązkowe</span>
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-slate-100 text-slate-500 border border-slate-200" title="Brak zarejestrowanej listy obecności - nie obniża frekwencji">
-                              <span>Brak listy</span>
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200" title="Nie dotyczy ogólnej frekwencji">
+                              <span>Nie dotyczy (projektowe / dodatkowe)</span>
                             </span>
                           )}
                         </div>

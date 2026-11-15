@@ -981,12 +981,18 @@ export default function MeetingsTab({
     const meetingKey = targetId || mCode;
     if (!meetingKey) return;
 
+    // Automatyczna konfiguracja mianownika:
+    // 'mandatory' wchodzi do mianownika (true), pozostałe (project, optional, internal itp.) nie wchodzą (false)
+    const defaultCountsInFrequency = (typeId === 'mandatory');
+
     const updatedOverrides = saveMeetingOverride(orgId, meetingKey, {
       meetingType: typeId,
       type: typeId,
       customType: typeId,
       category: typeId,
       charakter: typeId === 'mandatory' ? 'Obowiązkowe' : typeId === 'internal' ? 'Wewnętrzne' : 'Nieobowiązkowe',
+      countsInFrequency: defaultCountsInFrequency,
+      includeInFrequency: defaultCountsInFrequency,
     });
     setMeetingOverrides(updatedOverrides);
 
@@ -996,6 +1002,8 @@ export default function MeetingsTab({
       type: typeId,
       customType: typeId,
       category: typeId,
+      countsInFrequency: defaultCountsInFrequency,
+      includeInFrequency: defaultCountsInFrequency,
     }) : null);
 
     const updatedCustomTypes = { ...customTypes };
@@ -2544,7 +2552,7 @@ export default function MeetingsTab({
                       onChange={(e) => handleToggleCountsInFrequency(selectedMeeting?.id, e.target.checked)}
                       className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
                     />
-                    <span>Wliczaj do ogólnej frekwencji i certyfikatów (mianownik)</span>
+                    <span>Wliczaj do ogólnej frekwencji i certyfikatów (mianownik → % obecności)</span>
                   </label>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                     isMeetingEligibleForDenominator(currentSelectedMeeting || selectedMeeting, customTypes)

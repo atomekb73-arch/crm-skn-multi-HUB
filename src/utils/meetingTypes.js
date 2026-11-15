@@ -162,14 +162,13 @@ export function getAutoMeetingType(meeting) {
 
   // 3. Zamknięte spotkania robocze i zespoły projektowe -> project (Tabela B)
   // Wyłącznie zamknięte prace zespołowe: "spotkanie robocze", "grupa projektowa", "zespół projektowy", "(zamknięte)"
-  if (
+  const isClosedProject =
     title.includes('spotkanie robocze') ||
-    title.includes('grupa projektowa') ||
-    title.includes('zespół projektowy') ||
-    title.includes('zespol projektowy') ||
-    title.includes('(zamknięte)') ||
-    title.includes('(zamkniete)')
-  ) {
+    title.includes('robocz') ||
+    title.includes('zamkni') ||
+    (title.includes('projekt') && (title.includes('grup') || title.includes('zesp') || title.includes('techniczn')));
+
+  if (isClosedProject) {
     return 'project';
   }
 
@@ -413,6 +412,29 @@ export function isMeetingEligibleForDenominator(meeting, customTypes = {}, ewide
       return true;
     }
 
+    // 1b. Ręczny override z localStorage (jeśli nie przekazano bezpośrednio w obiekcie spotkania)
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const orgId = meeting.organization_id || meeting.orgId || localStorage.getItem('crm_active_org_id') || localStorage.getItem('crm_skn_current_org_id') || 'skn_seksuologii';
+        const rawOverrides = localStorage.getItem(`crm_meeting_overrides_${orgId}`) || localStorage.getItem('crm_meeting_overrides');
+        if (rawOverrides) {
+          const overrides = JSON.parse(rawOverrides);
+          const overrideObj = overrides[meeting.id] || overrides[meeting.code] || overrides[String(meeting.code || '').replace(/[\[\]]/g, '')];
+          if (overrideObj) {
+            if (overrideObj.countsInFrequency === false || overrideObj.includeInFrequency === false || overrideObj.wliczajDoFrekwencji === false) {
+              return false;
+            }
+            if (overrideObj.countsInFrequency === true || overrideObj.includeInFrequency === true || overrideObj.wliczajDoFrekwencji === true) {
+              return true;
+            }
+            if (overrideObj.meetingType === 'project' || overrideObj.type === 'project' || overrideObj.category === 'project') {
+              return false;
+            }
+          }
+        }
+      } catch {}
+    }
+
     // 2. Weryfikacja typu spotkania
     const rawType = meeting.type || meeting.meetingType || meeting.category || '';
     const typeKey = String(rawType).toLowerCase();
@@ -422,6 +444,9 @@ export function isMeetingEligibleForDenominator(meeting, customTypes = {}, ewide
     }
 
     const type = getMeetingType(meeting, customTypes);
+    if (type === 'project') {
+      return false;
+    }
     const typeConfig = MEETING_TYPES[type];
     if (typeConfig && !typeConfig.countsTowardsDenominator) {
       return false;
