@@ -3,7 +3,7 @@ import { fetchMeetingMetadata } from './meetingMetadataService.js';
 import { WSKZ_ORGANIZATIONS, getWskzOrgById, getWskzOrgBySubcalendarId, isSubcalendarExcluded } from '../config/wskzRegistry.js';
 import { fetchTeamupEvents } from './teamupService.js';
 import { getAutoMeetingType } from '../utils/meetingTypes.js';
-import { getOrgKey, getMeetingAttendanceStorageKeys } from '../utils/storage.js';
+import { getOrgKey, getOrgStorage, getMeetingAttendanceStorageKeys } from '../utils/storage.js';
 
 /**
  * Normalizuje tytuł spotkania do porównywania i deduplikacji wydarzeń wspólnych
@@ -45,6 +45,7 @@ export async function fetchInterClubReportData({
         endDate,
         subcalendarIds,
         bypassCache: true,
+        yearPrefix: null,
       });
     }
   } catch (err) {
@@ -95,8 +96,12 @@ export async function fetchInterClubReportData({
     });
   }
 
-  // 4. Pobieranie obecności z Supabase (attendance) dla każdego koła z właściwym nagłówkiem tenant + fallback localStorage
-  const attendanceCountMap = {}; // klucz: `${orgId}__${meeting_code}` -> liczba unikalnych obecnych
+  // 4. Pobieranie obecności z Supabase (attendance) dla każdego koła z właściwym nagłówkiem tenant + bezpieczny fallback localStorage
+  // Ważne: prefiks roku akademickiego ([25/26], [26/27]) i data spotkania muszą być ściśle respektowane,
+  // aby nie łączyć uczestników z różnych lat akademickich (np. M04 z 25/26 i M04 z 26/27).
+  const attendanceCountMap = {}; // klucze z Supabase: DATE / CODE_DATE / FULLCODE (z rokiem)
+  const localAttendanceCountMap = {}; // zapasowy cache z localStorage używany WYŁĄCZNIE gdy brak danych z Supabase (=== 0)
+  const YEAR_PREFIX_RE = /^\[?\d{2}\/\d{2}\]?/;
   const SYSTEM_PREFIX_RE = /^\[(?:SETTINGS|DOROBEK|BOARD_TERM|KORESPONDENCJA|MEETING_META|EMAIL_CONFIG|ACCESS_USER|DOKUMENT|OPIEKUN)\]/i;
   try {
     const attResults = await Promise.allSettled(
@@ -122,22 +127,29 @@ export async function fetchInterClubReportData({
         if (!rawCode || SYSTEM_PREFIX_RE.test(rawCode)) return;
         const org = String(row.organization_id || res.value.orgId || '').trim().toLowerCase();
         const code = rawCode.toUpperCase();
-        const cleanCode = code.replace(/^\[.*?\]\s*/, '');
+        const cleanCode = code.replace(/^\[.*?\]\s*/, '').trim();
+        const meetingDate = row.meeting_date ? String(row.meeting_date).trim().slice(0, 10) : '';
         const idx = String(row.index_number || '').trim();
+        if (!idx) return;
 
         const addKey = (k) => {
           if (!k) return;
           if (!uniqueAttendees[k]) uniqueAttendees[k] = new Set();
-          if (idx) uniqueAttendees[k].add(idx);
+          uniqueAttendees[k].add(idx);
         };
 
-        addKey(`${org}__${code}`);
-        if (cleanCode && cleanCode !== code) addKey(`${org}__${cleanCode}`);
-        addKey(`${org}__${code.replace(/[\[\]]/g, '').trim()}`);
-        addKey(`${org}__${code.replace(/\s+/g, '')}`);
-        addKey(`${org}__${cleanCode.replace(/\s+/g, '')}`);
-        if (row.meeting_date) {
-          addKey(`${org}__${String(row.meeting_date).trim()}`);
+        if (meetingDate) {
+          addKey(`${org}__DATE__${meetingDate}`);
+          if (cleanCode) {
+            addKey(`${org}__CODE_DATE__${cleanCode}__${meetingDate}`);
+          }
+          addKey(`${org}__CODE_DATE__${code}__${meetingDate}`);
+        }
+
+        // Pełny kod bez daty indeksujemy WYŁĄCZNIE wtedy, gdy zawiera jawny prefiks roku (np. [26/27] M04)
+        if (YEAR_PREFIX_RE.test(code)) {
+          addKey(`${org}__FULLCODE__${code}`);
+          addKey(`${org}__FULLCODE__${code.replace(/\s+/g, '')}`);
         }
       });
     });
@@ -149,9 +161,38 @@ export async function fetchInterClubReportData({
     console.warn('[interClubReport] Błąd pobierania attendance z Supabase:', err);
   }
 
-  // Uzupełnienie frekwencji z localStorage (dla każdego aktywnego koła)
+  // Opcjonalny bufor z localStorage (wyłącznie jako fallback przy braku wpisów w Supabase, z twardą weryfikacją daty/roku)
+  const overridesByOrg = {};
+  const customTypesByOrg = {};
   if (typeof window !== 'undefined' && window.localStorage) {
     activeOrgIds.forEach(orgId => {
+      try {
+        const mergedOverrides = {};
+        const o1 = getOrgStorage(orgId, 'meeting_overrides', null);
+        if (o1 && typeof o1 === 'object') Object.assign(mergedOverrides, o1);
+        const rawO2 = localStorage.getItem(`crm_meeting_overrides_${orgId}`);
+        if (rawO2) {
+          const o2 = JSON.parse(rawO2);
+          if (o2 && typeof o2 === 'object') Object.assign(mergedOverrides, o2);
+        }
+        overridesByOrg[orgId] = mergedOverrides;
+      } catch {
+        overridesByOrg[orgId] = {};
+      }
+
+      try {
+        const mergedTypes = {};
+        const rawGlobal = localStorage.getItem('crm_meeting_types');
+        if (rawGlobal) Object.assign(mergedTypes, JSON.parse(rawGlobal) || {});
+        const rawSkn = localStorage.getItem('crm_skn_crm_meeting_types');
+        if (rawSkn) Object.assign(mergedTypes, JSON.parse(rawSkn) || {});
+        const tOrg = getOrgStorage(orgId, 'crm_meeting_types', null);
+        if (tOrg && typeof tOrg === 'object') Object.assign(mergedTypes, tOrg);
+        customTypesByOrg[orgId] = mergedTypes;
+      } catch {
+        customTypesByOrg[orgId] = {};
+      }
+
       try {
         const rawEw = localStorage.getItem(getOrgKey(orgId, 'crm_ewidencja')) ||
           localStorage.getItem(`crm_ewidencja_${orgId}`) ||
@@ -163,37 +204,36 @@ export async function fetchInterClubReportData({
             const tempSet = {};
             parsedEw.forEach(item => {
               const code = String(item.kodSpotkania || item.meetingCode || '').trim().toUpperCase();
-              const cleanCode = code.replace(/^\[.*?\]\s*/, '');
+              const cleanCode = code.replace(/^\[.*?\]\s*/, '').trim();
+              const rawItemDate = String(item.dataSpotkania || item.date || '').trim();
+              const itemDate = /^\d{4}-\d{2}-\d{2}/.test(rawItemDate) ? rawItemDate.slice(0, 10) : '';
+              const hasYearPrefix = YEAR_PREFIX_RE.test(code);
               const idx = String(item.nrIndeksu || item.index || item.name || '').trim();
-              const matchM = (code + ' ' + String(item.title || '')).match(/\bM(\d+)\b/i);
-              const mTag = matchM ? `M${matchM[1].padStart(2, '0')}` : null;
-              const mTagSingle = matchM ? `M${parseInt(matchM[1], 10)}` : null;
+              if (!idx || (!itemDate && !hasYearPrefix)) return;
 
-              const addEw = (c) => {
-                if (!c) return;
-                const k1 = `${orgId}__${c}`;
-                if (!tempSet[k1]) tempSet[k1] = new Set();
-                if (idx) tempSet[k1].add(idx);
-                if (!tempSet[c]) tempSet[c] = new Set();
-                if (idx) tempSet[c].add(idx);
+              const addEw = (k) => {
+                if (!k) return;
+                if (!tempSet[k]) tempSet[k] = new Set();
+                tempSet[k].add(idx);
               };
-              addEw(code);
-              if (cleanCode && cleanCode !== code) addEw(cleanCode);
-              if (mTag) addEw(mTag);
-              if (mTagSingle) addEw(mTagSingle);
-              if (item.dataSpotkania || item.date) {
-                addEw(String(item.dataSpotkania || item.date).trim());
+              if (itemDate) {
+                addEw(`${orgId}__DATE__${itemDate}`);
+                if (cleanCode) addEw(`${orgId}__CODE_DATE__${cleanCode}__${itemDate}`);
+              }
+              if (hasYearPrefix) {
+                addEw(`${orgId}__FULLCODE__${code}`);
+                addEw(`${orgId}__FULLCODE__${code.replace(/\s+/g, '')}`);
               }
             });
             Object.entries(tempSet).forEach(([k, s]) => {
-              if (!attendanceCountMap[k] || attendanceCountMap[k] < s.size) {
-                attendanceCountMap[k] = s.size;
+              if (!localAttendanceCountMap[k] || localAttendanceCountMap[k] < s.size) {
+                localAttendanceCountMap[k] = s.size;
               }
             });
           }
         }
 
-        // Skanowanie bezpośrednich rekordów obecności w localStorage
+        // Skanowanie bezpośrednich rekordów obecności w localStorage (wymaga daty lub ID spotkania)
         for (let i = 0; i < localStorage.length; i++) {
           const lk = localStorage.key(i);
           if (lk && lk.includes('attendance') && lk.includes(orgId)) {
@@ -203,24 +243,26 @@ export async function fetchInterClubReportData({
                 (Array.isArray(val?.confirmedIndexes) ? val.confirmedIndexes.length : (Array.isArray(val?.attendees) ? val.attendees.length : 0));
               if (confirmedCount > 0) {
                 const mCode = String(val?.meetingCode || val?.code || '').trim().toUpperCase();
-                const cleanMCode = mCode.replace(/^\[.*?\]\s*/, '');
-                const mDate = String(val?.meetingDate || val?.date || '').trim();
+                const cleanMCode = mCode.replace(/^\[.*?\]\s*/, '').trim();
+                const rawMDate = String(val?.meetingDate || val?.date || '').trim();
+                const mDate = /^\d{4}-\d{2}-\d{2}/.test(rawMDate) ? rawMDate.slice(0, 10) : '';
                 const mId = String(val?.meetingId || val?.id || '').trim();
 
-                const setMax = (k, count) => {
-                  if (k && (!attendanceCountMap[k] || attendanceCountMap[k] < count)) {
-                    attendanceCountMap[k] = count;
+                const setMaxLocal = (k, count) => {
+                  if (k && (!localAttendanceCountMap[k] || localAttendanceCountMap[k] < count)) {
+                    localAttendanceCountMap[k] = count;
                   }
                 };
 
-                if (mCode) {
-                  setMax(`${orgId}__${mCode}`, confirmedCount);
-                  setMax(`${orgId}__${cleanMCode}`, confirmedCount);
-                  setMax(`${orgId}__${mCode.replace(/\s+/g, '')}`, confirmedCount);
-                  setMax(`${orgId}__${cleanMCode.replace(/\s+/g, '')}`, confirmedCount);
+                if (mId) setMaxLocal(`${orgId}__ID__${mId}`, confirmedCount);
+                if (mDate) {
+                  setMaxLocal(`${orgId}__DATE__${mDate}`, confirmedCount);
+                  if (cleanMCode) setMaxLocal(`${orgId}__CODE_DATE__${cleanMCode}__${mDate}`, confirmedCount);
                 }
-                if (mDate) setMax(`${orgId}__${mDate}`, confirmedCount);
-                if (mId) setMax(`${orgId}__${mId}`, confirmedCount);
+                if (mCode && YEAR_PREFIX_RE.test(mCode)) {
+                  setMaxLocal(`${orgId}__FULLCODE__${mCode}`, confirmedCount);
+                  setMaxLocal(`${orgId}__FULLCODE__${mCode.replace(/\s+/g, '')}`, confirmedCount);
+                }
               }
             } catch {}
           }
@@ -249,126 +291,165 @@ export async function fetchInterClubReportData({
       .filter(o => o && o.orgId !== primaryOrgId)
       .map(o => o.orgId);
 
-    // Szukamy pasujących metadanych z meeting_metadata
+    // Szukamy pasujących metadanych z meeting_metadata (z weryfikacją daty przy dopasowaniu innym niż po ID)
     const metaCandidateKeys = [
       `${primaryOrgId}__${evt.id}`,
-      `${primaryOrgId}__${evt.code}`,
+      evt.code ? `${primaryOrgId}__${evt.code}` : null,
       `${primaryOrgId}__${rawDate}`,
-      `${primaryOrgId}__${String(evt.code || '').replace(/^\[.*?\]\s*/, '')}`,
-    ];
+    ].filter(Boolean);
     let matchedMeta = null;
     for (const mk of metaCandidateKeys) {
-      if (metadataMap[mk]) {
-        matchedMeta = metadataMap[mk];
-        break;
+      const candidate = metadataMap[mk];
+      if (!candidate) continue;
+      if (mk !== `${primaryOrgId}__${evt.id}` && candidate.meeting_date && String(candidate.meeting_date).slice(0, 10) !== rawDate) {
+        continue;
+      }
+      matchedMeta = candidate;
+      break;
+    }
+    if (!matchedMeta && evt.code) {
+      const strippedCode = String(evt.code).replace(/^\[.*?\]\s*/, '').trim();
+      const candidate = metadataMap[`${primaryOrgId}__${strippedCode}`];
+      if (candidate && (!candidate.meeting_date || String(candidate.meeting_date).slice(0, 10) === rawDate)) {
+        matchedMeta = candidate;
       }
     }
 
     const coOrgsFromMeta = Array.isArray(matchedMeta?.co_organizers) ? matchedMeta.co_organizers : [];
     const allCoOrgIds = Array.from(new Set([...coOrgsFromTeamup, ...coOrgsFromMeta])).filter(id => id !== primaryOrgId);
 
-    // Ustalanie kategorii: 'project' (zespoły projektowe) vs 'substantive' (merytoryczne/warsztaty)
-    const detectedType = matchedMeta?.meeting_type || getAutoMeetingType(evt);
+    // Ustalanie kategorii: 'project' (Sekcja B) vs 'substantive' (Sekcja A)
+    const orgOverrides = overridesByOrg[primaryOrgId] || {};
+    const orgTypes = customTypesByOrg[primaryOrgId] || {};
+    const localOverride = (evt.id && orgOverrides[evt.id]) || (evt.code && orgOverrides[evt.code]) || null;
+    const localTypeOverride =
+      (evt.id && orgTypes[evt.id]) ||
+      (evt.code && orgTypes[evt.code]) ||
+      localOverride?.customType ||
+      localOverride?.meetingType ||
+      localOverride?.type ||
+      localOverride?.category ||
+      null;
+
+    const metaPayload = matchedMeta?.custom_payload && typeof matchedMeta.custom_payload === 'object'
+      ? matchedMeta.custom_payload
+      : {};
+    const explicitlyExcludedFromDenominator =
+      metaPayload.includeInFrequency === false ||
+      metaPayload.countsInFrequency === false ||
+      metaPayload.includeInDenominator === false ||
+      metaPayload.countsTowardsDenominator === false ||
+      metaPayload.wliczajDoFrekwencji === false ||
+      localOverride?.includeInFrequency === false ||
+      localOverride?.countsInFrequency === false ||
+      localOverride?.includeInDenominator === false ||
+      localOverride?.countsTowardsDenominator === false ||
+      localOverride?.wliczajDoFrekwencji === false;
+
+    const detectedType = localTypeOverride || matchedMeta?.meeting_type || getAutoMeetingType(evt);
+    const detectedTypeLower = String(detectedType || '').toLowerCase();
     const titleLower = (evt.title || '').toLowerCase();
 
-    // Typ 'project' (Tabela B) wyłącznie dla zamkniętych prac zespołowych / roboczych
-    const isProject = detectedType === 'project' || (
-      detectedType !== 'mandatory' && detectedType !== 'optional' && (
-        titleLower.includes('spotkanie robocze') ||
-        titleLower.includes('robocz') ||
-        titleLower.includes('zamkni') ||
-        (titleLower.includes('projekt') && (titleLower.includes('grup') || titleLower.includes('zesp') || titleLower.includes('techniczn')))
-      )
-    );
+    const isProjectType = ['project', 'projektowe', 'techniczne', 'robocze'].includes(detectedTypeLower);
+    const isProjectTitle =
+      titleLower.includes('🔒') ||
+      titleLower.includes('spotkanie robocze') ||
+      titleLower.includes('robocz') ||
+      titleLower.includes('zamkni') ||
+      titleLower.includes('grupa projektowa') ||
+      titleLower.includes('grupy projektowej') ||
+      titleLower.includes('zespół projektowy') ||
+      titleLower.includes('zespołu projektowego') ||
+      (titleLower.includes('projekt') && (titleLower.includes('grup') || titleLower.includes('zesp') || titleLower.includes('techniczn')));
 
+    const isProject = isProjectType || isProjectTitle || explicitlyExcludedFromDenominator;
     const reportCategory = isProject ? 'project' : 'substantive';
 
-    // Frekwencja z gośćmi - Twarda hierarchia odczytu:
-    // 1. meeting_metadata.total_participants (jeśli > 0)
-    // 2. Liczba zweryfikowanych uczestników z attendance (lub meeting.attendees)
-    // 3. Sprawdzenie kluczy localStorage dla spotkania
-    let totalParticipants = 0;
-    if (matchedMeta && Number(matchedMeta.total_participants) > 0) {
-      totalParticipants = Number(matchedMeta.total_participants);
-    }
-
-    // Sprawdzenie attendanceCountMap po kodzie, dacie, ID i numerze M
-    const rawCode = String(evt.code || evt.id || '').trim().toUpperCase();
+    // Frekwencja pojedynczego spotkania: Math.max(unikalni uczestnicy z ewidencji, ręczne total_participants, evtAttendeesCount)
+    // Nigdy nie sumujemy uczestników z bazy z ręczną liczbą całkowitą (z gośćmi).
+    const rawCode = String(evt.code || '').trim().toUpperCase();
     const cleanCode = rawCode.replace(/^\[.*?\]\s*/, '').trim();
-    const noBracketsCode = rawCode.replace(/[\[\]]/g, '').trim();
-    const matchM = (String(evt.code || '') + ' ' + String(evt.title || '')).match(/\bM(\d+)\b/i);
-    const mTagNum = matchM ? parseInt(matchM[1], 10) : null;
-    const mTag = mTagNum !== null ? `M${String(mTagNum).padStart(2, '0')}` : null;
-    const mTagSingle = mTagNum !== null ? `M${mTagNum}` : null;
-
-    const candidateCodes = [
-      rawCode,
-      cleanCode,
-      noBracketsCode,
-      mTag,
-      mTagSingle,
-      mTag ? `[${mTag}]` : null,
-      mTag ? `[26/27] ${mTag}` : null,
-      mTag ? `[26/27]${mTag}` : null,
-      String(evt.id || ''),
-      String(rawDate || ''),
-      rawCode.replace(/\s+/g, ''),
-      cleanCode.replace(/\s+/g, ''),
-    ].filter(Boolean);
-
+    const evtHasYearPrefix = YEAR_PREFIX_RE.test(rawCode);
     const checkOrgs = Array.from(new Set([primaryOrgId, ...allCoOrgIds, ...activeOrgIds]));
+
+    let uniqueAttendanceCount = 0;
     for (const orgToCheck of checkOrgs) {
-      for (const codeCandidate of candidateCodes) {
-        const count = attendanceCountMap[`${orgToCheck}__${codeCandidate.toUpperCase()}`] ||
-          attendanceCountMap[`${orgToCheck}__${codeCandidate}`] ||
-          attendanceCountMap[codeCandidate.toUpperCase()] ||
-          attendanceCountMap[codeCandidate];
-        if (count && count > totalParticipants) {
-          totalParticipants = count;
-        }
+      // 1a. Dopasowanie po kodzie + dokładnej dacie
+      if (cleanCode && rawDate) {
+        const c1 = attendanceCountMap[`${orgToCheck}__CODE_DATE__${cleanCode}__${rawDate}`] || 0;
+        const c2 = rawCode ? (attendanceCountMap[`${orgToCheck}__CODE_DATE__${rawCode}__${rawDate}`] || 0) : 0;
+        if (Math.max(c1, c2) > uniqueAttendanceCount) uniqueAttendanceCount = Math.max(c1, c2);
+      }
+      // 1b. Dopasowanie po pełnym kodzie z rokiem akademickim (np. [26/27] M04)
+      if (evtHasYearPrefix) {
+        const c3 = attendanceCountMap[`${orgToCheck}__FULLCODE__${rawCode}`] || 0;
+        const c4 = attendanceCountMap[`${orgToCheck}__FULLCODE__${rawCode.replace(/\s+/g, '')}`] || 0;
+        if (Math.max(c3, c4) > uniqueAttendanceCount) uniqueAttendanceCount = Math.max(c3, c4);
+      }
+    }
+    // 1c. Fallback po samej dokładnej dacie (obsługuje np. M05 gdy ewidencja w bazie ma inny kod na ten sam dzień)
+    if (uniqueAttendanceCount === 0 && rawDate) {
+      for (const orgToCheck of checkOrgs) {
+        const cDate = attendanceCountMap[`${orgToCheck}__DATE__${rawDate}`] || 0;
+        if (cDate > uniqueAttendanceCount) uniqueAttendanceCount = cDate;
       }
     }
 
-    // Bezpośrednie sprawdzenie w localStorage storageKeys dla danego wydarzenia
-    if (typeof window !== 'undefined' && window.localStorage) {
-      try {
-        for (const orgToCheck of checkOrgs) {
-          const storageKeys = getMeetingAttendanceStorageKeys(orgToCheck, { ...evt, code: mTag || evt.code });
-          for (const sk of storageKeys) {
-            const raw = localStorage.getItem(sk);
-            if (raw) {
+    // 2. Fallback do localStorage WYŁĄCZNIE gdy brak obecności w Supabase (uniqueAttendanceCount === 0)
+    if (uniqueAttendanceCount === 0) {
+      for (const orgToCheck of checkOrgs) {
+        const specificKeys = [
+          evt.id ? `${orgToCheck}__ID__${evt.id}` : null,
+          cleanCode && rawDate ? `${orgToCheck}__CODE_DATE__${cleanCode}__${rawDate}` : null,
+          evtHasYearPrefix ? `${orgToCheck}__FULLCODE__${rawCode}` : null,
+          evtHasYearPrefix ? `${orgToCheck}__FULLCODE__${rawCode.replace(/\s+/g, '')}` : null,
+        ].filter(Boolean);
+        for (const lk of specificKeys) {
+          const lc = localAttendanceCountMap[lk] || 0;
+          if (lc > uniqueAttendanceCount) uniqueAttendanceCount = lc;
+        }
+        if (uniqueAttendanceCount === 0 && rawDate) {
+          const lcDate = localAttendanceCountMap[`${orgToCheck}__DATE__${rawDate}`] || 0;
+          if (lcDate > uniqueAttendanceCount) uniqueAttendanceCount = lcDate;
+        }
+      }
+
+      if (uniqueAttendanceCount === 0 && typeof window !== 'undefined' && window.localStorage) {
+        try {
+          for (const orgToCheck of checkOrgs) {
+            const storageKeys = getMeetingAttendanceStorageKeys(orgToCheck, evt);
+            for (const sk of storageKeys) {
+              const raw = localStorage.getItem(sk);
+              if (!raw) continue;
               const parsed = JSON.parse(raw);
+              if (!parsed || typeof parsed !== 'object') continue;
+              const parsedDate = String(parsed?.meetingDate || parsed?.date || '').trim().slice(0, 10);
+              if (parsedDate && parsedDate !== rawDate) continue;
+              if (!parsedDate) {
+                const hasEventId = evt.id && sk.includes(String(evt.id));
+                const hasFullYearCode = evtHasYearPrefix && sk.toUpperCase().includes(rawCode);
+                if (!hasEventId && !hasFullYearCode) continue;
+              }
               const c = parsed?.confirmedCount ||
                 (Array.isArray(parsed?.confirmedIndexes) ? parsed.confirmedIndexes.length : (Array.isArray(parsed?.attendees) ? parsed.attendees.length : 0));
-              if (c > totalParticipants) totalParticipants = c;
+              if (c > uniqueAttendanceCount) uniqueAttendanceCount = c;
             }
           }
-        }
-        // Wyszukiwanie zapasowe w buforze localStorage po mTag lub dacie
-        if (totalParticipants === 0 && (mTag || rawDate)) {
-          for (let i = 0; i < localStorage.length; i++) {
-            const lk = localStorage.key(i);
-            if (lk && lk.includes('attendance') && ((mTag && lk.toUpperCase().includes(mTag.toUpperCase())) || (rawDate && lk.includes(rawDate)))) {
-              try {
-                const parsed = JSON.parse(localStorage.getItem(lk) || '{}');
-                const c = parsed?.confirmedCount ||
-                  (Array.isArray(parsed?.confirmedIndexes) ? parsed.confirmedIndexes.length : (Array.isArray(parsed?.attendees) ? parsed.attendees.length : 0));
-                if (c > totalParticipants) totalParticipants = c;
-              } catch {}
-            }
-          }
-        }
-      } catch {}
+        } catch {}
+      }
     }
+
+    const manualTotal = matchedMeta && Number(matchedMeta.total_participants) > 0
+      ? Number(matchedMeta.total_participants)
+      : 0;
 
     // Sprawdzenie evt.total_participants / evt.attendeesCount / evt.attendees / evt.participantRecords
     const evtAttendeesCount = evt.total_participants || evt.totalParticipants || evt.attendeesCount ||
       (Array.isArray(evt.attendees) ? evt.attendees.length : 0) ||
       (Array.isArray(evt.participantRecords) ? evt.participantRecords.length : 0) ||
       (Array.isArray(evt.listaObecnosci) ? evt.listaObecnosci.length : 0);
-    if (evtAttendeesCount > totalParticipants) {
-      totalParticipants = evtAttendeesCount;
-    }
+
+    const totalParticipants = Math.max(uniqueAttendanceCount, manualTotal, Number(evtAttendeesCount) || 0);
 
     // Klucz deduplikacji: data + znormalizowany tytuł (lub ID Teamup)
     const dedupKey = `${rawDate}___${normalizeTitle(evt.title) || evt.id}`;

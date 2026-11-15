@@ -163,9 +163,14 @@ export function getAutoMeetingType(meeting) {
   // 3. Zamknięte spotkania robocze i zespoły projektowe -> project (Tabela B)
   // Wyłącznie zamknięte prace zespołowe: "spotkanie robocze", "grupa projektowa", "zespół projektowy", "(zamknięte)"
   const isClosedProject =
+    title.includes('🔒') ||
     title.includes('spotkanie robocze') ||
     title.includes('robocz') ||
     title.includes('zamkni') ||
+    title.includes('grupa projektowa') ||
+    title.includes('grupy projektowej') ||
+    title.includes('zespół projektowy') ||
+    title.includes('zespołu projektowego') ||
     (title.includes('projekt') && (title.includes('grup') || title.includes('zesp') || title.includes('techniczn')));
 
   if (isClosedProject) {

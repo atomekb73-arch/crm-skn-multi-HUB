@@ -874,6 +874,7 @@ export function getMeetingAttendeesCount(m, orgId = null) {
   if (typeof window !== 'undefined' && window.localStorage) {
     try {
       const keys = getMeetingAttendanceStorageKeys(orgId || 'skn_seksuologii', m);
+      const mDateStr = String(m.date || (m.start_dt ? String(m.start_dt).split('T')[0] : '') || '').trim().slice(0, 10);
 
       for (const key of keys) {
         const raw = localStorage.getItem(key);
@@ -881,8 +882,13 @@ export function getMeetingAttendeesCount(m, orgId = null) {
           const parsed = JSON.parse(raw);
           if (parsed && typeof parsed === 'object') {
             if (parsed.organization_id && orgId && parsed.organization_id !== orgId) continue;
-            const pDate = parsed.date || parsed.meetingDate;
-            if (pDate && m.date && pDate !== m.date) continue;
+            const rawPDate = parsed.date || parsed.meetingDate || '';
+            const pDateStr = rawPDate ? String(rawPDate).trim().slice(0, 10) : '';
+            if (pDateStr && mDateStr && pDateStr !== mDateStr) continue;
+            // Ochrona przed starym cache z 2025/2026 bez daty pod gołym kluczem _M04 / _M07
+            if (/_M\d+$/i.test(key) && mDateStr >= '2026-10-01' && (!pDateStr || pDateStr !== mDateStr)) {
+              continue;
+            }
             let count = 0;
             if (typeof parsed.confirmedCount === 'number') count = parsed.confirmedCount;
             else if (Array.isArray(parsed.confirmedIndexes)) count = parsed.confirmedIndexes.length;

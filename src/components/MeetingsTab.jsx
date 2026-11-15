@@ -1022,8 +1022,11 @@ export default function MeetingsTab({
       localStorage.setItem('crm_meeting_types', JSON.stringify(updatedCustomTypes));
     } catch {}
 
-    // Natychmiastowa synchronizacja z tabelą meeting_metadata w Supabase
-    handlePatchSelectedMeetingMetadata({ meeting_type: typeId });
+    // Natychmiastowa synchronizacja z tabelą meeting_metadata w Supabase (typ + flaga mianownika)
+    handleUpdateMeetingMetadata({
+      meeting_type: typeId,
+      custom_payload: { includeInFrequency: defaultCountsInFrequency, countsInFrequency: defaultCountsInFrequency },
+    });
   };
 
   const handleSelectMeetingType = (typeIdOrEvent, maybeTypeKey) => {
@@ -1049,6 +1052,11 @@ export default function MeetingsTab({
     });
     setMeetingOverrides(updatedOverrides);
     setSelectedMeeting(prev => prev ? ({ ...prev, countsInFrequency: include, includeInFrequency: include }) : null);
+
+    // Utrwalenie flagi mianownika w meeting_metadata (SSOT dla Zestawienia Aktywności Kół)
+    handleUpdateMeetingMetadata({
+      custom_payload: { includeInFrequency: include, countsInFrequency: include },
+    });
   };
 
   const handleUpdateMeetingMetadata = async (patch) => {
@@ -1064,7 +1072,11 @@ export default function MeetingsTab({
       meeting_key: meetKey,
       title: meet.title || existing.title || '',
       meeting_date: meet.date || existing.meeting_date || null,
-      meeting_type: meet.type || existing.meeting_type || 'mandatory',
+      meeting_type: patch.meeting_type || existing.meeting_type || meet.type || 'mandatory',
+      custom_payload: {
+        ...(existing.custom_payload && typeof existing.custom_payload === 'object' ? existing.custom_payload : {}),
+        ...(patch.custom_payload && typeof patch.custom_payload === 'object' ? patch.custom_payload : {}),
+      },
     };
     setMeetingMetadataMap(prev => ({ ...prev, [meetKey]: updated }));
     try {
@@ -3164,7 +3176,15 @@ export default function MeetingsTab({
           const totalHeadcount = currentMeta.total_participants && Number(currentMeta.total_participants) > confirmedCount
             ? Number(currentMeta.total_participants)
             : confirmedCount;
-          const currentMeetingType = getMeetingType(targetMeeting || { id: meetingId }, customTypes) || currentMeta.meeting_type || targetMeeting?.type || 'mandatory';
+          // Jawnie wybrany charakter spotkania ma pierwszeństwo nad autodetekcją (nie nadpisujemy typu przy zapisie listy obecności)
+          const currentMeetingType =
+            (targetMeeting?.id && customTypes?.[targetMeeting.id]) ||
+            (targetMeeting?.code && customTypes?.[targetMeeting.code]) ||
+            currentMeta.meeting_type ||
+            targetMeeting?.meetingType ||
+            targetMeeting?.type ||
+            getMeetingType(targetMeeting || { id: meetingId }, customTypes) ||
+            'mandatory';
 
           saveMeetingMetadataToSupabase({
             organization_id: activeOrgId,
