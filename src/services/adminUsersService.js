@@ -975,6 +975,59 @@ export async function fetchRbacLoginProfile(email) {
         clubs,
       };
     }
+
+    // Fallback SSOT: automatyczne rozpoznanie uprawnień z kadencji Zarządu (board), Ustawień (access_users) i Opiekunów
+    const foundClubs = new Set();
+    let foundName = '';
+    let isBoardAdmin = false;
+    for (const row of rows) {
+      const orgId = normalizeOrgId(row.organization_id);
+      if (!orgId || orgId === 'test' || !ALL_WSKZ_ORGANIZATION_IDS.includes(orgId)) continue;
+      const s = row.settings && typeof row.settings === 'object' ? row.settings : {};
+      if (s.revoked_access?.[cleanEmail]?.active === false) continue;
+
+      const b = Array.isArray(s.board)
+        ? s.board.find((x) => String(x?.memberEmail || x?.email || '').trim().toLowerCase() === cleanEmail && x?.isActive !== false && !x?.accessRevoked)
+        : null;
+      if (b) {
+        foundClubs.add(orgId);
+        if (!foundName) foundName = b.memberName || b.name || b.fullName || '';
+        const r = String(b.roleName || '').toLowerCase();
+        if (r.includes('sekretarz') || r.includes('przewodnicz') || r.includes('admin')) isBoardAdmin = true;
+      }
+
+      const au = Array.isArray(s.access_users)
+        ? s.access_users.find((x) => String(x?.email || '').trim().toLowerCase() === cleanEmail && x?.active !== false)
+        : null;
+      if (au) {
+        foundClubs.add(orgId);
+        if (!foundName) foundName = au.name || '';
+        if (au.rbacRole === 'admin' || au.role_code === 'CLUB_ADMIN' || String(au.role || '').toLowerCase().includes('admin')) {
+          isBoardAdmin = true;
+        }
+      }
+
+      const sup = Array.isArray(s.supervisors)
+        ? s.supervisors.find((x) => String(x?.email || x?.memberEmail || '').trim().toLowerCase() === cleanEmail && x?.isActive !== false && !x?.accessRevoked)
+        : null;
+      if (sup) {
+        foundClubs.add(orgId);
+        if (!foundName) foundName = sup.fullName || sup.name || '';
+      }
+    }
+
+    if (foundClubs.size > 0) {
+      const clubs = Array.from(foundClubs);
+      return {
+        id: `rbac-${cleanEmail}`,
+        email: cleanEmail,
+        name: foundName || cleanEmail.split('@')[0],
+        role: isBoardAdmin ? 'admin' : 'user',
+        mustChangePassword: hasCustomPassword ? false : Boolean(mustChange),
+        isActive: true,
+        clubs,
+      };
+    }
   } catch {
     // Bezpieczny fallback do standardowego sprawdzania w AuthContext
   }

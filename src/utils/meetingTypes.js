@@ -781,12 +781,14 @@ export function calculateMemberStats(memberOrIndex, ewidencja = null, meetings =
 
   // 6. Zliczanie zaliczonych obecności
   const attendedMeetingCodes = new Set();
+  const attendedSourceIds = new Set();
   let presentMandatory = 0;
   let optionalBonus = 0;
 
   conductedMeetings.forEach(m => {
     const isEligibleMandatory = eligibleSet.has(m);
     const mCode = String(m.code || m.id || '').trim();
+    const sourceMeetId = String(m.source_meeting_id || m.sourceMeetingId || m.id || m.code || '').trim();
     const mCodeUpper = mCode.replace(/[\[\]]/g, '').trim().toUpperCase();
     const mNumMatch = mCodeUpper.match(/M(\d+)/i);
     const mNum = mNumMatch ? parseInt(mNumMatch[1], 10) : null;
@@ -899,8 +901,9 @@ export function calculateMemberStats(memberOrIndex, ewidencja = null, meetings =
     }
 
     if (isPresent) {
-      if (!attendedMeetingCodes.has(mCode)) {
+      if (!attendedMeetingCodes.has(mCode) && (!sourceMeetId || !attendedSourceIds.has(sourceMeetId))) {
         attendedMeetingCodes.add(mCode);
+        if (sourceMeetId) attendedSourceIds.add(sourceMeetId);
         if (isEligibleMandatory) {
           presentMandatory++;
         } else {
@@ -961,11 +964,19 @@ export function calculateMemberStats(memberOrIndex, ewidencja = null, meetings =
   let tenurePoints = 0;
 
   const countedEwidencjaRefs = new Set();
+  const creditedEventKeys = new Set(); // Ochrona przed podwójnym naliczeniem punktów (Global SSOT)
 
   // 1a. Nalicz punkty za każde zaliczone spotkanie z conductedMeetings (zarówno z ewidencji, jak i z localStorage)
   conductedMeetings.forEach(m => {
     const mCode = String(m.code || m.id || '').trim();
     if (!attendedMeetingCodes.has(mCode)) return;
+
+    // Deduplikacja punktów po kluczu: (index_number, source_meeting_id || meeting_id || mCode)
+    const sourceMeetId = String(m.source_meeting_id || m.sourceMeetingId || m.id || m.code || m.date || '').trim();
+    const dedupEventKey = `${cleanIdxDigits || rawIdx}__${sourceMeetId}`;
+    if (creditedEventKeys.has(dedupEventKey)) {
+      return; // Zapobiegaj podwójnemu naliczeniu punktów za to samo wydarzenie wspólne
+    }
 
     const mCodeUpper = mCode.replace(/[\[\]]/g, '').trim().toUpperCase();
     const mNumMatch = mCodeUpper.match(/M(\d+)/i);
@@ -1042,12 +1053,31 @@ export function calculateMemberStats(memberOrIndex, ewidencja = null, meetings =
       }
     }
 
-    meetingPoints += Math.max(1, ewPts, localPts);
+    const awarded = Math.max(1, ewPts, localPts);
+    meetingPoints += awarded;
+    creditedEventKeys.add(dedupEventKey);
+    if (m.date && m.title) {
+      creditedEventKeys.add(`${cleanIdxDigits || rawIdx}__${m.date}__${String(m.title).trim().toLowerCase()}`);
+    }
   });
 
   // 1b. Dodaj punkty z pozostałych wpisów w studentAttendance (jeśli nie miały odpowiednika w conductedMeetings)
   studentAttendance.forEach(e => {
     if (!e || countedEwidencjaRefs.has(e)) return;
+
+    const sourceMeetId = String(e.source_meeting_id || e.sourceMeetingId || e.kodSpotkania || e.meetingCode || e.dataSpotkania || '').trim();
+    const dedupEventKey = `${cleanIdxDigits || rawIdx}__${sourceMeetId}`;
+    if (creditedEventKeys.has(dedupEventKey)) {
+      return; // Zapobiegaj dublowaniu punktów za to samo wydarzenie
+    }
+    if (e.dataSpotkania && (e.tytulSpotkania || e.title)) {
+      const dateTitleKey = `${cleanIdxDigits || rawIdx}__${e.dataSpotkania}__${String(e.tytulSpotkania || e.title).trim().toLowerCase()}`;
+      if (creditedEventKeys.has(dateTitleKey)) {
+        return;
+      }
+      creditedEventKeys.add(dateTitleKey);
+    }
+
     const rawVal = e.punkty !== undefined ? e.punkty : (e.points !== undefined ? e.points : (e.pkt !== undefined ? e.pkt : null));
     let p = 1;
     if (rawVal !== null && rawVal !== undefined && String(rawVal).trim() !== '') {
@@ -1055,6 +1085,7 @@ export function calculateMemberStats(memberOrIndex, ewidencja = null, meetings =
       if (!isNaN(parsed)) p = parsed;
     }
     meetingPoints += p;
+    creditedEventKeys.add(dedupEventKey);
   });
 
   // 2. Punkty stałe z dorobku naukowego (izolowane ściśle do aktywnego koła i roku akademickiego)

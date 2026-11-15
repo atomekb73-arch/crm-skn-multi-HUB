@@ -20,6 +20,25 @@ function cleanOrgName(name) {
   return String(name || '').replace(/^\d+\s+/, '').trim();
 }
 
+/**
+ * Poprawna polska odmiana rzeczownika "osoba" (1 osoba, 2..4 osoby, 5..21 osób, 22..24 osoby, itd.)
+ */
+export function getOsobaSuffix(count) {
+  const n = Math.abs(Number(count) || 0);
+  if (n === 1) return 'osoba';
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) {
+    return 'osoby';
+  }
+  return 'osób';
+}
+
+export function pluralizeOsoba(count) {
+  const n = Number(count) || 0;
+  return `${n} ${getOsobaSuffix(n)}`;
+}
+
 export default function InterClubSummaryTemplate({
   startDate = '2026-10-01',
   endDate = '2027-09-30',
@@ -192,10 +211,10 @@ export default function InterClubSummaryTemplate({
               Łączna Frekwencja z Gośćmi
             </span>
             <div className="text-[19px] leading-tight font-bold text-indigo-950 mt-0.5 font-mono">
-              {totalAllAttendees} <span className="text-xs font-sans font-normal text-indigo-700">osób</span>
+              {totalAllAttendees} <span className="text-xs font-sans font-normal text-indigo-700">{getOsobaSuffix(totalAllAttendees)}</span>
             </div>
-            <span className="text-[9px] text-indigo-700 mt-0.5 block leading-tight">
-              Średnio ~{totalAllAvgAttendees} os./spotkanie
+            <span className="text-[9px] text-indigo-700 mt-0.5 block leading-tight font-medium">
+              średnia: {substantiveMeetings.length > 0 ? Math.round(substantiveTotalAttendees / substantiveMeetings.length) : 0} os. / spotkanie merytoryczne
             </span>
           </div>
         </div>

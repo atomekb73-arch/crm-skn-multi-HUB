@@ -323,7 +323,14 @@ export async function saveQuarantineDecisionsBatchToGAS(decyzje = []) {
  * Zapisuje frekwencję danego spotkania bezpośrednio i wyłącznie w tabeli `attendance` w Supabase.
  * Całkowicie odcięte od zewnętrznych arkuszy Google Sheets.
  */
-export async function saveMeetingAttendanceToSupabase({ kodSpotkania, dataSpotkania, obecnosci, orgId = 'skn_seksuologii' }) {
+export async function saveMeetingAttendanceToSupabase({
+  kodSpotkania,
+  dataSpotkania,
+  obecnosci,
+  orgId = 'skn_seksuologii',
+  sourceMeetingId = null,
+  coOrganizers = []
+}) {
   const cleanOrg = normalizeOrg(orgId);
   const client = getSupabaseForOrg(cleanOrg);
   const listToSave = Array.isArray(obecnosci) ? obecnosci : [];
@@ -331,6 +338,11 @@ export async function saveMeetingAttendanceToSupabase({ kodSpotkania, dataSpotka
   const cleanCode = rawCode.replace(/^\[.*?\]\s*/, '').trim();
   const hasYearPrefix = /^\[.*?\]/.test(rawCode);
   const dateStr = String(dataSpotkania || new Date().toISOString().slice(0, 10)).split('T')[0].trim();
+  const effectiveSourceMeetingId = String(sourceMeetingId || rawCode).trim();
+  const ACTIVE_CRM_ORGS = ['skn_seksuologii', 'uzaleznienia', 'psychoonkologia'];
+  const activeCoOrgsInCrm = (Array.isArray(coOrganizers) ? coOrganizers : [])
+    .map(normalizeOrg)
+    .filter(cid => cid !== cleanOrg && ACTIVE_CRM_ORGS.includes(cid));
 
   // Usuń dotychczasowe wpisy dla tego spotkania w Supabase w ramach tej organizacji
   let delQuery = client

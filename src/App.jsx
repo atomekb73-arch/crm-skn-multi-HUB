@@ -628,6 +628,51 @@ export default function App() {
         }
       });
 
+      // ── Wyszukaj wydarzenia współdzielone z innych aktywnych kół w CRM ──
+      const ACTIVE_CRM_CLUB_IDS = ['skn_seksuologii', 'uzaleznienia', 'psychoonkologia'];
+      const otherActiveClubIds = ACTIVE_CRM_CLUB_IDS.filter(cid => cid !== targetOrgId && cid !== currentOrg.id);
+
+      otherActiveClubIds.forEach(otherOrgId => {
+        try {
+          const otherCustoms = getCustomMeetings(otherOrgId);
+          let otherMetaMap = {};
+          if (typeof window !== 'undefined' && window.localStorage) {
+            const rawOtherMeta = localStorage.getItem(getOrgKey(otherOrgId, 'crm_meeting_metadata'));
+            if (rawOtherMeta) otherMetaMap = JSON.parse(rawOtherMeta);
+          }
+
+          otherCustoms.forEach(otherM => {
+            const mKey = otherM.id || otherM.code;
+            const meta = otherMetaMap[mKey] || (otherM.code ? otherMetaMap[otherM.code] : null) || {};
+            const coOrgs = Array.isArray(otherM.co_organizers)
+              ? otherM.co_organizers
+              : (Array.isArray(otherM.coOrganizers)
+                  ? otherM.coOrganizers
+                  : (Array.isArray(meta.co_organizers) ? meta.co_organizers : []));
+
+            if (coOrgs.includes(targetOrgId) || coOrgs.includes(currentOrg.id)) {
+              const leadOrgObj = getWskzOrgById(otherOrgId);
+              const leadOrgName = String(leadOrgObj?.displayName || leadOrgObj?.name || otherOrgId).replace(/^\d+\s+/, '').trim();
+              const sharedM = {
+                ...otherM,
+                isSharedEvent: true,
+                leadOrgId: otherOrgId,
+                leadOrgName,
+                co_organizers: coOrgs,
+                coOrganizers: coOrgs,
+                source_meeting_id: otherM.id || otherM.code,
+              };
+
+              if (!allMeetings.some(m => (m.id && sharedM.id && m.id === sharedM.id) || (m.code && sharedM.code && m.code === sharedM.code))) {
+                allMeetings.push(sharedM);
+              }
+            }
+          });
+        } catch (err) {
+          console.warn('[loadMeetings] Błąd wczytywania współdzielonych spotkań z koła', otherOrgId, err);
+        }
+      });
+
       // Odfiltruj Kosz i ignorowane spotkania (WYŁĄCZNIE po ID i kodzie, nigdy po samej dacie!)
       const finalMeetings = allMeetings
         .filter(m => {

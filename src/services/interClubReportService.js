@@ -153,22 +153,37 @@ export async function fetchInterClubReportData({
   if (typeof window !== 'undefined' && window.localStorage) {
     activeOrgIds.forEach(orgId => {
       try {
-        const rawEw = localStorage.getItem(getOrgKey(orgId, 'crm_ewidencja'));
+        const rawEw = localStorage.getItem(getOrgKey(orgId, 'crm_ewidencja')) ||
+          localStorage.getItem(`crm_ewidencja_${orgId}`) ||
+          localStorage.getItem(`${orgId}_crm_ewidencja`) ||
+          localStorage.getItem('crm_ewidencja');
         if (rawEw) {
           const parsedEw = JSON.parse(rawEw);
           if (Array.isArray(parsedEw)) {
             const tempSet = {};
             parsedEw.forEach(item => {
-              const code = String(item.kodSpotkania || '').trim().toUpperCase();
+              const code = String(item.kodSpotkania || item.meetingCode || '').trim().toUpperCase();
               const cleanCode = code.replace(/^\[.*?\]\s*/, '');
-              const idx = String(item.nrIndeksu || item.index || '').trim();
+              const idx = String(item.nrIndeksu || item.index || item.name || '').trim();
+              const matchM = (code + ' ' + String(item.title || '')).match(/\bM(\d+)\b/i);
+              const mTag = matchM ? `M${matchM[1].padStart(2, '0')}` : null;
+              const mTagSingle = matchM ? `M${parseInt(matchM[1], 10)}` : null;
+
               const addEw = (c) => {
-                const k = `${orgId}__${c}`;
-                if (!tempSet[k]) tempSet[k] = new Set();
-                if (idx) tempSet[k].add(idx);
+                if (!c) return;
+                const k1 = `${orgId}__${c}`;
+                if (!tempSet[k1]) tempSet[k1] = new Set();
+                if (idx) tempSet[k1].add(idx);
+                if (!tempSet[c]) tempSet[c] = new Set();
+                if (idx) tempSet[c].add(idx);
               };
               addEw(code);
               if (cleanCode && cleanCode !== code) addEw(cleanCode);
+              if (mTag) addEw(mTag);
+              if (mTagSingle) addEw(mTagSingle);
+              if (item.dataSpotkania || item.date) {
+                addEw(String(item.dataSpotkania || item.date).trim());
+              }
             });
             Object.entries(tempSet).forEach(([k, s]) => {
               if (!attendanceCountMap[k] || attendanceCountMap[k] < s.size) {
@@ -277,49 +292,80 @@ export async function fetchInterClubReportData({
       totalParticipants = Number(matchedMeta.total_participants);
     }
 
-    // Sprawdzenie attendanceCountMap po kodzie, dacie, ID
+    // Sprawdzenie attendanceCountMap po kodzie, dacie, ID i numerze M
     const rawCode = String(evt.code || evt.id || '').trim().toUpperCase();
     const cleanCode = rawCode.replace(/^\[.*?\]\s*/, '').trim();
     const noBracketsCode = rawCode.replace(/[\[\]]/g, '').trim();
+    const matchM = (String(evt.code || '') + ' ' + String(evt.title || '')).match(/\bM(\d+)\b/i);
+    const mTagNum = matchM ? parseInt(matchM[1], 10) : null;
+    const mTag = mTagNum !== null ? `M${String(mTagNum).padStart(2, '0')}` : null;
+    const mTagSingle = mTagNum !== null ? `M${mTagNum}` : null;
+
     const candidateCodes = [
       rawCode,
       cleanCode,
       noBracketsCode,
+      mTag,
+      mTagSingle,
+      mTag ? `[${mTag}]` : null,
+      mTag ? `[26/27] ${mTag}` : null,
+      mTag ? `[26/27]${mTag}` : null,
       String(evt.id || ''),
       String(rawDate || ''),
       rawCode.replace(/\s+/g, ''),
       cleanCode.replace(/\s+/g, ''),
-    ];
+    ].filter(Boolean);
 
-    for (const codeCandidate of candidateCodes) {
-      if (!codeCandidate) continue;
-      const count = attendanceCountMap[`${primaryOrgId}__${codeCandidate.toUpperCase()}`] ||
-        attendanceCountMap[`${primaryOrgId}__${codeCandidate}`];
-      if (count && count > totalParticipants) {
-        totalParticipants = count;
+    const checkOrgs = Array.from(new Set([primaryOrgId, ...allCoOrgIds, ...activeOrgIds]));
+    for (const orgToCheck of checkOrgs) {
+      for (const codeCandidate of candidateCodes) {
+        const count = attendanceCountMap[`${orgToCheck}__${codeCandidate.toUpperCase()}`] ||
+          attendanceCountMap[`${orgToCheck}__${codeCandidate}`] ||
+          attendanceCountMap[codeCandidate.toUpperCase()] ||
+          attendanceCountMap[codeCandidate];
+        if (count && count > totalParticipants) {
+          totalParticipants = count;
+        }
       }
     }
 
     // Bezpośrednie sprawdzenie w localStorage storageKeys dla danego wydarzenia
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
-        const storageKeys = getMeetingAttendanceStorageKeys(primaryOrgId, evt);
-        for (const sk of storageKeys) {
-          const raw = localStorage.getItem(sk);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            const c = parsed?.confirmedCount ||
-              (Array.isArray(parsed?.confirmedIndexes) ? parsed.confirmedIndexes.length : (Array.isArray(parsed?.attendees) ? parsed.attendees.length : 0));
-            if (c > totalParticipants) totalParticipants = c;
+        for (const orgToCheck of checkOrgs) {
+          const storageKeys = getMeetingAttendanceStorageKeys(orgToCheck, { ...evt, code: mTag || evt.code });
+          for (const sk of storageKeys) {
+            const raw = localStorage.getItem(sk);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              const c = parsed?.confirmedCount ||
+                (Array.isArray(parsed?.confirmedIndexes) ? parsed.confirmedIndexes.length : (Array.isArray(parsed?.attendees) ? parsed.attendees.length : 0));
+              if (c > totalParticipants) totalParticipants = c;
+            }
+          }
+        }
+        // Wyszukiwanie zapasowe w buforze localStorage po mTag lub dacie
+        if (totalParticipants === 0 && (mTag || rawDate)) {
+          for (let i = 0; i < localStorage.length; i++) {
+            const lk = localStorage.key(i);
+            if (lk && lk.includes('attendance') && ((mTag && lk.toUpperCase().includes(mTag.toUpperCase())) || (rawDate && lk.includes(rawDate)))) {
+              try {
+                const parsed = JSON.parse(localStorage.getItem(lk) || '{}');
+                const c = parsed?.confirmedCount ||
+                  (Array.isArray(parsed?.confirmedIndexes) ? parsed.confirmedIndexes.length : (Array.isArray(parsed?.attendees) ? parsed.attendees.length : 0));
+                if (c > totalParticipants) totalParticipants = c;
+              } catch {}
+            }
           }
         }
       } catch {}
     }
 
-    // Sprawdzenie evt.attendeesCount / evt.attendees / evt.participantRecords
-    const evtAttendeesCount = evt.attendeesCount ||
+    // Sprawdzenie evt.total_participants / evt.attendeesCount / evt.attendees / evt.participantRecords
+    const evtAttendeesCount = evt.total_participants || evt.totalParticipants || evt.attendeesCount ||
       (Array.isArray(evt.attendees) ? evt.attendees.length : 0) ||
-      (Array.isArray(evt.participantRecords) ? evt.participantRecords.length : 0);
+      (Array.isArray(evt.participantRecords) ? evt.participantRecords.length : 0) ||
+      (Array.isArray(evt.listaObecnosci) ? evt.listaObecnosci.length : 0);
     if (evtAttendeesCount > totalParticipants) {
       totalParticipants = evtAttendeesCount;
     }

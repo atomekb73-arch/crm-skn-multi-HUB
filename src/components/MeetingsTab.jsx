@@ -224,11 +224,18 @@ const MeetingListItem = React.memo(function MeetingListItem({
       </div>
 
       {/* Middle Row: Title (compact text-xs, truncate) */}
-      <p className={`text-xs font-semibold leading-tight line-clamp-2 ${
-        isSelected ? 'text-indigo-950 font-bold' : 'text-slate-800'
-      }`} title={m.title}>
-        {m.title}
-      </p>
+      <div className="space-y-0.5">
+        <p className={`text-xs font-semibold leading-tight line-clamp-2 ${
+          isSelected ? 'text-indigo-950 font-bold' : 'text-slate-800'
+        }`} title={m.title}>
+          {m.title}
+        </p>
+        {(m.isSharedEvent || (m.leadOrgId && m.leadOrgId !== currentOrg?.id)) && (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9.5px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/80 leading-tight">
+            (Wydarzenie współdzielone • organizator: {m.leadOrgName || 'Koło Wiodące'})
+          </span>
+        )}
+      </div>
 
       {/* Bottom Row: Status pill */}
       <div className="flex items-center justify-between text-[10px] pt-0.5 border-t border-slate-100/70">
@@ -2403,8 +2410,13 @@ export default function MeetingsTab({
                     </div>
                   )}
 
-                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                  <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
                     <span className="truncate font-semibold">{currentSelectedMeeting.title}</span>
+                    {(currentSelectedMeeting.isSharedEvent || (currentSelectedMeeting.leadOrgId && currentSelectedMeeting.leadOrgId !== currentOrg?.id)) && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
+                        (Wydarzenie współdzielone • organizator: {currentSelectedMeeting.leadOrgName || 'Koło Wiodące'})
+                      </span>
+                    )}
                     <button
                       type="button"
                       onClick={() => handleEditMeeting(currentSelectedMeeting || selectedMeeting)}
