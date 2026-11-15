@@ -65,6 +65,8 @@ import {
   isEwidencjaInAcademicScope,
   getAcademicYearTimeStatus,
   getMemberAcademicStatus,
+  getCurrentAcademicYear,
+  getInterClubDefaultDateRange,
 } from '../utils/academicScope';
 import { getStoredSupervisors } from '../utils/specialRoles';
 import { getOfficialMemberRecord, getMemberStats } from '../utils/activityRegistry';
@@ -220,8 +222,12 @@ export default function ReportsTab({
   }, [currentOrg?.name]);
 
   // Stan dla Generatora Zestawień Międzykołowych dla Władz Uczelni (Ścisła izolacja do aktywnego koła)
-  const [interClubStartDate, setInterClubStartDate] = useState('2026-10-01');
-  const [interClubEndDate, setInterClubEndDate] = useState('2027-09-30');
+  const [interClubStartDate, setInterClubStartDate] = useState(() => {
+    return getInterClubDefaultDateRange(academicYear).startDate;
+  });
+  const [interClubEndDate, setInterClubEndDate] = useState(() => {
+    return getInterClubDefaultDateRange(academicYear).endDate;
+  });
   const activeInterClubOrgId = useMemo(() => {
     return (currentOrg?.id === 'skn-template' ? 'skn_seksuologii' : currentOrg?.id) || 'skn_seksuologii';
   }, [currentOrg?.id]);
@@ -241,12 +247,16 @@ export default function ReportsTab({
     return WSKZ_ORGANIZATIONS.filter(o => o.orgId === activeInterClubOrgId);
   }, [activeInterClubOrgId]);
 
-  const handleFetchInterClubReport = useCallback(async () => {
+  const handleFetchInterClubReport = useCallback(async (customStart = null, customEnd = null) => {
+    const sDate = customStart || interClubStartDate;
+    const eDate = customEnd || interClubEndDate;
+    if (!sDate || !eDate) return;
+
     setIsLoadingInterClub(true);
     try {
       const result = await fetchInterClubReportData({
-        startDate: interClubStartDate,
-        endDate: interClubEndDate,
+        startDate: sDate,
+        endDate: eDate,
         selectedOrgIds: [activeInterClubOrgId],
       });
       setInterClubData(result);
@@ -258,11 +268,75 @@ export default function ReportsTab({
     }
   }, [interClubStartDate, interClubEndDate, activeInterClubOrgId]);
 
+  // Automatyczne ustawienie domyślnego zakresu dat przy zmianie roku akademickiego
+  const prevAcademicYearRef = useRef(academicYear);
+  useEffect(() => {
+    if (prevAcademicYearRef.current !== academicYear) {
+      prevAcademicYearRef.current = academicYear;
+      const { startDate: defStart, endDate: defEnd } = getInterClubDefaultDateRange(academicYear);
+      setInterClubStartDate(defStart);
+      setInterClubEndDate(defEnd);
+      if (selectedDocType === 'inter_club_summary') {
+        handleFetchInterClubReport(defStart, defEnd);
+      }
+    }
+  }, [academicYear, selectedDocType, handleFetchInterClubReport]);
+
+  // Automatyczne odświeżenie przy zmianie organizacji
+  const prevOrgIdRef = useRef(activeInterClubOrgId);
+  useEffect(() => {
+    if (prevOrgIdRef.current !== activeInterClubOrgId) {
+      prevOrgIdRef.current = activeInterClubOrgId;
+      if (selectedDocType === 'inter_club_summary') {
+        handleFetchInterClubReport();
+      }
+    }
+  }, [activeInterClubOrgId, selectedDocType, handleFetchInterClubReport]);
+
+  // Pobranie danych przy pierwszym wejściu w widok zestawienia
   useEffect(() => {
     if (selectedDocType === 'inter_club_summary' && !interClubData && !isLoadingInterClub) {
       handleFetchInterClubReport();
     }
   }, [selectedDocType, interClubData, isLoadingInterClub, handleFetchInterClubReport]);
+
+  // Ręczna zmiana dat przez użytkownika (input date)
+  const handleStartDateChange = (val) => {
+    setInterClubStartDate(val);
+    if (val && val.length === 10 && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
+      const effectiveEnd = interClubEndDate && interClubEndDate >= val ? interClubEndDate : val;
+      if (effectiveEnd !== interClubEndDate) {
+        setInterClubEndDate(effectiveEnd);
+      }
+      handleFetchInterClubReport(val, effectiveEnd);
+    }
+  };
+
+  const handleEndDateChange = (val) => {
+    setInterClubEndDate(val);
+    if (val && val.length === 10 && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
+      const effectiveStart = interClubStartDate && interClubStartDate <= val ? interClubStartDate : val;
+      if (effectiveStart !== interClubStartDate) {
+        setInterClubStartDate(effectiveStart);
+      }
+      handleFetchInterClubReport(effectiveStart, val);
+    }
+  };
+
+  // Szybki wybór okresu (presety)
+  const handleDatePreset = (presetStart, presetEnd) => {
+    setInterClubStartDate(presetStart);
+    setInterClubEndDate(presetEnd);
+    handleFetchInterClubReport(presetStart, presetEnd);
+  };
+
+  const matchYr = useMemo(() => String(academicYear || '').match(/(\d{4})\/(\d{4})/), [academicYear]);
+  const curAcademicStartYear = matchYr ? parseInt(matchYr[1], 10) : 2026;
+  const curAcademicEndYear = matchYr ? parseInt(matchYr[2], 10) : curAcademicStartYear + 1;
+  const shortYearLabel = `${String(curAcademicStartYear).slice(2)}/${String(curAcademicEndYear).slice(2)}`;
+  const curSysAcademicYear = useMemo(() => getCurrentAcademicYear(), []);
+  const isSelectedYearCurrent = (academicYear || curSysAcademicYear) === curSysAcademicYear;
+  const defRangeForSelectedYear = useMemo(() => getInterClubDefaultDateRange(academicYear), [academicYear]);
 
   const handleToggleInterClubOrg = (_orgId) => {
     setSelectedInterClubOrgIds([activeInterClubOrgId]);
@@ -1336,7 +1410,7 @@ export default function ReportsTab({
                     <input
                       type="date"
                       value={interClubStartDate}
-                      onChange={(e) => setInterClubStartDate(e.target.value)}
+                      onChange={(e) => handleStartDateChange(e.target.value)}
                       className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-indigo-500"
                     />
                   </div>
@@ -1345,7 +1419,7 @@ export default function ReportsTab({
                     <input
                       type="date"
                       value={interClubEndDate}
-                      onChange={(e) => setInterClubEndDate(e.target.value)}
+                      onChange={(e) => handleEndDateChange(e.target.value)}
                       className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-indigo-500"
                     />
                   </div>
@@ -1355,31 +1429,50 @@ export default function ReportsTab({
                 <div className="flex flex-wrap gap-1.5 pt-0.5">
                   <button
                     type="button"
-                    onClick={() => {
-                      setInterClubStartDate('2026-10-01');
-                      setInterClubEndDate('2027-09-30');
-                    }}
-                    className="px-2 py-1 rounded-md text-[10px] font-bold bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-900 border border-slate-200 transition cursor-pointer"
+                    onClick={() => handleDatePreset(defRangeForSelectedYear.startDate, defRangeForSelectedYear.endDate)}
+                    className={`px-2 py-1 rounded-md text-[10px] font-bold border transition cursor-pointer ${
+                      interClubStartDate === defRangeForSelectedYear.startDate &&
+                      interClubEndDate === defRangeForSelectedYear.endDate
+                        ? 'bg-indigo-600 text-white border-indigo-700 shadow-2xs'
+                        : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border-indigo-200'
+                    }`}
+                    title="Ustaw przedział od 1 października do dzisiaj (lub do 30.09 dla lat archiwalnych)"
                   >
-                    Cały rok 26/27
+                    {isSelectedYearCurrent ? 'Od 1 X do dzisiaj' : 'Domyślny zakres'}
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      setInterClubStartDate('2026-10-01');
-                      setInterClubEndDate('2027-02-28');
-                    }}
-                    className="px-2 py-1 rounded-md text-[10px] font-bold bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-900 border border-slate-200 transition cursor-pointer"
+                    onClick={() => handleDatePreset(`${curAcademicStartYear}-10-01`, `${curAcademicEndYear}-09-30`)}
+                    className={`px-2 py-1 rounded-md text-[10px] font-bold border transition cursor-pointer ${
+                      interClubStartDate === `${curAcademicStartYear}-10-01` &&
+                      interClubEndDate === `${curAcademicEndYear}-09-30`
+                        ? 'bg-indigo-600 text-white border-indigo-700 shadow-2xs'
+                        : 'bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-900 border-slate-200'
+                    }`}
+                  >
+                    Cały rok {shortYearLabel}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDatePreset(`${curAcademicStartYear}-10-01`, `${curAcademicEndYear}-02-28`)}
+                    className={`px-2 py-1 rounded-md text-[10px] font-bold border transition cursor-pointer ${
+                      interClubStartDate === `${curAcademicStartYear}-10-01` &&
+                      interClubEndDate === `${curAcademicEndYear}-02-28`
+                        ? 'bg-indigo-600 text-white border-indigo-700 shadow-2xs'
+                        : 'bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-900 border-slate-200'
+                    }`}
                   >
                     Semestr zimowy
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      setInterClubStartDate('2027-03-01');
-                      setInterClubEndDate('2027-09-30');
-                    }}
-                    className="px-2 py-1 rounded-md text-[10px] font-bold bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-900 border border-slate-200 transition cursor-pointer"
+                    onClick={() => handleDatePreset(`${curAcademicEndYear}-03-01`, `${curAcademicEndYear}-09-30`)}
+                    className={`px-2 py-1 rounded-md text-[10px] font-bold border transition cursor-pointer ${
+                      interClubStartDate === `${curAcademicEndYear}-03-01` &&
+                      interClubEndDate === `${curAcademicEndYear}-09-30`
+                        ? 'bg-indigo-600 text-white border-indigo-700 shadow-2xs'
+                        : 'bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-900 border-slate-200'
+                    }`}
                   >
                     Semestr letni
                   </button>

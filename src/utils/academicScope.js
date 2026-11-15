@@ -460,3 +460,38 @@ export function getMemberAcademicStatus({
     isPassed: false,
   };
 }
+
+/**
+ * Zwraca domyślny przedział dat dla Zestawienia Aktywności Kół:
+ * - Data od: początek roku akademickiego (01.10.RRRR)
+ * - Data do: aktualna data systemowa (new Date()) dla bieżącego roku, a dla lat archiwalnych (zamkniętych) 30.09.RRRR
+ * @param {string} [academicYear] np. "2026/2027"
+ * @param {Date} [referenceDate=new Date()]
+ * @returns {{ startDate: string, endDate: string, startYear: number, endYear: number, isCurrentYear: boolean }}
+ */
+export function getInterClubDefaultDateRange(academicYear, referenceDate = new Date()) {
+  const currentAcademicYear = getCurrentAcademicYear(referenceDate);
+  const yr = String(academicYear || currentAcademicYear).trim();
+  const match = yr.match(/(\d{4})\/(\d{4})/);
+  const startYear = match ? parseInt(match[1], 10) : 2026;
+  const endYear = match ? parseInt(match[2], 10) : startYear + 1;
+
+  const startDate = `${startYear}-10-01`;
+
+  const isCurrentYear = yr === currentAcademicYear;
+
+  let endDate;
+  if (isCurrentYear) {
+    const d = referenceDate instanceof Date && !isNaN(referenceDate.getTime()) ? referenceDate : new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+    endDate = todayStr >= startDate ? todayStr : `${startYear}-10-01`;
+  } else {
+    // Dla lat archiwalnych (zamkniętych) oraz przyszłych: 30 września
+    endDate = `${endYear}-09-30`;
+  }
+
+  return { startDate, endDate, startYear, endYear, isCurrentYear };
+}
