@@ -59,6 +59,7 @@ import { getAcademicYearFromDate } from '../utils/helpers';
 import AttendanceModal from './AttendanceModal';
 import CalendarSelector, { DEFAULT_CALENDAR_SUB_ID } from './CalendarSelector';
 import { OfficialMeetingMinutesTemplate } from './DocumentTemplates';
+import { OfficialWskzDocumentSheet } from './OfficialWskzDocumentA4';
 import {
   getMeetingProtocol,
   saveMeetingProtocol,
@@ -4000,13 +4001,20 @@ export default function MeetingsTab({
       {/* ── Printable Meeting Minutes Protocol (A4) ── */}
       {isPrintingProtocol && currentSelectedMeeting && (
         <div id="protocol-print-container" className="hidden print:block fixed inset-0 bg-white z-9999 p-0 m-0">
-          <OfficialMeetingMinutesTemplate
-            meeting={currentSelectedMeeting}
-            protocolData={protocolForm}
+          <OfficialWskzDocumentSheet
             org={currentOrg}
             academicYear={academicYear || '2025/2026'}
-            supervisors={currentOrg.supervisors}
-          />
+            docNumber={protocolForm.protocolNumber}
+            isMultiPage={true}
+          >
+            <OfficialMeetingMinutesTemplate
+              meeting={currentSelectedMeeting}
+              protocolData={protocolForm}
+              org={currentOrg}
+              academicYear={academicYear || '2025/2026'}
+              supervisors={currentOrg.supervisors}
+            />
+          </OfficialWskzDocumentSheet>
         </div>
       )}
     </div>

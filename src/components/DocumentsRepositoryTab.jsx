@@ -65,6 +65,7 @@ import {
   getActiveSupervisors,
   formatSupervisorName,
 } from './DocumentTemplates';
+import { OfficialWskzDocumentSheet } from './OfficialWskzDocumentA4';
 import { getStoredSupervisors } from '../utils/specialRoles';
 import { useSettings } from '../context/SettingsContext';
 import { useAcademicYear } from '../context/AcademicYearContext';
@@ -2567,12 +2568,18 @@ export default function DocumentsRepositoryTab() {
       {/* ── PRINTABLE CORRESPONDENCE PROTOCOL ─────────────────────────────────── */}
       {isPrintingCorrespondence && (
         <div id="correspondence-print-container" className="hidden print:block fixed inset-0 bg-white z-9999 p-0 m-0">
-          <OfficialCorrespondenceProtocolTemplate
-            correspondenceLog={filteredCorrespondence}
+          <OfficialWskzDocumentSheet
             org={currentOrg}
             academicYear={academicYear || getCurrentAcademicYear()}
-            supervisors={supervisors}
-          />
+            isMultiPage={true}
+          >
+            <OfficialCorrespondenceProtocolTemplate
+              correspondenceLog={filteredCorrespondence}
+              org={currentOrg}
+              academicYear={academicYear || getCurrentAcademicYear()}
+              supervisors={supervisors}
+            />
+          </OfficialWskzDocumentSheet>
         </div>
       )}
 

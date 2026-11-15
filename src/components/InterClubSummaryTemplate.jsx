@@ -87,11 +87,11 @@ export default function InterClubSummaryTemplate({
     : '0.0';
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-5 print:space-y-3 print:w-full print:max-w-none print:mx-auto print:box-border text-slate-900 font-sans inter-club-report-print">
+    <div className="w-full space-y-4 text-slate-900 font-sans select-text relative inter-club-report-print">
       <style>{`
         @page {
           size: A4 portrait;
-          margin: 12mm 14mm;
+          margin: 0;
         }
         @media print {
           .inter-club-report-print {
@@ -144,8 +144,8 @@ export default function InterClubSummaryTemplate({
       `}</style>
 
       {/* ── Nagłówek Urzędowy WSKZ (Dla Władz Uczelni) ── */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 print:p-0 print:border-none print:shadow-none print:rounded-none">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-slate-200 print:pb-3">
+      <div className="w-full text-slate-900 font-sans">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
           <div>
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 print:bg-black inline-block"></span>

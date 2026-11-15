@@ -52,6 +52,7 @@ import {
   getMeetingAttendeesCount,
   getOrgMetadata,
 } from './DocumentTemplates';
+import OfficialWskzDocumentA4, { OfficialWskzDocumentSheet } from './OfficialWskzDocumentA4';
 import { exportMultipleSheetsToXlsx } from '../utils/exportToExcel';
 import { WSKZ_ORGANIZATIONS, getWskzOrgById } from '../config/wskzRegistry';
 import { fetchInterClubReportData } from '../services/interClubReportService';
@@ -220,6 +221,14 @@ export default function ReportsTab({
       setBoardRole(`Przewodniczący ${currentOrg.name}`);
     }
   }, [currentOrg?.name]);
+
+  // Stan oficjalnego modala A4 (Portal)
+  const [isA4ModalOpen, setIsA4ModalOpen] = useState(false);
+
+  const isMultiPageDoc = useMemo(() => {
+    if (isPrintingProtocol) return true;
+    return selectedDocType !== 'membership' && selectedDocType !== 'speaker' && selectedDocType !== 'board';
+  }, [isPrintingProtocol, selectedDocType]);
 
   // Stan dla Generatora Zestawień Międzykołowych dla Władz Uczelni (Ścisła izolacja do aktywnego koła)
   const [interClubStartDate, setInterClubStartDate] = useState(() => {
@@ -570,10 +579,7 @@ export default function ReportsTab({
 
   const handlePrintRegistryProtocol = () => {
     setIsPrintingProtocol(true);
-    setTimeout(() => {
-      window.print();
-      setIsPrintingProtocol(false);
-    }, 200);
+    setIsA4ModalOpen(true);
   };
 
   // Settings & Supervisors
@@ -841,7 +847,7 @@ export default function ReportsTab({
       if (updated) setIssuedRegistry(updated);
     }
 
-    window.print();
+    setIsA4ModalOpen(true);
   };
 
   const handleCopyId = () => {
@@ -1732,132 +1738,278 @@ export default function ReportsTab({
           {/* Printable Document Sheet Container z płynnym, leniwym renderowaniem transition */}
           <div className="bg-slate-100 p-2 sm:p-4 rounded-2xl border border-slate-200 overflow-x-auto max-h-[85vh] overflow-y-auto flex justify-center items-start print:max-h-none print:overflow-visible print:p-0 print:bg-transparent print:border-none">
             <div id="reports-print-container" className={`w-full flex justify-center transition-opacity duration-150 ${isPending ? 'opacity-60 pointer-events-none' : 'opacity-100'}`}>
+              <OfficialWskzDocumentSheet
+                org={currentOrg}
+                academicYear={academicYear}
+                docNumber={currentDocNumber}
+                isMultiPage={isMultiPageDoc}
+              >
+                {isPrintingProtocol ? (
+                  <OfficialRegistryProtocolTemplate
+                    registry={filteredRegistry.length > 0 ? filteredRegistry : issuedRegistry}
+                    org={currentOrg}
+                    academicYear={academicYear}
+                    supervisors={supervisors}
+                    columnVisibility={columnVisibility}
+                  />
+                ) : (
+                  <>
+                    {selectedDocType === 'membership' && (
+                      <MembershipCertificateTemplate
+                        member={selectedMember}
+                        freqData={memberFreqData}
+                        points={memberPoints}
+                        supervisors={supervisors}
+                        academicYear={academicYear}
+                        isEditing={isEditing}
+                        customText={membershipCustomText}
+                        onUpdateCustomText={setMembershipCustomText}
+                        org={currentOrg}
+                        columnVisibility={columnVisibility}
+                      />
+                    )}
 
-              {isPrintingProtocol ? (
-                <OfficialRegistryProtocolTemplate
-                  registry={filteredRegistry.length > 0 ? filteredRegistry : issuedRegistry}
-                  org={currentOrg}
-                  academicYear={academicYear}
-                  supervisors={supervisors}
-                  columnVisibility={columnVisibility}
-                />
-              ) : (
-                <>
-                  {selectedDocType === 'membership' && (
-                    <MembershipCertificateTemplate
-                      member={selectedMember}
-                      freqData={memberFreqData}
-                      points={memberPoints}
-                      supervisors={supervisors}
-                      academicYear={academicYear}
-                      isEditing={isEditing}
-                      customText={membershipCustomText}
-                      onUpdateCustomText={setMembershipCustomText}
-                      org={currentOrg}
-                      columnVisibility={columnVisibility}
-                    />
-                  )}
+                    {selectedDocType === 'speaker' && (
+                      <SpeakerDiplomaTemplate
+                        member={selectedMember}
+                        presentationTopic={presentationTopic}
+                        presentationDate={presentationDate}
+                        supervisors={supervisors}
+                        academicYear={academicYear}
+                        isEditing={isEditing}
+                        onUpdateTopic={setPresentationTopic}
+                        org={currentOrg}
+                      />
+                    )}
 
-                  {selectedDocType === 'speaker' && (
-                    <SpeakerDiplomaTemplate
-                      member={selectedMember}
-                      presentationTopic={presentationTopic}
-                      presentationDate={presentationDate}
-                      supervisors={supervisors}
-                      academicYear={academicYear}
-                      isEditing={isEditing}
-                      onUpdateTopic={setPresentationTopic}
-                      org={currentOrg}
-                    />
-                  )}
+                    {selectedDocType === 'board' && (
+                      <BoardCertificateTemplate
+                        member={selectedMember}
+                        boardRole={boardRole}
+                        termDates={termDates}
+                        supervisors={supervisors}
+                        academicYear={academicYear}
+                        isEditing={isEditing}
+                        customDuties={boardCustomDuties}
+                        onUpdateDuties={setBoardCustomDuties}
+                        org={currentOrg}
+                      />
+                    )}
 
-                  {selectedDocType === 'board' && (
-                    <BoardCertificateTemplate
-                      member={selectedMember}
-                      boardRole={boardRole}
-                      termDates={termDates}
-                      supervisors={supervisors}
-                      academicYear={academicYear}
-                      isEditing={isEditing}
-                      customDuties={boardCustomDuties}
-                      onUpdateDuties={setBoardCustomDuties}
-                      org={currentOrg}
-                    />
-                  )}
+                    {selectedDocType === 'meetings_summary' && (
+                      <MeetingsSummaryTableTemplate
+                        meetings={customMeetingsList}
+                        supervisors={supervisors}
+                        academicYear={academicYear}
+                        isEditing={isEditing}
+                        onUpdateMeetings={setCustomMeetingsList}
+                        onOpenAddModal={() => setIsAddMeetingModalOpen(true)}
+                        org={currentOrg}
+                        columnVisibility={columnVisibility}
+                      />
+                    )}
 
-                  {selectedDocType === 'meetings_summary' && (
-                    <MeetingsSummaryTableTemplate
-                      meetings={customMeetingsList}
-                      supervisors={supervisors}
-                      academicYear={academicYear}
-                      isEditing={isEditing}
-                      onUpdateMeetings={setCustomMeetingsList}
-                      onOpenAddModal={() => setIsAddMeetingModalOpen(true)}
-                      org={currentOrg}
-                      columnVisibility={columnVisibility}
-                    />
-                  )}
+                    {selectedDocType === 'inter_club_summary' && (
+                      <InterClubSummaryTemplate
+                        startDate={interClubStartDate}
+                        endDate={interClubEndDate}
+                        selectedOrgs={selectedInterClubOrgs}
+                        allProcessedEvents={interClubData?.allProcessedEvents || []}
+                        substantiveMeetings={interClubData?.substantiveMeetings || []}
+                        projectMeetings={interClubData?.projectMeetings || []}
+                        summaryStats={interClubData?.summaryStats || {}}
+                        byOrgStats={interClubData?.byOrgStats || []}
+                        docDate={new Date()}
+                        onExportExcel={handleExportInterClubToExcel}
+                        onPrint={handlePrint}
+                      />
+                    )}
 
-                  {selectedDocType === 'inter_club_summary' && (
-                    <InterClubSummaryTemplate
-                      startDate={interClubStartDate}
-                      endDate={interClubEndDate}
-                      selectedOrgs={selectedInterClubOrgs}
-                      allProcessedEvents={interClubData?.allProcessedEvents || []}
-                      substantiveMeetings={interClubData?.substantiveMeetings || []}
-                      projectMeetings={interClubData?.projectMeetings || []}
-                      summaryStats={interClubData?.summaryStats || {}}
-                      byOrgStats={interClubData?.byOrgStats || []}
-                      docDate={new Date()}
-                      onExportExcel={handleExportInterClubToExcel}
-                      onPrint={handlePrint}
-                    />
-                  )}
+                    {selectedDocType === 'members_registry' && (
+                      <MembersRegistryTemplate
+                        members={members}
+                        meetings={orgMeetings}
+                        supervisors={supervisors}
+                        academicYear={academicYear}
+                        org={currentOrg}
+                        columnVisibility={columnVisibility}
+                        customMeetingTypes={customMeetingTypes}
+                        attendanceConfig={attendanceConfig}
+                        precalculatedStatsMap={memberStatsMap}
+                      />
+                    )}
 
-                  {selectedDocType === 'members_registry' && (
-                    <MembersRegistryTemplate
-                      members={members}
-                      meetings={orgMeetings}
-                      supervisors={supervisors}
-                      academicYear={academicYear}
-                      org={currentOrg}
-                      columnVisibility={columnVisibility}
-                      customMeetingTypes={customMeetingTypes}
-                      attendanceConfig={attendanceConfig}
-                      precalculatedStatsMap={memberStatsMap}
-                    />
-                  )}
+                    {selectedDocType === 'research_conferences' && (
+                      <ResearchConferencesRegistryTemplate
+                        supervisors={supervisors}
+                        academicYear={academicYear}
+                        isEditing={isEditing}
+                        activities={customResearchActivities}
+                        onUpdateActivities={setCustomResearchActivities}
+                        org={currentOrg}
+                        columnVisibility={columnVisibility}
+                      />
+                    )}
 
-                  {selectedDocType === 'research_conferences' && (
-                    <ResearchConferencesRegistryTemplate
-                      supervisors={supervisors}
-                      academicYear={academicYear}
-                      isEditing={isEditing}
-                      activities={customResearchActivities}
-                      onUpdateActivities={setCustomResearchActivities}
-                      org={currentOrg}
-                      columnVisibility={columnVisibility}
-                    />
-                  )}
-
-                  {selectedDocType === 'annual_report' && (
-                    <AnnualReportProtocolTemplate
-                      org={currentOrg}
-                      supervisors={supervisors}
-                      academicYear={academicYear}
-                      membersCount={members.length}
-                      meetingsCount={legitimateMeetings.length}
-                      isEditing={isEditing}
-                      columnVisibility={columnVisibility}
-                    />
-                  )}
-                </>
-              )}
+                    {selectedDocType === 'annual_report' && (
+                      <AnnualReportProtocolTemplate
+                        org={currentOrg}
+                        supervisors={supervisors}
+                        academicYear={academicYear}
+                        membersCount={members.length}
+                        meetingsCount={legitimateMeetings.length}
+                        isEditing={isEditing}
+                        columnVisibility={columnVisibility}
+                      />
+                    )}
+                  </>
+                )}
+              </OfficialWskzDocumentSheet>
             </div>
           </div>
         </div>
 
       </div>
+
+      {/* ── Modal: Oficjalny Podgląd Pełnoekranowy i Wydruk A4 WSKZ (Portal) ── */}
+      <OfficialWskzDocumentA4
+        isOpen={isA4ModalOpen}
+        onClose={() => setIsA4ModalOpen(false)}
+        title={isPrintingProtocol ? 'Oficjalny Protokół Zbiorczy Wydanych Dokumentów' : (DOCUMENT_TYPES.find(d => d.id === selectedDocType)?.title || 'Dokument A4')}
+        documentCode={currentDocNumber}
+        academicYear={academicYear}
+        org={currentOrg}
+        isMultiPage={isMultiPageDoc}
+        isEditing={isEditing}
+        onToggleEdit={() => setIsEditing(!isEditing)}
+        onExportExcel={
+          selectedDocType === 'inter_club_summary'
+            ? handleExportInterClubToExcel
+            : (isPrintingProtocol ? handleExportToExcel : null)
+        }
+        docxUrl="/szablon-pisma-wskz.docx"
+      >
+        {isPrintingProtocol ? (
+          <OfficialRegistryProtocolTemplate
+            registry={filteredRegistry.length > 0 ? filteredRegistry : issuedRegistry}
+            org={currentOrg}
+            academicYear={academicYear}
+            supervisors={supervisors}
+            columnVisibility={columnVisibility}
+          />
+        ) : (
+          <>
+            {selectedDocType === 'membership' && (
+              <MembershipCertificateTemplate
+                member={selectedMember}
+                freqData={memberFreqData}
+                points={memberPoints}
+                supervisors={supervisors}
+                academicYear={academicYear}
+                isEditing={isEditing}
+                customText={membershipCustomText}
+                onUpdateCustomText={setMembershipCustomText}
+                org={currentOrg}
+                columnVisibility={columnVisibility}
+              />
+            )}
+
+            {selectedDocType === 'speaker' && (
+              <SpeakerDiplomaTemplate
+                member={selectedMember}
+                presentationTopic={presentationTopic}
+                presentationDate={presentationDate}
+                supervisors={supervisors}
+                academicYear={academicYear}
+                isEditing={isEditing}
+                onUpdateTopic={setPresentationTopic}
+                org={currentOrg}
+              />
+            )}
+
+            {selectedDocType === 'board' && (
+              <BoardCertificateTemplate
+                member={selectedMember}
+                boardRole={boardRole}
+                termDates={termDates}
+                supervisors={supervisors}
+                academicYear={academicYear}
+                isEditing={isEditing}
+                customDuties={boardCustomDuties}
+                onUpdateDuties={setBoardCustomDuties}
+                org={currentOrg}
+              />
+            )}
+
+            {selectedDocType === 'meetings_summary' && (
+              <MeetingsSummaryTableTemplate
+                meetings={customMeetingsList}
+                supervisors={supervisors}
+                academicYear={academicYear}
+                isEditing={isEditing}
+                onUpdateMeetings={setCustomMeetingsList}
+                onOpenAddModal={() => setIsAddMeetingModalOpen(true)}
+                org={currentOrg}
+                columnVisibility={columnVisibility}
+              />
+            )}
+
+            {selectedDocType === 'inter_club_summary' && (
+              <InterClubSummaryTemplate
+                startDate={interClubStartDate}
+                endDate={interClubEndDate}
+                selectedOrgs={selectedInterClubOrgs}
+                allProcessedEvents={interClubData?.allProcessedEvents || []}
+                substantiveMeetings={interClubData?.substantiveMeetings || []}
+                projectMeetings={interClubData?.projectMeetings || []}
+                summaryStats={interClubData?.summaryStats || {}}
+                byOrgStats={interClubData?.byOrgStats || []}
+                docDate={new Date()}
+                onExportExcel={handleExportInterClubToExcel}
+                onPrint={handlePrint}
+              />
+            )}
+
+            {selectedDocType === 'members_registry' && (
+              <MembersRegistryTemplate
+                members={members}
+                meetings={orgMeetings}
+                supervisors={supervisors}
+                academicYear={academicYear}
+                org={currentOrg}
+                columnVisibility={columnVisibility}
+                customMeetingTypes={customMeetingTypes}
+                attendanceConfig={attendanceConfig}
+                precalculatedStatsMap={memberStatsMap}
+              />
+            )}
+
+            {selectedDocType === 'research_conferences' && (
+              <ResearchConferencesRegistryTemplate
+                supervisors={supervisors}
+                academicYear={academicYear}
+                isEditing={isEditing}
+                activities={customResearchActivities}
+                onUpdateActivities={setCustomResearchActivities}
+                org={currentOrg}
+                columnVisibility={columnVisibility}
+              />
+            )}
+
+            {selectedDocType === 'annual_report' && (
+              <AnnualReportProtocolTemplate
+                org={currentOrg}
+                supervisors={supervisors}
+                academicYear={academicYear}
+                membersCount={members.length}
+                meetingsCount={legitimateMeetings.length}
+                isEditing={isEditing}
+                columnVisibility={columnVisibility}
+              />
+            )}
+          </>
+        )}
+      </OfficialWskzDocumentA4>
 
       {/* ── Add Meeting Modal Dialog ─────────────────────────────────────── */}
       {isAddMeetingModalOpen && (

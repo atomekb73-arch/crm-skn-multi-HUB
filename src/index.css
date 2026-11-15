@@ -144,7 +144,21 @@ select option:checked {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 12mm 14mm;
+    margin: 0;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Jeśli aktywny jest oficjalny modal podglądu A4, ukryj cały #root aplikacji */
+  body:has(#skn-a4-modal-backdrop) #root {
+    display: none !important;
+  }
+
+  #skn-a4-top-bar {
+    display: none !important;
   }
 
   /* Ukryj elementy interfejsu nienadające się do druku */
@@ -153,17 +167,39 @@ select option:checked {
   }
 
   /* Resetuj ograniczenia wysokości, szerokości i overflow dla drukowanego kontenera */
-  body, html, #root, main {
+  body, html, main {
     overflow: visible !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    height: auto !important;
-    min-height: auto !important;
-    max-height: none !important;
+    width: 210mm !important;
+    max-width: 210mm !important;
     margin: 0 !important;
     padding: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
+  }
+
+  #skn-a4-modal-backdrop {
+    position: static !important;
+    display: block !important;
+    overflow: visible !important;
+    width: 210mm !important;
+    min-height: 297mm !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+  }
+
+  #skn-a4-print-area {
+    position: relative !important;
+    width: 210mm !important;
+    max-width: 210mm !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
   }
 
   /* Kontenery arkusza dokumentu A4 – czysta kartka bez podwójnych obramowań i cieni */

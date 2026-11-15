@@ -164,13 +164,13 @@ export function DocumentStandardHeader({
   className = '',
   borderBottom = true,
   rightCustom = null,
-  showFullBanner = true,
+  showFullBanner = false, // Domyślnie false - nagłówek WSKZ jest renderowany przez OfficialWskzDocumentSheet
 }) {
   const { name: orgName, tag: orgTag, unit: orgUnit } = getOrgMetadata(org);
 
   return (
-    <div className={`document-standard-header w-full ${borderBottom ? 'border-b border-slate-300 pb-1.5 mb-2' : 'pb-1 mb-1'} ${className}`}>
-      {/* 1. Oficjalna belka graficzna WSKZ z logotypem, cytatem i paskiem */}
+    <div className={`document-standard-header w-full ${borderBottom ? 'border-b border-slate-300 pb-1.5 mb-2.5' : 'pb-1 mb-1.5'} ${className}`}>
+      {/* 1. Opcjonalna belka graficzna WSKZ (tylko w trybie standalone bez wrapper A4) */}
       {showFullBanner && (
         <div className="w-full mb-1 overflow-hidden p-0 m-0 text-left flex justify-start items-center">
           <img
@@ -185,14 +185,14 @@ export function DocumentStandardHeader({
       {/* 2. Kompaktowy pasek metadanych: Jednostka / Koło oraz Sygnatura / Data */}
       <div className="flex items-start justify-between gap-3 text-left">
         <div className="text-left space-y-0.5 min-w-0">
-          <p className="text-[8.5px] font-normal tracking-wider text-slate-600 uppercase font-sans truncate">
+          <p className="text-[8.5pt] font-normal tracking-wider text-slate-500 uppercase font-sans truncate">
             {orgUnit.toUpperCase()}
           </p>
-          <p className="text-[9px] font-medium tracking-tight text-indigo-950 uppercase font-sans truncate">
+          <p className="text-[10pt] font-bold tracking-tight text-indigo-950 uppercase font-sans truncate">
             {orgName.toUpperCase()}
           </p>
           {subtitle && (
-            <p className="text-[8px] font-normal text-slate-500 italic mt-0.5 font-sans truncate">
+            <p className="text-[8.5pt] font-normal text-slate-500 italic mt-0.5 font-sans truncate">
               {subtitle}
             </p>
           )}
@@ -203,12 +203,12 @@ export function DocumentStandardHeader({
         ) : (
           <div className="text-right shrink-0 space-y-0.5">
             {docNumber && (
-              <div className="inline-flex items-center gap-1 font-mono text-[8.5px] font-medium text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 whitespace-nowrap shadow-2xs">
-                {docLabel && <span className="text-slate-500 font-sans uppercase text-[7.5px] tracking-wider font-normal">{docLabel}:</span>}
+              <div className="inline-flex items-center gap-1 font-mono text-[9pt] font-semibold text-slate-800 bg-slate-100 px-2.5 py-0.5 rounded border border-slate-200 whitespace-nowrap shadow-2xs">
+                {docLabel && <span className="text-slate-500 font-sans uppercase text-[8pt] tracking-wider font-normal">{docLabel}:</span>}
                 <span>{docNumber}</span>
               </div>
             )}
-            <p className="text-[8px] text-slate-500 font-mono mt-0.5 whitespace-nowrap">
+            <p className="text-[8.5pt] text-slate-500 font-mono mt-0.5 whitespace-nowrap">
               {dateLabel} {formatPolishDate(docDate)}
             </p>
           </div>
@@ -224,7 +224,7 @@ export function DocumentStandardHeader({
 export function DocumentStandardFooter({
   org = null,
   docDate = new Date(),
-  showBanner = true,
+  showBanner = false, // Domyślnie false - stopka WSKZ full-bleed jest renderowana przez OfficialWskzDocumentSheet
   pageNumberText = null,
   className = '',
 }) {
@@ -233,13 +233,13 @@ export function DocumentStandardFooter({
 
   return (
     <div
-      className={`document-standard-footer w-full mt-auto pt-1.5 space-y-1 break-inside-avoid ${className}`}
+      className={`document-standard-footer w-full mt-auto pt-2 space-y-1 break-inside-avoid ${className}`}
       style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
     >
       {/* Pasek techniczny z potwierdzeniem autentyczności */}
-      <div className="flex items-center justify-between text-[8px] text-slate-400 font-mono px-0.5">
+      <div className="flex items-center justify-between text-[8pt] text-slate-400 font-sans px-0.5">
         <div className="flex items-center gap-1">
-          <ShieldCheck size={10} className="text-indigo-600 shrink-0" />
+          <ShieldCheck size={11} className="text-indigo-600 shrink-0" />
           <span>Autentyczność dokumentu potwierdzona w systemie CRM {orgGenitive}</span>
         </div>
         <div className="flex items-center gap-2">
@@ -248,7 +248,7 @@ export function DocumentStandardFooter({
         </div>
       </div>
 
-      {/* Oficjalna belka adresowo-rejestrowa WSKZ */}
+      {/* Oficjalna belka adresowo-rejestrowa WSKZ (tylko w trybie standalone bez wrapper A4) */}
       {showBanner && (
         <div className="w-full overflow-hidden">
           <img
@@ -465,11 +465,7 @@ export function MembershipCertificateTemplate({
   const yearLabel = member?.year ? `rok ${member.year}` : 'jednolite studia magisterskie';
 
   return (
-    <div className="doc-a4-sheet w-full max-w-[210mm] bg-white text-slate-900 font-sans p-6 sm:p-8 relative flex flex-col justify-between border border-slate-300 shadow-xl mx-auto my-0 select-text print:max-w-none print:w-full print:border-none print:shadow-none print:p-0 print:m-0 box-border">
-      {/* Ozdobna ramka wewnętrzna */}
-      <div className="cert-frame-outer absolute inset-3.5 border border-slate-200 pointer-events-none rounded-lg" />
-      <div className="cert-frame-inner absolute inset-5 border-2 border-indigo-950/20 pointer-events-none rounded-md" />
-
+    <div className="w-full flex-1 flex flex-col justify-between bg-white text-slate-900 font-sans select-text relative">
       {/* ── STREFA 1 (GÓRNA): Nagłówek Uczelni, Sygnatura, Tytuł i Formuła Wstępna ── */}
       <div className="relative z-10 space-y-2.5">
         {/* Globalny Ujednolicony Nagłówek Uczelniany WSKZ i Koła */}
@@ -483,13 +479,10 @@ export function MembershipCertificateTemplate({
           className="border-indigo-900"
         />
 
-        {/* Tytuł Zaświadczenia (Główny, dominujący element wizualny) */}
+        {/* Tytuł Zaświadczenia */}
         <div className="text-center my-1.5 sm:my-2">
-          <span className="inline-block text-[9px] font-medium uppercase tracking-widest text-indigo-700 bg-indigo-50 px-3 py-0.5 rounded-full border border-indigo-200">
-            Oficjalne Zaświadczenie Akademickie
-          </span>
-          <h2 className="text-xl sm:text-2xl font-normal text-slate-900 tracking-wide mt-1 uppercase [text-wrap:balance]">
-            Zaświadczenie o&nbsp;Członkostwie i&nbsp;Frekwencji
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-wide mt-1 uppercase [text-wrap:balance]">
+            Zaświadczenie o Członkostwie i Frekwencji
           </h2>
           <p className="text-[10px] text-slate-500 font-normal tracking-wide mt-0.5">
             Rok akademicki {academicYear} &bull; Oficjalny Rejestr Działalności Studenckiej
@@ -641,11 +634,7 @@ export function SpeakerDiplomaTemplate({
   const indexNumber = member?.index || member?.indexNumber || '—';
 
   return (
-    <div className="doc-a4-sheet w-full max-w-[210mm] bg-white text-slate-900 font-sans p-6 sm:p-8 relative flex flex-col justify-between border border-amber-300/80 shadow-xl mx-auto my-0 select-text print:max-w-none print:w-full print:border-none print:shadow-none print:p-0 print:m-0 box-border">
-      {/* Ozdobna złota ramka */}
-      <div className="cert-frame-outer absolute inset-3.5 border-2 border-amber-500/30 pointer-events-none rounded-lg" />
-      <div className="cert-frame-inner absolute inset-5 border border-amber-600/20 pointer-events-none rounded-md" />
-
+    <div className="w-full flex-1 flex flex-col justify-between bg-white text-slate-900 font-sans select-text relative">
       {/* ── STREFA 1 (GÓRNA): Nagłówek Uczelniany i Koła ── */}
       <div className="relative z-10 space-y-2">
         <DocumentStandardHeader
@@ -757,11 +746,7 @@ export function BoardCertificateTemplate({
   }, [boardRole, orgName]);
 
   return (
-    <div className="doc-a4-sheet w-full max-w-[210mm] bg-white text-slate-900 font-sans p-6 sm:p-8 relative flex flex-col justify-between border border-indigo-300/80 shadow-xl mx-auto my-0 select-text print:max-w-none print:w-full print:border-none print:shadow-none print:p-0 print:m-0 box-border">
-      {/* Ozdobna podwójna ramka */}
-      <div className="cert-frame-outer absolute inset-3.5 border border-indigo-200 pointer-events-none rounded-lg" />
-      <div className="cert-frame-inner absolute inset-5 border-2 border-indigo-900/30 pointer-events-none rounded-md" />
-
+    <div className="w-full flex-1 flex flex-col justify-between bg-white text-slate-900 font-sans select-text relative">
       {/* ── STREFA 1 (GÓRNA): Nagłówek Uczelni, Sygnatura, Tytuł i Formuła Wstępna ── */}
       <div className="relative z-10 space-y-2.5">
         {/* Globalny Ujednolicony Nagłówek Uczelniany i Koła */}
@@ -777,9 +762,6 @@ export function BoardCertificateTemplate({
 
         {/* Tytuł Zaświadczenia z estetycznym podziałem (Główny, dominujący element) */}
         <div className="text-center my-1.5 sm:my-2">
-          <span className="inline-block text-[9px] font-medium uppercase tracking-widest text-indigo-700 bg-indigo-50 px-3 py-0.5 rounded-full border border-indigo-200">
-            Uchwała Walnego Zebrania Członków
-          </span>
           <div className="mt-1">
             <span className="text-[10.5px] font-normal text-slate-500 uppercase tracking-widest block">
               Zaświadczenie o:
@@ -969,7 +951,7 @@ export function MeetingsSummaryTableTemplate({
   const showAttendees = columnVisibility.attendees !== false;
 
   return (
-    <div className="doc-a4-sheet doc-a4-multipage bg-white text-slate-900 font-sans p-8 sm:p-12 relative flex flex-col justify-between border border-slate-300 shadow-xl w-full max-w-[210mm] min-h-[297mm] mx-auto my-0 select-text print:p-0 print:border-none print:shadow-none print:max-w-none print:w-full box-border">
+    <div className="w-full flex-1 flex flex-col justify-between bg-white text-slate-900 font-sans select-text relative">
       {/* ── Nagłówek Uczelniany i Identyfikator Dokumentu ── */}
       <DocumentStandardHeader
         org={org}
@@ -1049,7 +1031,7 @@ export function MeetingsSummaryTableTemplate({
             {meetingsList.length === 0 ? (
               <tr>
                 <td colSpan={10} className="py-8 text-center text-slate-400 italic bg-slate-50/50">
-                  Brak zrealizowanych spotkań z zarejestrowaną listą obecności w wybranym roku akademickim.
+                  Brak zarejestrowanych pozycji w wybranym okresie.
                 </td>
               </tr>
             ) : (
@@ -1403,7 +1385,7 @@ export function MembersRegistryTemplate({
   ]);
 
   return (
-    <div className="doc-a4-sheet doc-a4-multipage bg-white text-slate-900 font-sans p-8 sm:p-12 relative flex flex-col justify-between border border-slate-300 shadow-xl w-full max-w-[210mm] min-h-[297mm] mx-auto my-0 select-text print:p-0 print:border-none print:shadow-none print:max-w-none print:w-full print:m-0 print:min-h-0 print:block box-border">
+    <div className="w-full flex-1 flex flex-col justify-between bg-white text-slate-900 font-sans select-text relative">
       {/* ── Nagłówek Formalny Raportu ── */}
       <DocumentStandardHeader
         org={org}
@@ -1413,22 +1395,19 @@ export function MembersRegistryTemplate({
         docDate={docDate}
       />
 
-      {/* ── Tytuł Ewidencji z nowym standardem wizualnym (optymalny oddech i interlinia) ── */}
-      <div className="mt-4 mb-6 text-center">
-        <h2 className="text-xl font-normal text-slate-950 uppercase tracking-wide">
-          OFICJALNA EWIDENCJA CZŁONKÓW
+      {/* ── Tytuł Ewidencji ── */}
+      <div className="mt-3 mb-5 text-center">
+        <h2 className="text-xl font-bold text-slate-950 uppercase tracking-wide">
+          OFICJALNA EWIDENCJA CZŁONKÓW KOŁA
         </h2>
-        <div className="mt-2 space-y-1">
-          <h3 className="text-sm font-medium text-indigo-950 uppercase tracking-wide">
+        <div className="mt-1.5 space-y-0.5">
+          <h3 className="text-sm font-semibold text-indigo-950 uppercase tracking-wide">
             {formatOrgFullName(orgName)}
           </h3>
-          <p className="text-xs font-normal text-slate-600">
-            Oficjalna ewidencja członków
-          </p>
         </div>
-        <div className="mt-2.5 space-y-0.5 text-xs text-slate-600 font-normal">
+        <div className="mt-2 space-y-0.5 text-xs text-slate-600 font-normal">
           <p>
-            Rok Akademicki {academicYear} &bull; {orgUnit} &bull; Zarejestrowanych aktywnych studentów: <span className="font-medium">{activeMembers.length}</span>
+            Rok Akademicki {academicYear} &bull; {orgUnit} &bull; Zarejestrowanych aktywnych studentów: <span className="font-semibold text-slate-900">{activeMembers.length}</span>
           </p>
           <p className="text-[11px] text-slate-500">
             <span className="font-medium">Opieka naukowa:</span> {activeSupervisors.map(s => formatSupervisorName(s)).join(' • ')}
@@ -1625,7 +1604,7 @@ export function ResearchConferencesRegistryTemplate({
   const showPoints = columnVisibility.points !== false;
 
   return (
-    <div className="doc-a4-sheet doc-a4-multipage bg-white text-slate-900 font-sans p-8 sm:p-12 relative flex flex-col justify-between border border-slate-300 shadow-xl w-full max-w-[210mm] min-h-[297mm] mx-auto my-0 select-text print:p-0 print:border-none print:shadow-none print:max-w-none print:w-full box-border">
+    <div className="w-full flex-1 flex flex-col justify-between bg-white text-slate-900 font-sans select-text relative">
       {/* Nagłówek */}
       <DocumentStandardHeader
         org={org}
@@ -1869,7 +1848,7 @@ export function AnnualReportProtocolTemplate({
   const showStatus = columnVisibility.status !== false;
 
   return (
-    <div className="doc-a4-sheet doc-a4-multipage bg-white text-slate-900 font-sans p-8 sm:p-12 relative flex flex-col justify-between border border-slate-300 shadow-xl w-full max-w-[210mm] min-h-[297mm] mx-auto my-0 select-text print:p-0 print:border-none print:shadow-none print:max-w-none print:w-full box-border">
+    <div className="w-full flex-1 flex flex-col justify-between bg-white text-slate-900 font-sans select-text relative">
       {/* Nagłówek */}
       <DocumentStandardHeader
         org={org}
@@ -2028,7 +2007,7 @@ export function OfficialRegistryProtocolTemplate({
   const showStatus = columnVisibility.status !== false;
 
   return (
-    <div className="doc-a4-sheet doc-a4-multipage w-full max-w-[210mm] min-h-[297mm] bg-white text-slate-800 p-8 sm:p-12 font-sans shadow-lg mx-auto flex flex-col justify-between print:shadow-none print:max-w-none print:w-full print:m-0">
+    <div className="w-full flex-1 flex flex-col justify-between bg-white text-slate-800 font-sans mx-auto select-text relative">
       {/* Header */}
       <DocumentStandardHeader
         org={org}
@@ -2159,7 +2138,7 @@ export function OfficialCorrespondenceProtocolTemplate({
   const outCount = correspondenceLog.filter(c => c.direction === 'OUT').length;
 
   return (
-    <div className="doc-a4-sheet doc-a4-multipage w-full max-w-[210mm] min-h-[297mm] bg-white text-slate-800 p-8 sm:p-12 font-sans shadow-lg mx-auto flex flex-col justify-between print:shadow-none print:max-w-none print:w-full print:m-0">
+    <div className="w-full flex-1 flex flex-col justify-between bg-white text-slate-800 font-sans mx-auto select-text relative">
       {/* Header */}
       <DocumentStandardHeader
         org={org}
@@ -2304,10 +2283,10 @@ export function OfficialMeetingMinutesTemplate({
   const shouldShowAppendix = protocolData?.includeAttendeesList || (attendanceList.length > 0 && protocolData?.includeAttendeesList !== false);
 
   return (
-    <div id="printable-protocol-document" className="print-document w-full max-w-[210mm] mx-auto bg-white text-slate-900 font-sans print:max-w-none print:shadow-none print:bg-white text-xs leading-relaxed">
+    <div id="printable-protocol-document" className="print-document w-full flex-1 flex flex-col justify-between bg-white text-slate-900 font-sans text-xs leading-relaxed select-text relative">
       
       {/* SEKCJA 1: STRONA PROTOKOŁU (Karta Merytoryczna) */}
-      <section className="protocol-main-page min-h-[297mm] p-8 sm:p-12 relative flex flex-col justify-between break-after-page print:p-0 print:min-h-0">
+      <section className="protocol-main-page flex-1 w-full relative flex flex-col justify-between break-after-page print:p-0">
         <div>
           {/* Nagłówek Uczelni i Koła */}
           <DocumentStandardHeader
