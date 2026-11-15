@@ -930,16 +930,14 @@ export default function ReportsTab({
             max-width: 100% !important;
             width: 100% !important;
             margin: 0 auto !important;
-            padding: 4mm 6mm !important;
+            padding: 0 !important;
             box-shadow: none !important;
             border: none !important;
-            overflow: hidden !important;
+            overflow: visible !important;
             background: #ffffff !important;
             position: relative !important;
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-            page-break-after: avoid !important;
-            break-after: avoid !important;
+            page-break-inside: auto !important;
+            break-inside: auto !important;
           }
           .doc-a4-sheet.doc-a4-multipage,
           .doc-a4-multipage {
@@ -947,10 +945,18 @@ export default function ReportsTab({
             min-height: auto !important;
             max-height: none !important;
             height: auto !important;
-            padding: 2mm 2mm !important;
+            padding: 0 !important;
             overflow: visible !important;
             page-break-after: auto !important;
             break-after: auto !important;
+            border: none !important;
+            box-shadow: none !important;
+          }
+          .doc-a4-sheet .border,
+          .doc-a4-sheet .rounded-lg,
+          .doc-a4-sheet .rounded-xl,
+          .doc-a4-sheet .rounded-2xl {
+            box-shadow: none !important;
           }
           .cert-frame-outer {
             position: absolute !important;
@@ -972,6 +978,7 @@ export default function ReportsTab({
             break-inside: auto !important;
             width: 100% !important;
             table-layout: fixed !important;
+            border-collapse: collapse !important;
           }
           .doc-a4-sheet thead {
             display: table-header-group !important;
@@ -983,8 +990,17 @@ export default function ReportsTab({
           }
           .doc-a4-sheet td,
           .doc-a4-sheet th {
-            word-break: break-word !important;
+            padding: 6px 8px !important;
+            word-break: normal !important;
             overflow-wrap: break-word !important;
+            line-height: 1.3 !important;
+          }
+          .doc-a4-sheet .whitespace-nowrap,
+          .doc-a4-sheet th.whitespace-nowrap,
+          .doc-a4-sheet td.whitespace-nowrap {
+            white-space: nowrap !important;
+            word-break: keep-all !important;
+            overflow-wrap: normal !important;
           }
           .doc-a4-sheet input {
             border: none !important;
@@ -994,7 +1010,7 @@ export default function ReportsTab({
           }
           @page {
             size: A4 portrait;
-            margin: 12mm;
+            margin: 12mm 14mm;
           }
         }
       `}</style>

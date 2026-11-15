@@ -87,16 +87,16 @@ export default function InterClubSummaryTemplate({
     : '0.0';
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-5 print:space-y-3 print:w-full print:max-w-[186mm] print:mx-auto print:box-border text-slate-900 font-sans inter-club-report-print">
+    <div className="w-full max-w-5xl mx-auto space-y-5 print:space-y-3 print:w-full print:max-w-none print:mx-auto print:box-border text-slate-900 font-sans inter-club-report-print">
       <style>{`
         @page {
           size: A4 portrait;
-          margin: 10mm 12mm;
+          margin: 12mm 14mm;
         }
         @media print {
           .inter-club-report-print {
             width: 100% !important;
-            max-width: 186mm !important;
+            max-width: 100% !important;
             margin: 0 auto !important;
             box-sizing: border-box !important;
             padding: 0 !important;
@@ -104,16 +104,23 @@ export default function InterClubSummaryTemplate({
           .inter-club-report-print table {
             table-layout: fixed !important;
             width: 100% !important;
-            word-wrap: break-word !important;
+            border-collapse: collapse !important;
             font-size: 9.5px !important;
           }
           .inter-club-report-print th,
           .inter-club-report-print td {
-            padding: 3px 4px !important;
-            word-break: break-word !important;
+            padding: 5px 6px !important;
+            word-break: normal !important;
             overflow-wrap: break-word !important;
             font-size: 9.5px !important;
-            line-height: 1.2 !important;
+            line-height: 1.25 !important;
+          }
+          .inter-club-report-print .whitespace-nowrap,
+          .inter-club-report-print th.whitespace-nowrap,
+          .inter-club-report-print td.whitespace-nowrap {
+            white-space: nowrap !important;
+            word-break: keep-all !important;
+            overflow-wrap: normal !important;
           }
           .inter-club-report-print tr {
             page-break-inside: avoid !important;
@@ -127,6 +134,11 @@ export default function InterClubSummaryTemplate({
           .inter-club-signatures {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
+          }
+          .inter-club-report-print .border,
+          .inter-club-report-print .rounded-xl,
+          .inter-club-report-print .rounded-2xl {
+            box-shadow: none !important;
           }
         }
       `}</style>
@@ -231,7 +243,7 @@ export default function InterClubSummaryTemplate({
             </span>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-slate-200 print:rounded-none">
+          <div className="overflow-x-auto rounded-xl border border-slate-200 print:border-none print:rounded-none">
             <table className="w-full text-left text-xs border-collapse table-fixed">
               <colgroup>
                 <col style={{ width: '4%' }} />
@@ -311,7 +323,7 @@ export default function InterClubSummaryTemplate({
             </span>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-slate-200 print:rounded-none">
+          <div className="overflow-x-auto rounded-xl border border-slate-200 print:border-none print:rounded-none">
             <table className="w-full text-left text-xs border-collapse table-fixed">
               <colgroup>
                 <col style={{ width: '4%' }} />
@@ -404,7 +416,7 @@ export default function InterClubSummaryTemplate({
             </span>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-slate-200 print:rounded-none">
+          <div className="overflow-x-auto rounded-xl border border-slate-200 print:border-none print:rounded-none">
             <table className="w-full text-left text-xs border-collapse table-fixed">
               <colgroup>
                 <col style={{ width: '5%' }} />

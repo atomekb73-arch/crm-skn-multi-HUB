@@ -144,7 +144,7 @@ select option:checked {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 8mm 8mm 8mm 8mm;
+    margin: 12mm 14mm;
   }
 
   /* Ukryj elementy interfejsu nienadające się do druku */
@@ -166,7 +166,7 @@ select option:checked {
     color: #000000 !important;
   }
 
-  /* Kontenery arkusza dokumentu A4 */
+  /* Kontenery arkusza dokumentu A4 – czysta kartka bez podwójnych obramowań i cieni */
   .doc-a4-sheet {
     box-sizing: border-box !important;
     display: flex !important;
@@ -175,19 +175,17 @@ select option:checked {
     width: 100% !important;
     max-width: 100% !important;
     min-height: auto !important;
-    max-height: 275mm !important;
-    height: 100% !important;
-    margin: 0 auto !important;
-    padding: 4mm 6mm !important;
+    max-height: none !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
     border: none !important;
     box-shadow: none !important;
     background: #ffffff !important;
     position: relative !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-    page-break-after: avoid !important;
-    break-after: avoid !important;
-    overflow: hidden !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+    overflow: visible !important;
   }
 
   /* Kontener arkusza dla dokumentów i tabel wielostronicowych */
@@ -199,16 +197,36 @@ select option:checked {
     min-height: auto !important;
     max-height: none !important;
     height: auto !important;
-    padding: 2mm 2mm !important;
+    padding: 0 !important;
     overflow: visible !important;
     page-break-after: auto !important;
     break-after: auto !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Eliminacja efektu "okna w oknie": usuwamy sztuczne ramki kontenerów tabel wewnątrz A4 */
+  .doc-a4-sheet .border,
+  .doc-a4-sheet .rounded-lg,
+  .doc-a4-sheet .rounded-xl,
+  .doc-a4-sheet .rounded-2xl,
+  .inter-club-report-print .border,
+  .inter-club-report-print .rounded-xl,
+  .inter-club-report-print .rounded-2xl {
+    box-shadow: none !important;
   }
 
   .signature-block,
-  .signatures-block {
+  .signatures-block,
+  .inter-club-signatures,
+  .document-standard-footer,
+  [data-signature-block] {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+    break-after: auto !important;
+    page-break-after: auto !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
     margin-top: auto !important;
   }
 
@@ -232,18 +250,6 @@ select option:checked {
     box-sizing: border-box !important;
   }
 
-  /* Bloki podpisów chronione przed podziałem między strony */
-  .signature-block,
-  .signatures-block,
-  [data-signature-block] {
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-    break-after: auto !important;
-    page-break-after: auto !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-  }
-
   /* Wymuś widoczność tabeli i elementów w obszarze drukowania */
   .printable-area,
   #reports-print-container,
@@ -255,6 +261,8 @@ select option:checked {
     overflow: visible !important;
     margin: 0 !important;
     padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
   }
 
   table,
@@ -263,12 +271,16 @@ select option:checked {
     max-width: 100% !important;
     table-layout: fixed !important;
     border-collapse: collapse !important;
-    page-break-inside: auto;
-    break-inside: auto;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
   }
 
   thead {
     display: table-header-group !important;
+  }
+
+  tbody {
+    display: table-row-group !important;
   }
 
   tr {
@@ -276,44 +288,67 @@ select option:checked {
     break-inside: avoid !important;
   }
 
+  /* Czyste komórki z czytelnym paddingiem i brakiem łamania pojedynczych słów */
   th, td {
-    border: 1px solid #d1d5db !important;
-    padding: 4px 6px !important;
-    font-size: 8pt !important;
-    color: #111827 !important;
+    padding: 6px 8px !important;
+    font-size: 8.5pt !important;
+    color: #0f172a !important;
     min-width: 0 !important;
-    white-space: normal !important;
-    word-break: break-word !important;
+    word-break: normal !important;
     overflow-wrap: break-word !important;
+    hyphens: manual !important;
+    line-height: 1.3 !important;
+    border-top: none !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+  }
+
+  th {
+    background-color: #f8fafc !important;
+    border-bottom: 1.5px solid #94a3b8 !important;
+    font-weight: 700 !important;
+    color: #1e293b !important;
+  }
+
+  /* Zablokuj łamanie w kolumnach krótkich i liczbowych */
+  .whitespace-nowrap,
+  th.whitespace-nowrap,
+  td.whitespace-nowrap,
+  .nowrap-col {
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+    overflow-wrap: normal !important;
   }
 
   .print-table th {
-    font-size: 8pt !important;
-    padding: 4px 6px !important;
+    font-size: 8.5pt !important;
+    padding: 6px 8px !important;
     text-transform: uppercase !important;
-    background-color: #f3f4f6 !important;
-    border-bottom: 1.5px solid #374151 !important;
-    color: #111827 !important;
+    background-color: #f8fafc !important;
+    border-bottom: 1.5px solid #94a3b8 !important;
+    color: #1e293b !important;
   }
 
   .print-table td {
-    font-size: 8pt !important;
-    padding: 4px 6px !important;
-    line-height: 1.25 !important;
-    word-break: break-word !important;
+    font-size: 8.5pt !important;
+    padding: 6px 8px !important;
+    line-height: 1.3 !important;
+    word-break: normal !important;
     overflow-wrap: break-word !important;
-    border-bottom: 1px solid #e5e7eb !important;
-    color: #111827 !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    color: #0f172a !important;
   }
 
   /* Druga linijka tekstu (e-mail, rok/specjalność pod kierunkiem) */
   .print-subtext {
-    font-size: 7pt !important;
+    font-size: 7.5pt !important;
     line-height: 1.2 !important;
     color: #4b5563 !important;
     margin-top: 1px !important;
     white-space: normal !important;
-    word-break: break-word !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
   }
 
   /* Zachowaj kolory tła i obramowania */

@@ -980,14 +980,11 @@ export function MeetingsSummaryTableTemplate({
       />
 
       {/* ── Tytuł Sprawozdania z nowym standardem wizualnym (optymalny oddech i interlinia) ── */}
-      <div className="mt-6 mb-7 sm:mb-8 text-center">
-        <span className="inline-block text-[9.5px] font-medium uppercase tracking-widest text-indigo-700 bg-indigo-50 px-3.5 py-1 rounded-full border border-indigo-200/80 mb-3 sm:mb-3.5">
-          Oficjalna Ewidencja Działalności Akademickiej
-        </span>
+      <div className="mt-4 mb-6 text-center">
         <h2 className="text-xl font-normal text-slate-950 uppercase tracking-wide">
           ZBIORCZA TABELA ZREALIZOWANYCH SPOTKAŃ
         </h2>
-        <div className="mt-2.5 sm:mt-3 space-y-1">
+        <div className="mt-2 space-y-1">
           <h3 className="text-sm font-medium text-indigo-950 uppercase tracking-wide">
             {formatOrgFullName(orgName)}
           </h3>
@@ -995,7 +992,7 @@ export function MeetingsSummaryTableTemplate({
             Rejestr aktywności i spotkań naukowych
           </p>
         </div>
-        <div className="mt-3.5 space-y-1 text-xs text-slate-600 font-normal">
+        <div className="mt-2.5 space-y-0.5 text-xs text-slate-600 font-normal">
           <p>
             Rok Akademicki {academicYear} &bull; {orgUnit}
           </p>
@@ -1006,18 +1003,18 @@ export function MeetingsSummaryTableTemplate({
       </div>
 
       {/* ── KPI Podsumowanie ── */}
-      <div className="metric-box-container w-full grid grid-cols-1 sm:grid-cols-3 md:grid-cols-3 gap-2.5 sm:gap-3 mb-6 text-center text-xs box-border">
-        <div className="p-2.5 bg-slate-50/90 rounded-lg border border-slate-200">
+      <div className="metric-box-container w-full grid grid-cols-1 sm:grid-cols-3 md:grid-cols-3 gap-2.5 sm:gap-3 mb-5 text-center text-xs box-border print:mb-3">
+        <div className="p-2.5 bg-slate-50/90 rounded-lg border border-slate-200 print:bg-transparent print:border-slate-300 print:rounded-none">
           <span className="text-[9.5px] uppercase font-medium text-slate-500 tracking-wider block">Zrealizowane spotkania</span>
           <span className="text-base font-normal text-indigo-950 font-mono mt-0.5 block">{meetingsList.length}</span>
           <span className="text-[9px] text-slate-400 block mt-0.5">z listą obecności</span>
         </div>
-        <div className="p-2.5 bg-slate-50/90 rounded-lg border border-slate-200">
+        <div className="p-2.5 bg-slate-50/90 rounded-lg border border-slate-200 print:bg-transparent print:border-slate-300 print:rounded-none">
           <span className="text-[9.5px] uppercase font-medium text-slate-500 tracking-wider block">Łączna liczba osobodni</span>
           <span className="text-base font-normal text-emerald-700 font-mono mt-0.5 block">{totalAttendees} os.</span>
           <span className="text-[9px] text-slate-400 block mt-0.5">łączna frekwencja</span>
         </div>
-        <div className="p-2.5 bg-slate-50/90 rounded-lg border border-slate-200">
+        <div className="p-2.5 bg-slate-50/90 rounded-lg border border-slate-200 print:bg-transparent print:border-slate-300 print:rounded-none">
           <span className="text-[9.5px] uppercase font-medium text-slate-500 tracking-wider block">Średnia uczestników / spotkanie</span>
           <span className="text-base font-normal text-slate-900 font-mono mt-0.5 block">{avgAttendees} os.</span>
           <span className="text-[9px] text-slate-400 block mt-0.5">na zrealizowane zebranie</span>
@@ -1025,30 +1022,27 @@ export function MeetingsSummaryTableTemplate({
       </div>
 
       {/* ── Tabela Spotkań ze zoptymalizowanymi kolumnami ── */}
-      <div className="border border-slate-200 rounded-lg overflow-hidden text-[9.5px] flex-1 min-h-[300px] flex flex-col mb-4 print:overflow-visible">
+      <div className="border border-slate-200 rounded-lg overflow-hidden text-[9.5px] flex-1 min-h-[300px] flex flex-col mb-4 print:border-none print:rounded-none print:overflow-visible print:m-0">
         <table className="w-full text-left border-collapse" style={{ tableLayout: 'fixed', width: '100%' }}>
           <thead className="bg-slate-100 text-slate-700 font-medium border-b border-slate-200" style={{ display: 'table-header-group' }}>
             <tr className="hidden print:table-row bg-white border-b border-slate-300">
               <th colSpan={10} className="p-0 pb-1 text-left font-normal">
                 <div className="flex items-center justify-between text-[8px] text-slate-600 font-sans pb-1 mb-1 border-b border-slate-200">
-                  <div className="flex items-center gap-2">
-                    <img src="/wskz-header.png" alt="" className="h-[7mm] object-contain object-left block m-0 p-0" />
-                    <span className="font-bold text-slate-800 uppercase tracking-tight">{orgName}</span>
-                  </div>
-                  <div className="font-mono text-slate-500">
+                  <span className="font-semibold text-slate-800 uppercase tracking-tight">{orgName}</span>
+                  <span className="font-mono text-slate-500">
                     Tabela Spotkań &bull; {docNumber}
-                  </div>
+                  </span>
                 </div>
               </th>
             </tr>
             <tr>
               {showLp && <th className="py-2 px-1 text-center whitespace-nowrap" style={{ width: '4%' }}>LP.</th>}
-              {showDate && <th className="py-2 px-2 whitespace-nowrap" style={{ width: '12%' }}>Data</th>}
-              {showType && <th className="py-2 px-2 whitespace-nowrap" style={{ width: '14%' }}>Forma</th>}
-              {showTitle && <th className="py-2 px-2.5" style={{ width: isEditing ? '33%' : '36%' }}>Temat / Zakres Merytoryczny</th>}
-              {showSpeaker && <th className="py-2 px-2" style={{ width: '16%' }}>Prelegent / Prowadzący</th>}
-              {showAttendees && <th className="py-2 px-2 text-center whitespace-nowrap" style={{ width: isEditing ? '15%' : '18%' }}>Frekwencja</th>}
-              {isEditing && <th className="py-2 px-1 text-center print:hidden" style={{ width: '6%' }}>Akcja</th>}
+              {showDate && <th className="py-2 px-2 text-center whitespace-nowrap" style={{ width: '11%' }}>Data</th>}
+              {showType && <th className="py-2 px-2" style={{ width: '15%' }}>Forma</th>}
+              {showTitle && <th className="py-2 px-2.5" style={{ width: isEditing ? '30%' : '33%' }}>Temat / Zakres Merytoryczny</th>}
+              {showSpeaker && <th className="py-2 px-2" style={{ width: '24%' }}>Prelegent / Prowadzący</th>}
+              {showAttendees && <th className="py-2 px-2 text-center whitespace-nowrap" style={{ width: isEditing ? '13%' : '13%' }}>Frekwencja</th>}
+              {isEditing && <th className="py-2 px-1 text-center print:hidden" style={{ width: '5%' }}>Akcja</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -1297,14 +1291,14 @@ export function MembersRegistryTemplate({
   // Dynamiczny, proporcjonalny rozkład szerokości kolumn dopasowany w 100% do ramki A4
   const colWidths = useMemo(() => {
     const baseWeights = {
-      lp: showStatus ? 4.5 : 5,
-      name: showStatus ? 22.5 : 26,
+      lp: showStatus ? 4 : 4,
+      name: showStatus ? 22 : 25,
       index: showStatus ? 9 : 10,
-      field: showStatus ? 18.5 : 24,
-      year: showStatus ? 6.5 : 7,
-      present: showStatus ? 9 : 9,
-      freq: showStatus ? 9.5 : 10,
-      points: showStatus ? 8.5 : 9,
+      field: showStatus ? 20 : 23,
+      year: showStatus ? 6 : 7,
+      present: showStatus ? 9 : 10,
+      freq: showStatus ? 9 : 10,
+      points: showStatus ? 9 : 11,
       status: showStatus ? 12 : 0,
     };
 
@@ -1420,14 +1414,11 @@ export function MembersRegistryTemplate({
       />
 
       {/* ── Tytuł Ewidencji z nowym standardem wizualnym (optymalny oddech i interlinia) ── */}
-      <div className="mt-6 mb-7 sm:mb-8 text-center">
-        <span className="inline-block text-[9.5px] font-medium uppercase tracking-widest text-indigo-700 bg-indigo-50 px-3.5 py-1 rounded-full border border-indigo-200/80 mb-3 sm:mb-3.5">
-          Oficjalna Ewidencja Działalności Akademickiej
-        </span>
+      <div className="mt-4 mb-6 text-center">
         <h2 className="text-xl font-normal text-slate-950 uppercase tracking-wide">
           OFICJALNA EWIDENCJA CZŁONKÓW
         </h2>
-        <div className="mt-2.5 sm:mt-3 space-y-1">
+        <div className="mt-2 space-y-1">
           <h3 className="text-sm font-medium text-indigo-950 uppercase tracking-wide">
             {formatOrgFullName(orgName)}
           </h3>
@@ -1435,7 +1426,7 @@ export function MembersRegistryTemplate({
             Oficjalna ewidencja członków
           </p>
         </div>
-        <div className="mt-3.5 space-y-1 text-xs text-slate-600 font-normal">
+        <div className="mt-2.5 space-y-0.5 text-xs text-slate-600 font-normal">
           <p>
             Rok Akademicki {academicYear} &bull; {orgUnit} &bull; Zarejestrowanych aktywnych studentów: <span className="font-medium">{activeMembers.length}</span>
           </p>
@@ -1462,16 +1453,13 @@ export function MembersRegistryTemplate({
         </div>
       ) : (
         /* ── Tabela członków ze zoptymalizowanymi kolumnami dopasowanymi w 100% do A4 ── */
-        <div className="w-full max-w-full border border-slate-200 rounded-lg overflow-hidden text-[10px] flex-1 min-h-[300px] flex flex-col mb-4 print:border-slate-300 print:rounded-none print:overflow-visible box-border">
+        <div className="w-full max-w-full border border-slate-200 rounded-lg overflow-hidden text-[10px] flex-1 min-h-[300px] flex flex-col mb-4 print:border-none print:rounded-none print:overflow-visible box-border">
           <table className="w-full text-left border-collapse print:text-[9.5px]" style={{ tableLayout: 'fixed', width: '100%', pageBreakInside: 'auto', breakInside: 'auto' }}>
             <thead className="bg-slate-100 text-slate-700 font-medium border-b border-slate-200" style={{ display: 'table-header-group' }}>
               <tr className="hidden print:table-row bg-white border-b border-slate-300">
                 <th colSpan={10} className="p-0 pb-1 text-left font-normal">
                   <div className="flex items-center justify-between text-[8px] text-slate-600 font-sans pb-1 mb-1 border-b border-slate-200">
-                    <div className="flex items-center gap-2">
-                      <img src="/wskz-header.png" alt="" className="h-[7mm] object-contain object-left block m-0 p-0" />
-                      <span className="font-medium text-slate-800 uppercase tracking-tight">{orgName}</span>
-                    </div>
+                    <span className="font-semibold text-slate-800 uppercase tracking-tight">{orgName}</span>
                     <div className="font-mono text-slate-500">
                       Ewidencja Członków &bull; {docNumber}
                     </div>
@@ -1479,15 +1467,15 @@ export function MembersRegistryTemplate({
                 </th>
               </tr>
               <tr>
-                {showLp && <th className="py-2 px-1 text-center text-[10px] whitespace-nowrap" style={{ width: colWidths.lp }}>LP.</th>}
-                {showName && <th className="py-2 px-2 text-[10px]" style={{ width: colWidths.name }}>Imię i Nazwisko</th>}
-                {showIndex && <th className="py-2 px-1 text-center text-[10px] whitespace-nowrap" style={{ width: colWidths.index }}>Nr Albumu</th>}
-                {showField && <th className="py-2 px-2 text-[10px]" style={{ width: colWidths.field }}>Kierunek Studiów</th>}
-                {showYear && <th className="py-2 px-1 text-center text-[10px] whitespace-nowrap" style={{ width: colWidths.year }}>Rok</th>}
-                {showPresent && <th className="py-2 px-1 text-center text-[10px] whitespace-nowrap" style={{ width: colWidths.present }}>Obecności</th>}
-                {showFreq && <th className="py-2 px-1 text-center text-[10px] whitespace-nowrap" style={{ width: colWidths.freq }}>Frekwencja</th>}
-                {showPoints && <th className="py-2 px-1 text-center text-[10px] whitespace-nowrap" style={{ width: colWidths.points }}>Punkty</th>}
-                {showStatus && <th className="py-2 px-1.5 text-center text-[10px] whitespace-nowrap" style={{ width: colWidths.status }}>Zaliczenie</th>}
+                {showLp && <th className="py-2 px-2 text-center text-[10px] whitespace-nowrap" style={{ width: colWidths.lp }}>LP.</th>}
+                {showName && <th className="py-2 px-2.5 text-[10px]" style={{ width: colWidths.name }}>Imię i Nazwisko</th>}
+                {showIndex && <th className="py-2 px-2 text-center text-[10px] whitespace-nowrap" style={{ width: colWidths.index }}>Nr Albumu</th>}
+                {showField && <th className="py-2 px-2.5 text-[10px]" style={{ width: colWidths.field }}>Kierunek Studiów</th>}
+                {showYear && <th className="py-2 px-2 text-center text-[10px] whitespace-nowrap" style={{ width: colWidths.year }}>Rok</th>}
+                {showPresent && <th className="py-2 px-2 text-center text-[10px] whitespace-nowrap" style={{ width: colWidths.present }}>Obecności</th>}
+                {showFreq && <th className="py-2 px-2 text-center text-[10px] whitespace-nowrap" style={{ width: colWidths.freq }}>Frekwencja</th>}
+                {showPoints && <th className="py-2 px-2 text-center text-[10px] whitespace-nowrap" style={{ width: colWidths.points }}>Punkty</th>}
+                {showStatus && <th className="py-2 px-2 text-center text-[10px] whitespace-nowrap" style={{ width: colWidths.status }}>Zaliczenie</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -1498,32 +1486,32 @@ export function MembersRegistryTemplate({
                     className="hover:bg-slate-50 break-inside-avoid page-break-inside-avoid align-top"
                     style={{ pageBreakInside: 'avoid', breakInside: 'avoid', pageBreakAfter: 'auto', contentVisibility: 'auto', containIntrinsicSize: '0 26px' }}
                   >
-                    {showLp && <td className="py-1.5 px-1 text-center text-slate-400 font-mono text-[9.5px] whitespace-nowrap align-top">{row.lp}</td>}
-                    {showName && <td className="py-1.5 px-2 font-medium text-slate-900 text-[10px] break-words align-top">{row.name}</td>}
-                    {showIndex && <td className="py-1.5 px-1 text-center font-mono text-[9.5px] whitespace-nowrap align-top">{row.cleanIndex}</td>}
-                    {showField && <td className="py-1.5 px-2 text-slate-600 break-words text-[9.5px] align-top">{row.field}</td>}
-                    {showYear && <td className="py-1.5 px-1 text-center text-[9.5px] whitespace-nowrap align-top">{row.yearDisplay}</td>}
+                    {showLp && <td className="py-2 px-2 text-center text-slate-400 font-mono text-[9.5px] whitespace-nowrap align-top">{row.lp}</td>}
+                    {showName && <td className="py-2 px-2.5 font-medium text-slate-900 text-[10px] align-top">{row.name}</td>}
+                    {showIndex && <td className="py-2 px-2 text-center font-mono text-[9.5px] whitespace-nowrap align-top">{row.cleanIndex}</td>}
+                    {showField && <td className="py-2 px-2.5 text-slate-600 text-[9.5px] align-top">{row.field}</td>}
+                    {showYear && <td className="py-2 px-2 text-center text-[9.5px] whitespace-nowrap align-top">{row.yearDisplay}</td>}
                     {showPresent && (
-                      <td className="py-1.5 px-1 text-center font-mono text-[9.5px] whitespace-nowrap align-top">
+                      <td className="py-2 px-2 text-center font-mono text-[9.5px] whitespace-nowrap align-top">
                         {row.isZeroActivity && isPastYear ? '—' : `${row.present} / ${row.memberTotalMeetings}`}
                       </td>
                     )}
                     {showFreq && (
-                      <td className="py-1.5 px-1 text-center font-mono font-medium text-[9.5px] whitespace-nowrap align-top">
+                      <td className="py-2 px-2 text-center font-mono font-medium text-[9.5px] whitespace-nowrap align-top">
                         <span className={row.freq >= 50 ? 'text-emerald-700' : (row.isZeroActivity && isPastYear ? 'text-slate-400' : 'text-slate-600')}>
                           {row.isZeroActivity && isPastYear ? '—' : `${row.freq}%`}
                         </span>
                       </td>
                     )}
                     {showPoints && (
-                      <td className="py-1.5 px-1 text-center font-mono font-semibold text-[9.5px] whitespace-nowrap align-top">
+                      <td className="py-2 px-2 text-center font-mono font-semibold text-[9.5px] whitespace-nowrap align-top">
                         <span className={row.points > 0 ? 'text-purple-700' : 'text-slate-400'}>
                           {row.isZeroActivity && isPastYear ? '—' : `${row.points} pkt`}
                         </span>
                       </td>
                     )}
                     {showStatus && (
-                      <td className="py-1.5 px-1 text-center align-top">
+                      <td className="py-2 px-2 text-center align-top">
                         <span className={`inline-block px-1.5 py-0.5 rounded text-[8px] font-semibold border whitespace-nowrap ${row.statusInfo.badgeClass}`}>
                           {row.statusInfo.label}
                         </span>
@@ -1649,14 +1637,11 @@ export function ResearchConferencesRegistryTemplate({
       />
 
       {/* ── Tytuł Wykazu z nowym standardem wizualnym (optymalny oddech i interlinia) ── */}
-      <div className="mt-6 mb-7 sm:mb-8 text-center">
-        <span className="inline-block text-[9.5px] font-medium uppercase tracking-widest text-indigo-700 bg-indigo-50 px-3.5 py-1 rounded-full border border-indigo-200/80 mb-3 sm:mb-3.5">
-          Oficjalna Ewidencja Działalności Akademickiej
-        </span>
+      <div className="mt-4 mb-6 text-center">
         <h2 className="text-xl font-normal text-slate-950 uppercase tracking-wide">
           WYKAZ KONFERENCJI, BADAŃ I PUBLIKACJI NAUKOWYCH
         </h2>
-        <div className="mt-2.5 sm:mt-3 space-y-1">
+        <div className="mt-2 space-y-1">
           <h3 className="text-sm font-medium text-indigo-950 uppercase tracking-wide">
             {formatOrgFullName(orgName)}
           </h3>
@@ -1664,7 +1649,7 @@ export function ResearchConferencesRegistryTemplate({
             Wykaz konferencji, badań i publikacji naukowych
           </p>
         </div>
-        <div className="mt-3.5 space-y-1 text-xs text-slate-600 font-normal">
+        <div className="mt-2.5 space-y-0.5 text-xs text-slate-600 font-normal">
           <p>
             Rok Akademicki {academicYear} &bull; {orgUnit}
           </p>
@@ -1675,16 +1660,13 @@ export function ResearchConferencesRegistryTemplate({
       </div>
 
       {/* Tabela projektów */}
-      <div className="border border-slate-200 rounded-lg overflow-hidden text-[9.5px] flex-1 min-h-[340px] flex flex-col mb-4 print:overflow-visible">
+      <div className="border border-slate-200 rounded-lg overflow-hidden text-[9.5px] flex-1 min-h-[340px] flex flex-col mb-4 print:border-none print:rounded-none print:overflow-visible">
         <table className="w-full text-left border-collapse" style={{ tableLayout: 'fixed', width: '100%' }}>
           <thead className="bg-slate-100 text-slate-700 font-medium border-b border-slate-200" style={{ display: 'table-header-group' }}>
             <tr className="hidden print:table-row bg-white border-b border-slate-300">
               <th colSpan={10} className="p-0 pb-1 text-left font-normal">
                 <div className="flex items-center justify-between text-[8px] text-slate-600 font-sans pb-1 mb-1 border-b border-slate-200">
-                  <div className="flex items-center gap-2">
-                    <img src="/wskz-header.png" alt="" className="h-[7mm] object-contain object-left block m-0 p-0" />
-                    <span className="font-medium text-slate-800 uppercase tracking-tight">{orgName}</span>
-                  </div>
+                  <span className="font-semibold text-slate-800 uppercase tracking-tight">{orgName}</span>
                   <div className="font-mono text-slate-500">
                     Ewidencja Badań i Konferencji &bull; {docNumber}
                   </div>
@@ -1692,12 +1674,12 @@ export function ResearchConferencesRegistryTemplate({
               </th>
             </tr>
             <tr>
-              {showLp && <th className="py-2 px-2 text-center" style={{ width: '5%' }}>LP.</th>}
-              {showCategory && <th className="py-2 px-2" style={{ width: '17%' }}>Kategoria</th>}
+              {showLp && <th className="py-2 px-2 text-center whitespace-nowrap" style={{ width: '4%' }}>LP.</th>}
+              {showCategory && <th className="py-2 px-2" style={{ width: '16%' }}>Kategoria</th>}
               {showTitle && <th className="py-2 px-2.5" style={{ width: isEditing ? '27%' : '32%' }}>Tytuł Osiągnięcia / Projektu</th>}
               {showAuthors && <th className="py-2 px-2" style={{ width: '20%' }}>Autorzy / Zespół</th>}
-              {showScope && <th className="py-2 px-2" style={{ width: '19%' }}>Zakres Prac</th>}
-              {showPoints && <th className="py-2 px-1.5 text-center" style={{ width: '7%' }}>Waga</th>}
+              {showScope && <th className="py-2 px-2" style={{ width: '20%' }}>Zakres Prac</th>}
+              {showPoints && <th className="py-2 px-2 text-center whitespace-nowrap" style={{ width: '8%' }}>Waga</th>}
               {isEditing && <th className="py-2 px-1 text-center print:hidden" style={{ width: '5%' }}>Akcja</th>}
             </tr>
           </thead>
@@ -1705,9 +1687,8 @@ export function ResearchConferencesRegistryTemplate({
             {currentActivities.length === 0 ? (
               <tr>
                 <td colSpan={10} className="py-12 px-6 text-center text-slate-400 italic bg-slate-50/50">
-                  <div className="max-w-md mx-auto space-y-1">
-                    <p className="font-medium text-slate-600 text-xs">Brak zarejestrowanych osiągnięć badawczych i konferencji</p>
-                    <p className="text-[10.5px] text-slate-400">Kliknij „➕ Dodaj projekt/aktywność”, aby wprowadzić pozycję dorobku naukowego koła.</p>
+                  <div className="max-w-md mx-auto">
+                    <p className="text-xs text-slate-500 italic">Brak zarejestrowanych osiągnięć w wybranym okresie.</p>
                   </div>
                 </td>
               </tr>
@@ -1899,14 +1880,11 @@ export function AnnualReportProtocolTemplate({
       />
 
       {/* Tytuł z nowym standardem wizualnym (optymalny oddech i interlinia) */}
-      <div className="mt-6 mb-7 sm:mb-8 text-center">
-        <span className="inline-block text-[9.5px] font-bold uppercase tracking-widest text-indigo-700 bg-indigo-50 px-3.5 py-1 rounded-full border border-indigo-200/80 mb-3 sm:mb-3.5">
-          Oficjalna Ewidencja Działalności Akademickiej
-        </span>
+      <div className="mt-4 mb-6 text-center">
         <h2 className="text-xl font-black text-slate-950 uppercase tracking-tight">
           ZBIORCZY PROTOKÓŁ SPRAWOZDAWCZY
         </h2>
-        <div className="mt-2.5 sm:mt-3 space-y-1">
+        <div className="mt-2 space-y-1">
           <h3 className="text-sm font-bold text-indigo-950 uppercase tracking-wide">
             {formatOrgFullName(orgName)}
           </h3>
@@ -1914,7 +1892,7 @@ export function AnnualReportProtocolTemplate({
             Oficjalne roczne sprawozdanie z działalności akademickiej
           </p>
         </div>
-        <div className="mt-3.5 space-y-1 text-xs text-slate-600 font-medium">
+        <div className="mt-2.5 space-y-0.5 text-xs text-slate-600 font-medium">
           <p>
             dla Dziekanatu i Władz {orgUnit} &bull; Rok Akademicki {academicYear}
           </p>
@@ -1926,27 +1904,27 @@ export function AnnualReportProtocolTemplate({
 
       {/* KPI Podsumowanie */}
       <div className="metric-box-container w-full grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 mb-4 text-center box-border">
-        <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
+        <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 print:bg-transparent print:border-slate-300 print:rounded-none">
           <span className="text-[9px] uppercase font-bold text-slate-500 block">Aktywni Członkowie</span>
           <span className="text-base font-bold text-slate-900 font-mono">{activeMembers.length}</span>
         </div>
-        <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
+        <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 print:bg-transparent print:border-slate-300 print:rounded-none">
           <span className="text-[9px] uppercase font-bold text-slate-500 block">Zrealizowane Spotkania</span>
           <span className="text-base font-bold text-indigo-900 font-mono">{totalMeetings}</span>
           <span className="text-[8px] text-slate-400 block">({totalMeetings} spotkań koła)</span>
         </div>
-        <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
+        <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 print:bg-transparent print:border-slate-300 print:rounded-none">
           <span className="text-[9px] uppercase font-bold text-slate-500 block">Średnia Frekwencja</span>
           <span className="text-base font-bold text-emerald-700 font-mono">{avgAttendancePercent}%</span>
         </div>
-        <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
+        <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 print:bg-transparent print:border-slate-300 print:rounded-none">
           <span className="text-[9px] uppercase font-bold text-slate-500 block">Spełniają Kryteria</span>
           <span className="text-base font-bold text-purple-700 font-mono">{passingMembers.length}</span>
         </div>
       </div>
 
       {/* Dynamiczne Pole Opiekunów */}
-      <div className="mb-4 bg-indigo-50/50 p-3 rounded-lg border border-indigo-100 text-xs">
+      <div className="mb-4 bg-indigo-50/50 p-3 rounded-lg border border-indigo-100 text-xs print:bg-transparent print:border-slate-300 print:rounded-none">
         <p className="font-bold text-indigo-950 mb-1">Opiekunowie Naukowi Koła:</p>
         <div className={`grid gap-2 text-[11px] text-slate-700 ${activeSupervisors.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
           {activeSupervisors.map((s, idx) => (
@@ -1965,32 +1943,32 @@ export function AnnualReportProtocolTemplate({
         <p className="text-xs font-bold text-slate-900 mb-1.5">
           Wykaz studentów o najwyższej aktywności naukowej i frekwencji (Próbka rejestru):
         </p>
-        <div className="border border-slate-200 rounded-lg overflow-hidden text-[10.5px] print:overflow-visible">
+        <div className="border border-slate-200 rounded-lg overflow-hidden text-[10.5px] print:border-none print:rounded-none print:overflow-visible">
           <table className="w-full text-left border-collapse" style={{ tableLayout: 'fixed', width: '100%' }}>
             <thead className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200" style={{ display: 'table-header-group' }}>
               <tr>
-                {showLp && <th className="py-1 px-2 text-center" style={{ width: '5%' }}>LP.</th>}
-                {showName && <th className="py-1 px-2" style={{ width: '23%' }}>Imię i Nazwisko</th>}
-                {showIndex && <th className="py-1 px-2 text-center" style={{ width: '12%' }}>Nr Indeksu</th>}
-                {showField && <th className="py-1 px-2" style={{ width: '24%' }}>Kierunek</th>}
-                {showPresent && <th className="py-1 px-2 text-center" style={{ width: '10%' }}>Obecności</th>}
-                {showFreq && <th className="py-1 px-2 text-center" style={{ width: '9%' }}>Frekwencja</th>}
-                {showPoints && <th className="py-1 px-2 text-center" style={{ width: '8%' }}>Punkty</th>}
-                {showStatus && <th className="py-1 px-2 text-center" style={{ width: '9%' }}>Status</th>}
+                {showLp && <th className="py-2 px-2 text-center whitespace-nowrap" style={{ width: '4%' }}>LP.</th>}
+                {showName && <th className="py-2 px-2.5" style={{ width: '24%' }}>Imię i Nazwisko</th>}
+                {showIndex && <th className="py-2 px-2 text-center whitespace-nowrap" style={{ width: '12%' }}>Nr Indeksu</th>}
+                {showField && <th className="py-2 px-2.5" style={{ width: '23%' }}>Kierunek</th>}
+                {showPresent && <th className="py-2 px-2 text-center whitespace-nowrap" style={{ width: '10%' }}>Obecności</th>}
+                {showFreq && <th className="py-2 px-2 text-center whitespace-nowrap" style={{ width: '9%' }}>Frekwencja</th>}
+                {showPoints && <th className="py-2 px-2 text-center whitespace-nowrap" style={{ width: '8%' }}>Punkty</th>}
+                {showStatus && <th className="py-2 px-2 text-center whitespace-nowrap" style={{ width: '10%' }}>Status</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {activeMembers.slice(0, 10).map((m, i) => (
                 <tr key={i} className="hover:bg-slate-50 break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                  {showLp && <td className="py-1 px-2 text-center text-slate-400 font-mono">{i + 1}</td>}
-                  {showName && <td className="py-1 px-2 font-medium text-slate-900 break-words">{m.fullName || m.name}</td>}
-                  {showIndex && <td className="py-1 px-2 text-center font-mono">{m.index}</td>}
-                  {showField && <td className="py-1 px-2 text-slate-600 break-words">{m.field || 'Psychologia'}</td>}
-                  {showPresent && <td className="py-1 px-2 text-center font-mono">{m.present || totalMeetings}/{totalMeetings}</td>}
-                  {showFreq && <td className="py-1 px-2 text-center font-mono font-bold text-emerald-700">{m.attendancePercent || 100}%</td>}
-                  {showPoints && <td className="py-1 px-2 text-center font-mono text-purple-700 font-semibold">{m.points || 0}</td>}
+                  {showLp && <td className="py-2 px-2 text-center text-slate-400 font-mono align-top">{i + 1}</td>}
+                  {showName && <td className="py-2 px-2.5 font-medium text-slate-900 align-top">{m.fullName || m.name}</td>}
+                  {showIndex && <td className="py-2 px-2 text-center font-mono whitespace-nowrap align-top">{m.index}</td>}
+                  {showField && <td className="py-2 px-2.5 text-slate-600 align-top">{m.field || 'Psychologia'}</td>}
+                  {showPresent && <td className="py-2 px-2 text-center font-mono whitespace-nowrap align-top">{m.present || totalMeetings}/{totalMeetings}</td>}
+                  {showFreq && <td className="py-2 px-2 text-center font-mono font-bold text-emerald-700 whitespace-nowrap align-top">{m.attendancePercent || 100}%</td>}
+                  {showPoints && <td className="py-2 px-2 text-center font-mono text-purple-700 font-semibold whitespace-nowrap align-top">{m.points || 0}</td>}
                   {showStatus && (
-                    <td className="py-1 px-2 text-center">
+                    <td className="py-2 px-2 text-center whitespace-nowrap align-top">
                       <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                         Zaliczono
                       </span>
@@ -2061,14 +2039,11 @@ export function OfficialRegistryProtocolTemplate({
       />
 
       {/* Title */}
-      <div className="text-center mt-6 mb-7 sm:mb-8">
-        <span className="inline-block text-[9.5px] font-bold uppercase tracking-widest text-indigo-700 bg-indigo-50 px-3.5 py-1 rounded-full border border-indigo-200/80 mb-3 sm:mb-3.5">
-          Oficjalna Ewidencja Działalności Akademickiej
-        </span>
+      <div className="text-center mt-4 mb-6">
         <h2 className="text-xl font-black uppercase tracking-tight text-slate-900">
           OFICJALNY PROTOKÓŁ ZBIORCZY EWIDENCJI WYDANYCH DOKUMENTÓW
         </h2>
-        <div className="mt-2.5 sm:mt-3 space-y-1">
+        <div className="mt-2 space-y-1">
           <h3 className="text-sm font-bold text-indigo-950 uppercase tracking-wide">
             {formatOrgFullName(orgName)}
           </h3>
@@ -2079,37 +2054,37 @@ export function OfficialRegistryProtocolTemplate({
       </div>
 
       {/* Summary Stat Pills */}
-      <div className="metric-box-container grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3 my-5 p-3 rounded-xl bg-slate-50 border border-slate-200 text-center box-border">
-        <div className="p-2 bg-white rounded-lg border border-slate-200">
+      <div className="metric-box-container grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3 my-5 p-3 rounded-xl bg-slate-50 border border-slate-200 text-center box-border print:border-none print:p-0 print:bg-transparent">
+        <div className="p-2 bg-white rounded-lg border border-slate-200 print:bg-transparent print:border-slate-300 print:rounded-none">
           <p className="text-[10px] font-bold text-slate-500 uppercase">Wszystkie Akty</p>
           <p className="text-base font-black text-slate-900 font-mono">{totalCount}</p>
         </div>
-        <div className="p-2 bg-white rounded-lg border border-slate-200">
+        <div className="p-2 bg-white rounded-lg border border-slate-200 print:bg-transparent print:border-slate-300 print:rounded-none">
           <p className="text-[10px] font-bold text-emerald-600 uppercase">Zaświadczenia Członków</p>
           <p className="text-base font-black text-emerald-700 font-mono">{memberCount}</p>
         </div>
-        <div className="p-2 bg-white rounded-lg border border-slate-200">
+        <div className="p-2 bg-white rounded-lg border border-slate-200 print:bg-transparent print:border-slate-300 print:rounded-none">
           <p className="text-[10px] font-bold text-amber-600 uppercase">Dyplomy Prelegentów</p>
           <p className="text-base font-black text-amber-700 font-mono">{speakerCount}</p>
         </div>
-        <div className="p-2 bg-white rounded-lg border border-slate-200">
+        <div className="p-2 bg-white rounded-lg border border-slate-200 print:bg-transparent print:border-slate-300 print:rounded-none">
           <p className="text-[10px] font-bold text-indigo-600 uppercase">Zaświadczenia Zarządu</p>
           <p className="text-base font-black text-indigo-700 font-mono">{boardCount}</p>
         </div>
       </div>
 
       {/* Table */}
-      <div className="border border-slate-200 rounded-xl overflow-hidden mb-6 print:overflow-visible">
+      <div className="border border-slate-200 rounded-xl overflow-hidden mb-6 print:border-none print:rounded-none print:overflow-visible">
         <table className="w-full text-[10.5px] border-collapse" style={{ tableLayout: 'fixed', width: '100%' }}>
           <thead>
             <tr className="bg-slate-900 text-white font-bold text-left">
-              {showLp && <th className="py-2 px-2.5 text-center" style={{ width: '5%' }}>Lp.</th>}
-              {showId && <th className="py-2 px-2.5" style={{ width: '21%' }}>Nr Aktu / Sygnatura</th>}
+              {showLp && <th className="py-2 px-2 text-center whitespace-nowrap" style={{ width: '4%' }}>Lp.</th>}
+              {showId && <th className="py-2 px-2.5" style={{ width: '20%' }}>Nr Aktu / Sygnatura</th>}
               {showType && <th className="py-2 px-2.5" style={{ width: '17%' }}>Typ Dokumentu</th>}
               {showRecipient && <th className="py-2 px-2.5" style={{ width: '20%' }}>Odbiorca (Nr Albumu)</th>}
-              {showIssueDate && <th className="py-2 px-2.5 text-center" style={{ width: '11%' }}>Data Wydania</th>}
-              {showDetails && <th className="py-2 px-2.5" style={{ width: '16%' }}>Przedmiot / Temat / Rola</th>}
-              {showStatus && <th className="py-2 px-2.5 text-center" style={{ width: '10%' }}>Status</th>}
+              {showIssueDate && <th className="py-2 px-2.5 text-center whitespace-nowrap" style={{ width: '11%' }}>Data Wydania</th>}
+              {showDetails && <th className="py-2 px-2.5" style={{ width: '18%' }}>Przedmiot / Temat / Rola</th>}
+              {showStatus && <th className="py-2 px-2.5 text-center whitespace-nowrap" style={{ width: '10%' }}>Status</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
@@ -2195,14 +2170,11 @@ export function OfficialCorrespondenceProtocolTemplate({
       />
 
       {/* Title */}
-      <div className="text-center mt-6 mb-7 sm:mb-8">
-        <span className="inline-block text-[9.5px] font-bold uppercase tracking-widest text-indigo-700 bg-indigo-50 px-3.5 py-1 rounded-full border border-indigo-200/80 mb-3 sm:mb-3.5">
-          Oficjalna Ewidencja Kancelaryjna
-        </span>
+      <div className="text-center mt-4 mb-6">
         <h2 className="text-xl font-black uppercase tracking-tight text-slate-900">
           ELEKTRONICZNY DZIENNIK PODAWCZY
         </h2>
-        <div className="mt-2.5 sm:mt-3 space-y-1">
+        <div className="mt-2 space-y-1">
           <h3 className="text-sm font-bold text-indigo-950 uppercase tracking-wide">
             {formatOrgFullName(orgName)}
           </h3>
@@ -2213,33 +2185,33 @@ export function OfficialCorrespondenceProtocolTemplate({
       </div>
 
       {/* Summary Stat Pills */}
-      <div className="metric-box-container grid grid-cols-1 sm:grid-cols-3 md:grid-cols-3 gap-2.5 sm:gap-3 my-5 p-3 rounded-xl bg-slate-50 border border-slate-200 text-center box-border">
-        <div className="p-2 bg-white rounded-lg border border-slate-200">
+      <div className="metric-box-container grid grid-cols-1 sm:grid-cols-3 md:grid-cols-3 gap-2.5 sm:gap-3 my-5 p-3 rounded-xl bg-slate-50 border border-slate-200 text-center box-border print:border-none print:p-0 print:bg-transparent">
+        <div className="p-2 bg-white rounded-lg border border-slate-200 print:bg-transparent print:border-slate-300 print:rounded-none">
           <p className="text-[10px] font-bold text-slate-500 uppercase">Wszystkie Pisma</p>
           <p className="text-base font-black text-slate-900 font-mono">{totalCount}</p>
         </div>
-        <div className="p-2 bg-white rounded-lg border border-slate-200">
+        <div className="p-2 bg-white rounded-lg border border-slate-200 print:bg-transparent print:border-slate-300 print:rounded-none">
           <p className="text-[10px] font-bold text-emerald-600 uppercase">Przychodzące (IN)</p>
           <p className="text-base font-black text-emerald-700 font-mono">{inCount}</p>
         </div>
-        <div className="p-2 bg-white rounded-lg border border-slate-200">
+        <div className="p-2 bg-white rounded-lg border border-slate-200 print:bg-transparent print:border-slate-300 print:rounded-none">
           <p className="text-[10px] font-bold text-sky-600 uppercase">Wychodzące (OUT)</p>
           <p className="text-base font-black text-sky-700 font-mono">{outCount}</p>
         </div>
       </div>
 
       {/* Table */}
-      <div className="border border-slate-200 rounded-xl overflow-hidden mb-6 print:overflow-visible">
+      <div className="border border-slate-200 rounded-xl overflow-hidden mb-6 print:border-none print:rounded-none print:overflow-visible">
         <table className="w-full text-[10px] border-collapse" style={{ tableLayout: 'fixed', width: '100%' }}>
           <thead>
             <tr className="bg-slate-900 text-white font-bold text-left">
-              <th className="py-2 px-2 text-center" style={{ width: '4%' }}>Lp.</th>
+              <th className="py-2 px-2 text-center whitespace-nowrap" style={{ width: '4%' }}>Lp.</th>
               <th className="py-2 px-2" style={{ width: '18%' }}>Sygnatura</th>
-              <th className="py-2 px-2 text-center" style={{ width: '10%' }}>Data</th>
-              <th className="py-2 px-2 text-center" style={{ width: '9%' }}>Kierunek</th>
+              <th className="py-2 px-2 text-center whitespace-nowrap" style={{ width: '10%' }}>Data</th>
+              <th className="py-2 px-2 text-center whitespace-nowrap" style={{ width: '9%' }}>Kierunek</th>
               <th className="py-2 px-2" style={{ width: '22%' }}>Nadawca / Odbiorca</th>
               <th className="py-2 px-2" style={{ width: '27%' }}>Temat & Przedmiot Pisma</th>
-              <th className="py-2 px-2 text-center" style={{ width: '10%' }}>Status</th>
+              <th className="py-2 px-2 text-center whitespace-nowrap" style={{ width: '10%' }}>Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
@@ -2347,14 +2319,11 @@ export function OfficialMeetingMinutesTemplate({
           />
 
           {/* Document Title */}
-          <div className="text-center mt-6 mb-7 sm:mb-8">
-            <span className="inline-block text-[9.5px] font-bold uppercase tracking-widest text-indigo-700 bg-indigo-50 px-3.5 py-1 rounded-full border border-indigo-200/80 mb-3 sm:mb-3.5">
-              Oficjalna Dokumentacja Zebrania
-            </span>
+          <div className="text-center mt-4 mb-6">
             <h2 className="text-xl font-black uppercase tracking-tight text-slate-900">
               PROTOKÓŁ ZE SPOTKANIA NAUKOWEGO
             </h2>
-            <div className="mt-2.5 sm:mt-3 space-y-1">
+            <div className="mt-2 space-y-1">
               <h3 className="text-sm font-bold text-indigo-950 uppercase tracking-wide">
                 {formatOrgFullName(orgName)}
               </h3>
@@ -2365,7 +2334,7 @@ export function OfficialMeetingMinutesTemplate({
           </div>
 
           {/* Meeting Metadata Table */}
-          <div className="mb-6 border border-slate-300 rounded-xl overflow-hidden shadow-2xs">
+          <div className="mb-6 border border-slate-300 rounded-xl overflow-hidden shadow-2xs print:border-none print:shadow-none print:rounded-none">
             <table className="w-full text-left text-xs border-collapse">
               <tbody>
                 <tr className="border-b border-slate-200 bg-slate-50/80">
