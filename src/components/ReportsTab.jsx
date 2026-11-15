@@ -1875,7 +1875,7 @@ export default function ReportsTab({
       <OfficialWskzDocumentA4
         isOpen={isA4ModalOpen}
         onClose={() => setIsA4ModalOpen(false)}
-        title={isPrintingProtocol ? 'Oficjalny Protokół Zbiorczy Wydanych Dokumentów' : (DOCUMENT_TYPES.find(d => d.id === selectedDocType)?.title || 'Dokument A4')}
+        title={isPrintingProtocol ? 'Oficjalny Protokół Zbiorczy Wydanych Dokumentów' : (DOCUMENT_CATEGORIES.find(d => d.id === selectedDocType)?.title || 'Dokument A4')}
         documentCode={currentDocNumber}
         academicYear={academicYear}
         org={currentOrg}
