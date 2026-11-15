@@ -300,6 +300,7 @@ export default function ReportsTab({
         'Współorganizatorzy': (m.coOrgs || []).map(co => co.shortName || co.name).join(', ') || 'Brak',
         'Temat / Cel prac projektowych': m.title,
         'Koordynator / Prowadzący': m.speaker,
+        'Frekwencja': m.totalParticipants || 0,
       }));
 
       const summaryRows = (interClubData.byOrgStats || []).map(item => ({
