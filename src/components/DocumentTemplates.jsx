@@ -287,12 +287,17 @@ export function generateDocumentNumber(prefix, indexNumber, seed = getCurrentAca
 }
 
 export function formatPolishDate(date = new Date()) {
-  const d = new Date(date);
-  return d.toLocaleDateString('pl-PL', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
+  try {
+    const d = date ? new Date(date) : new Date();
+    if (isNaN(d.getTime())) return new Date().toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
+    return d.toLocaleDateString('pl-PL', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  } catch (_e) {
+    return new Date().toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
 }
 
 /**
@@ -2025,6 +2030,7 @@ export function OfficialRegistryProtocolTemplate({
   academicYear = getCurrentAcademicYear(),
   supervisors = [],
   columnVisibility = {},
+  docDate = new Date(),
 }) {
   const { id: orgId, name: orgName, shortName: orgShortName, tag: orgTag, unit: orgUnit } = getOrgMetadata(org);
   const activeSupervisors = getActiveSupervisors(supervisors, org);
@@ -2050,7 +2056,7 @@ export function OfficialRegistryProtocolTemplate({
         docLabel="Protokół"
         docNumber={academicYear}
         dateLabel="Wydano:"
-        docDate={new Date()}
+        docDate={docDate}
       />
 
       {/* Title */}

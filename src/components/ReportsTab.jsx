@@ -225,6 +225,9 @@ export default function ReportsTab({
   // Stan oficjalnego modala A4 (Portal)
   const [isA4ModalOpen, setIsA4ModalOpen] = useState(false);
 
+  // Oficjalna data wystawienia dokumentów A4 (domyślnie bieżąca data systemowa)
+  const [docDate, setDocDate] = useState(() => new Date());
+
   // Stan dla Generatora Zestawień Międzykołowych dla Władz Uczelni (Ścisła izolacja do aktywnego koła)
   const [interClubStartDate, setInterClubStartDate] = useState(() => {
     return getInterClubDefaultDateRange(academicYear).startDate;
@@ -1810,6 +1813,7 @@ export default function ReportsTab({
                     academicYear={academicYear}
                     supervisors={supervisors}
                     columnVisibility={columnVisibility}
+                    docDate={docDate}
                   />
                 ) : (
                   <>
@@ -1820,6 +1824,8 @@ export default function ReportsTab({
                         points={memberPoints}
                         supervisors={supervisors}
                         academicYear={academicYear}
+                        docNumber={currentDocNumber}
+                        docDate={docDate}
                         isEditing={isEditing}
                         customText={membershipCustomText}
                         onUpdateCustomText={setMembershipCustomText}
@@ -1835,6 +1841,7 @@ export default function ReportsTab({
                         presentationDate={presentationDate}
                         supervisors={supervisors}
                         academicYear={academicYear}
+                        docDate={docDate}
                         isEditing={isEditing}
                         onUpdateTopic={setPresentationTopic}
                         org={currentOrg}
@@ -1848,6 +1855,7 @@ export default function ReportsTab({
                         termDates={termDates}
                         supervisors={supervisors}
                         academicYear={academicYear}
+                        docDate={docDate}
                         isEditing={isEditing}
                         customDuties={boardCustomDuties}
                         onUpdateDuties={setBoardCustomDuties}
@@ -1860,6 +1868,7 @@ export default function ReportsTab({
                         meetings={customMeetingsList}
                         supervisors={supervisors}
                         academicYear={academicYear}
+                        docDate={docDate}
                         isEditing={isEditing}
                         onUpdateMeetings={setCustomMeetingsList}
                         onOpenAddModal={() => setIsAddMeetingModalOpen(true)}
@@ -1878,7 +1887,7 @@ export default function ReportsTab({
                         projectMeetings={interClubData?.projectMeetings || []}
                         summaryStats={interClubData?.summaryStats || {}}
                         byOrgStats={interClubData?.byOrgStats || []}
-                        docDate={new Date()}
+                        docDate={docDate}
                         onExportExcel={handleExportInterClubToExcel}
                         onPrint={handlePrint}
                       />
@@ -1890,6 +1899,7 @@ export default function ReportsTab({
                         meetings={orgMeetings}
                         supervisors={supervisors}
                         academicYear={academicYear}
+                        docDate={docDate}
                         org={currentOrg}
                         columnVisibility={columnVisibility}
                         customMeetingTypes={customMeetingTypes}
@@ -1902,6 +1912,7 @@ export default function ReportsTab({
                       <ResearchConferencesRegistryTemplate
                         supervisors={supervisors}
                         academicYear={academicYear}
+                        docDate={docDate}
                         isEditing={isEditing}
                         activities={customResearchActivities}
                         onUpdateActivities={setCustomResearchActivities}
@@ -1915,6 +1926,7 @@ export default function ReportsTab({
                         org={currentOrg}
                         supervisors={supervisors}
                         academicYear={academicYear}
+                        docDate={docDate}
                         membersCount={members.length}
                         meetingsCount={legitimateMeetings.length}
                         isEditing={isEditing}
@@ -1989,6 +2001,7 @@ export default function ReportsTab({
             academicYear={academicYear}
             supervisors={supervisors}
             columnVisibility={columnVisibility}
+            docDate={docDate}
           />
         ) : (
           <>
@@ -1999,6 +2012,8 @@ export default function ReportsTab({
                 points={memberPoints}
                 supervisors={supervisors}
                 academicYear={academicYear}
+                docNumber={currentDocNumber}
+                docDate={docDate}
                 isEditing={isEditing}
                 customText={membershipCustomText}
                 onUpdateCustomText={setMembershipCustomText}
@@ -2014,6 +2029,7 @@ export default function ReportsTab({
                 presentationDate={presentationDate}
                 supervisors={supervisors}
                 academicYear={academicYear}
+                docDate={docDate}
                 isEditing={isEditing}
                 onUpdateTopic={setPresentationTopic}
                 org={currentOrg}
@@ -2027,6 +2043,7 @@ export default function ReportsTab({
                 termDates={termDates}
                 supervisors={supervisors}
                 academicYear={academicYear}
+                docDate={docDate}
                 isEditing={isEditing}
                 customDuties={boardCustomDuties}
                 onUpdateDuties={setBoardCustomDuties}
@@ -2039,6 +2056,7 @@ export default function ReportsTab({
                 meetings={customMeetingsList}
                 supervisors={supervisors}
                 academicYear={academicYear}
+                docDate={docDate}
                 isEditing={isEditing}
                 onUpdateMeetings={setCustomMeetingsList}
                 onOpenAddModal={() => setIsAddMeetingModalOpen(true)}
@@ -2057,7 +2075,7 @@ export default function ReportsTab({
                 projectMeetings={interClubData?.projectMeetings || []}
                 summaryStats={interClubData?.summaryStats || {}}
                 byOrgStats={interClubData?.byOrgStats || []}
-                docDate={new Date()}
+                docDate={docDate}
                 onExportExcel={handleExportInterClubToExcel}
                 onPrint={handlePrint}
               />
@@ -2069,6 +2087,7 @@ export default function ReportsTab({
                 meetings={orgMeetings}
                 supervisors={supervisors}
                 academicYear={academicYear}
+                docDate={docDate}
                 org={currentOrg}
                 columnVisibility={columnVisibility}
                 customMeetingTypes={customMeetingTypes}
@@ -2081,6 +2100,7 @@ export default function ReportsTab({
               <ResearchConferencesRegistryTemplate
                 supervisors={supervisors}
                 academicYear={academicYear}
+                docDate={docDate}
                 isEditing={isEditing}
                 activities={customResearchActivities}
                 onUpdateActivities={setCustomResearchActivities}
@@ -2094,6 +2114,7 @@ export default function ReportsTab({
                 org={currentOrg}
                 supervisors={supervisors}
                 academicYear={academicYear}
+                docDate={docDate}
                 membersCount={members.length}
                 meetingsCount={legitimateMeetings.length}
                 isEditing={isEditing}
