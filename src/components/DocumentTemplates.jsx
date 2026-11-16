@@ -538,47 +538,47 @@ export function MembershipCertificateTemplate({
       </div>
 
       {/* ── STREFA 2 (ŚRODKOWA): Kluczowe Dane, Metryki i Wyszczególnienie Aktywności ── */}
-      <div className="relative z-10 flex-grow flex flex-col justify-center my-2 sm:my-3 space-y-3 sm:space-y-3.5">
+      <div className="relative z-10 flex-grow flex flex-col justify-center mt-1 sm:mt-1.5 mb-2 space-y-2 sm:space-y-2.5">
         {!hasDataForYear ? (
-          <div className="my-3 p-5 bg-amber-50/90 border-2 border-dashed border-amber-300 rounded-xl text-center">
-            <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-amber-100 text-amber-700 mb-2">
-              <AlertTriangle className="w-5 h-5" />
+          <div className="my-2 p-4 bg-amber-50/90 border-2 border-dashed border-amber-300 rounded-xl text-center">
+            <div className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-amber-100 text-amber-700 mb-1.5">
+              <AlertTriangle className="w-4 h-4" />
             </div>
             <h3 className="text-xs font-semibold text-slate-900 uppercase tracking-tight">
               Brak zarejestrowanej działalności w roku {academicYear}
             </h3>
-            <p className="text-[10.5px] text-slate-600 mt-1 max-w-md mx-auto leading-relaxed font-normal">
+            <p className="text-[10px] text-slate-600 mt-0.5 max-w-md mx-auto leading-relaxed font-normal">
               Dla roku akademickiego <strong className="font-semibold text-slate-800">{academicYear}</strong> nie zarejestrowano spotkań ani obecności studenta <strong className="font-semibold text-slate-800">{studentName}</strong>. Wystawienie oficjalnego zaświadczenia z zerowymi wartościami zostało wstrzymane.
             </p>
-            <div className="mt-2 inline-block bg-white px-2.5 py-1 rounded-md border border-amber-200 text-[9px] text-slate-500 font-mono">
+            <div className="mt-1.5 inline-block bg-white px-2 py-0.5 rounded-md border border-amber-200 text-[8.5px] text-slate-500 font-mono">
               Status: {isFutureYear ? 'Okres planowany' : (isPastYear ? 'Brak wpisów archiwalnych' : 'Brak danych w roku bieżącym')}
             </div>
           </div>
         ) : (
           <>
-            {/* ── Metryka Osiągnięć i Frekwencji ── */}
+            {/* ── Metryka Osiągnięć i Frekwencji (podniesiona i odchudzona pionowo o 12px) ── */}
             <div
-              className="metric-box-container w-full grid gap-2 p-3 sm:p-3.5 bg-slate-50/90 rounded-xl border border-slate-200/90 text-center shadow-2xs box-border"
+              className="metric-box-container w-full grid gap-2 px-3 py-2 sm:py-2.5 bg-slate-50/90 rounded-xl border border-slate-200/90 text-center shadow-2xs box-border"
               style={{ gridTemplateColumns: `repeat(${visibleMetricCols}, minmax(0, 1fr))`, width: '100%' }}
             >
               {showFreqSection && (
-                <div className="p-1.5 border-r border-slate-200 min-w-0">
-                  <span className="text-[9px] uppercase font-medium text-slate-500 tracking-wider block truncate">Łączna Frekwencja</span>
-                  <span className="text-xl sm:text-2xl font-normal text-emerald-700 font-mono leading-none my-1 block">{safeFreq}%</span>
-                  <span className="text-[9px] text-slate-500 block truncate">
+                <div className="py-1 px-1.5 border-r border-slate-200 min-w-0">
+                  <span className="text-[8.5px] uppercase font-medium text-slate-500 tracking-wider block truncate">Łączna Frekwencja</span>
+                  <span className="text-xl sm:text-2xl font-normal text-emerald-700 font-mono leading-none my-0.5 block">{safeFreq}%</span>
+                  <span className="text-[8.5px] text-slate-500 block truncate">
                     {safeFreqData?.displayRatio || `${safePresent} / ${totalMeetings}`} spotkań{bonusCount > 0 ? ` (+${bonusCount})` : ''}
                   </span>
                 </div>
               )}
               {showPointsSection && (
-                <div className="p-1.5 border-r border-slate-200 min-w-0">
-                  <span className="text-[9px] uppercase font-medium text-slate-500 tracking-wider block truncate">Punkty Aktywności</span>
-                  <span className="text-xl sm:text-2xl font-normal text-purple-700 font-mono leading-none my-1 block">{safePoints} pkt</span>
-                  <span className="text-[9px] text-slate-500 block truncate">Wykaz aktywności</span>
+                <div className="py-1 px-1.5 border-r border-slate-200 min-w-0">
+                  <span className="text-[8.5px] uppercase font-medium text-slate-500 tracking-wider block truncate">Punkty Aktywności</span>
+                  <span className="text-xl sm:text-2xl font-normal text-purple-700 font-mono leading-none my-0.5 block">{safePoints} pkt</span>
+                  <span className="text-[8.5px] text-slate-500 block truncate">Wykaz aktywności</span>
                 </div>
               )}
-              <div className="p-1.5 min-w-0 flex flex-col justify-center">
-                <span className="text-[9px] uppercase font-medium text-slate-500 tracking-wider block truncate">Ocena Aktywności</span>
+              <div className="py-1 px-1.5 min-w-0 flex flex-col justify-center">
+                <span className="text-[8.5px] uppercase font-medium text-slate-500 tracking-wider block truncate">Ocena Aktywności</span>
                 {showDetailedActivityRating ? (
                   <>
                     <span className="text-xs font-normal text-indigo-950 block leading-tight mt-0.5 truncate">
@@ -597,16 +597,16 @@ export function MembershipCertificateTemplate({
                     </span>
                   </>
                 ) : (
-                  <span className="text-xs font-bold text-indigo-950 block leading-tight mt-1">
+                  <span className="text-xs font-bold text-indigo-950 block leading-tight mt-0.5">
                     Aktywny członek koła naukowego
                   </span>
                 )}
               </div>
             </div>
 
-            {/* ── Wyszczególnienie aktywności merytorycznej (bez ikon AI) ── */}
-            <div className="text-[10.5px] sm:text-[11px] text-slate-700 space-y-2 bg-indigo-50/40 p-3.5 sm:p-4 rounded-xl border border-indigo-100/90 shadow-2xs font-normal">
-              <p className="font-semibold text-indigo-950 text-[10.5px] sm:text-[11px] uppercase tracking-wide">
+            {/* ── Wyszczególnienie aktywności merytorycznej (podniesione i zoptymalizowane) ── */}
+            <div className="text-[10px] sm:text-[10.5px] text-slate-700 space-y-1.5 bg-indigo-50/40 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl border border-indigo-100/90 shadow-2xs font-normal">
+              <p className="font-semibold text-indigo-950 text-[10px] sm:text-[10.5px] uppercase tracking-wide">
                 Wyszczególnienie aktywności merytorycznej:
               </p>
               {isEditing ? (
@@ -614,10 +614,10 @@ export function MembershipCertificateTemplate({
                   rows={3}
                   value={customText || `• Udział w comiesięcznych spotkaniach merytorycznych, seminaryjnych oraz warsztatowych Koła.\n• Wystąpienia prelekcyjne, udział w sesjach Journal Club i dyskusjach klinicznych.\n• Praca nad materiałami edukacyjnymi, analizami piśmiennictwa i projektami badawczymi Koła.`}
                   onChange={(e) => onUpdateCustomText(e.target.value)}
-                  className="w-full p-2 bg-white border border-indigo-300 rounded-lg text-[10.5px] font-sans text-slate-800 focus:outline-none"
+                  className="w-full p-2 bg-white border border-indigo-300 rounded-lg text-[10px] font-sans text-slate-800 focus:outline-none"
                 />
               ) : (
-                <ul className="list-disc list-inside space-y-1 sm:space-y-1.5 text-[10px] sm:text-[10.5px] text-slate-700 pl-1 leading-snug">
+                <ul className="list-disc list-inside space-y-1 text-[9.5px] sm:text-[10px] text-slate-700 pl-1 leading-snug">
                   {(customText || `Udział w comiesięcznych spotkaniach merytorycznych, seminaryjnych oraz warsztatowych Koła.\nWystąpienia prelekcyjne, udział w sesjach Journal Club i dyskusjach klinicznych.\nPraca nad materiałami edukacyjnymi, analizami piśmiennictwa i projektami badawczymi Koła.`)
                     .split('\n')
                     .filter(Boolean)
@@ -630,14 +630,14 @@ export function MembershipCertificateTemplate({
           </>
         )}
 
-        <p className="text-[9.5px] sm:text-[10px] text-slate-500 italic leading-normal text-center px-2">
+        <p className="text-[9px] sm:text-[9.5px] text-slate-500 italic leading-snug text-center px-2 mt-0.5 mb-0.5">
           Zaświadczenie wydaje się na wniosek studenta celem przedłożenia w&nbsp;Dziekanacie Uczelni, do&nbsp;stypendium Rektora, 
           do&nbsp;suplementu do&nbsp;dyplomu lub do&nbsp;portfolio osiągnięć naukowych.
         </p>
       </div>
 
       {/* ── STREFA 3 (DOLNA): Podpisy i Stopka WSKZ ── */}
-      <div className="relative z-10 mt-auto pt-2 space-y-2">
+      <div className="relative z-10 mt-auto pt-1 space-y-1">
         {/* Dynamiczny Blok Podpisów */}
         <DocumentSignaturesBlock
           activeSupervisors={activeSupervisors}
@@ -646,6 +646,7 @@ export function MembershipCertificateTemplate({
           orgUnit={orgUnit}
           chairpersonTitle="Zarząd Koła Naukowego"
           chairpersonSub={orgShortName}
+          className="pt-1.5 sm:pt-2"
         />
       </div>
     </div>

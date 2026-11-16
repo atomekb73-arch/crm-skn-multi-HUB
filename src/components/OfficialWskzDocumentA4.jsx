@@ -52,7 +52,7 @@ export function OfficialWskzDocumentSheet({
         ...style,
       }}
       className={`w-full max-w-[210mm] shrink-0 bg-white text-slate-900 rounded-xs shadow-2xl border border-slate-300 relative select-text mb-8 print:mb-0 print:border-none print:shadow-none ${
-        isMultiPage ? 'min-h-[297mm] h-auto' : 'h-[297mm] min-h-[297mm]'
+        isMultiPage ? 'min-h-[297mm] h-auto' : 'h-[297mm] min-h-[297mm] max-h-[297mm] overflow-hidden'
       } ${className}`}
     >
       {/* ── STREFA GÓRNA: Padding 15mm 20mm 0 20mm + Oficjalny Nagłówek WSKZ ── */}
@@ -90,7 +90,7 @@ export function OfficialWskzDocumentSheet({
       >
         {/* Dyskretny, oficjalny pasek metadanych systemu CRM SKN WSKZ */}
         <div
-          style={{ padding: '0 20mm 6px 20mm' }}
+          style={{ padding: '0 20mm 16px 20mm' }}
           className="flex items-end justify-between text-[8pt] text-slate-500 font-sans leading-tight select-text w-full"
         >
           <div className="text-left space-y-0.5">
@@ -199,6 +199,7 @@ export default function OfficialWskzDocumentA4({
             max-width: 210mm !important;
             min-height: 297mm !important;
             height: ${isMultiPage ? 'auto' : '297mm'} !important;
+            max-height: ${isMultiPage ? 'none' : '297mm'} !important;
             margin: 0 auto !important;
             padding: 0 !important;
             box-sizing: border-box !important;
@@ -209,6 +210,8 @@ export default function OfficialWskzDocumentA4({
             justify-content: space-between !important;
             page-break-inside: ${isMultiPage ? 'auto' : 'avoid'} !important;
             break-inside: ${isMultiPage ? 'auto' : 'avoid'} !important;
+            page-break-after: ${isMultiPage ? 'auto' : 'avoid'} !important;
+            break-after: ${isMultiPage ? 'auto' : 'avoid'} !important;
             overflow: ${isMultiPage ? 'visible' : 'hidden'} !important;
             background: #ffffff !important;
           }
