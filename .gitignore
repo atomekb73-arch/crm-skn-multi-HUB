@@ -57,3 +57,6 @@ Thumbs.db
 # Migrated local data & spreadsheets
 *.xlsx
 scripts/psychoonkologia_data/
+
+.vercel
+.env*
