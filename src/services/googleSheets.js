@@ -410,6 +410,7 @@ export async function saveMeetingAttendanceToSupabase({
 
     const metaPayload = {
       desc: opisAktywnosci,
+      opisAktywnosci: opisAktywnosci,
       rawName: String(item.rawName || item.fullName || name || '').trim(),
       fullName: String(item.fullName || name || '').trim(),
       joinTime: String(item.joinTime || '').trim(),
@@ -418,7 +419,10 @@ export async function saveMeetingAttendanceToSupabase({
       manualApproved: true,
       isEligible: true,
       status: isSup ? 'supervisor' : (isSpk ? 'speaker' : (isGst ? 'guest' : 'approved')),
-      ...(Array.isArray(item.activities) && item.activities.length > 0 ? { activities: item.activities } : {}),
+      punkty: punkty,
+      points: punkty,
+      activities: Array.isArray(item.activities) ? item.activities : [],
+      daysAttended: item.daysAttended ? Number(item.daysAttended) : 1,
     };
 
     return {
@@ -1267,9 +1271,11 @@ export async function fetchMeetingAttendanceFromSupabase(meetingCode, sheetId = 
           manualApproved: true,
           isEligible: true,
           status: isSupervisor ? 'supervisor' : (isSpeaker ? 'speaker' : 'approved'),
+          punkty: Number(item.points ?? 1),
           points: Number(item.points ?? 1),
           opisAktywnosci: parsedDesc?.desc || rawDesc || 'Obecność na spotkaniu naukowym',
-          ...(Array.isArray(parsedDesc?.activities) ? { activities: parsedDesc.activities } : {}),
+          activities: Array.isArray(parsedDesc?.activities) ? parsedDesc.activities : [],
+          daysAttended: Number(parsedDesc?.daysAttended || 1),
           joinTime: parsedDesc?.joinTime || item.meeting_date || '18:00',
           durationStr: parsedDesc?.durationStr || '60 min',
           durationMinutes: parsedDesc?.durationMinutes ?? 60,

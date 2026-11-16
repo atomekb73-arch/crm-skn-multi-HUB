@@ -1525,12 +1525,14 @@ export default function MeetingsTab({
           durationMinutes: p.durationMinutes ?? null,
           durationStr: p.durationStr || '',
           activities: Array.isArray(p.activities) ? p.activities : [],
+          daysAttended: typeof p.daysAttended === 'number' && p.daysAttended > 0 ? p.daysAttended : 1,
           rola,
           role: isSup ? 'supervisor' : (isSpk ? 'speaker' : (isGst ? 'guest' : 'member')),
           isSupervisor: isSup,
           isSpeaker: isSpk,
           isGuest: isGst,
           punkty: (isSup || isSpk || isGst) ? 0 : (Number(p.punkty ?? p.points ?? 1) || 1),
+          points: (isSup || isSpk || isGst) ? 0 : (Number(p.punkty ?? p.points ?? 1) || 1),
           opisAktywnosci: p.opisAktywnosci || 'Obecność na spotkaniu'
         };
       })

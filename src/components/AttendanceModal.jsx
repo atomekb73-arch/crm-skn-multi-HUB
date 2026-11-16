@@ -187,13 +187,26 @@ function resolveInitialParticipants(meeting = {}, members = [], participants = [
       isEligible: Boolean(isExplicitSpeaker || isSup || isOver),
       manualApproved: Boolean(isSup ? true : approved),
       hasManualOverride: Boolean(p.hasManualOverride || isExplicitSpeaker || isSup || isMonika),
-      activities: Array.isArray(p.activities) ? p.activities : [],
+      activities: Array.isArray(p.activities) && p.activities.length > 0
+        ? p.activities
+        : (typeof p.opisAktywnosci === 'string' && p.opisAktywnosci.includes('(')
+            ? (p.opisAktywnosci.match(/\((.*?)\)/)?.[1]?.split(',').map(s => s.trim().toUpperCase()) || [])
+            : (Array.isArray(p.activities) ? p.activities : [])),
+      daysAttended: Number(p.daysAttended || 1),
       status: String(isSup ? 'supervisor' : (isExplicitSpeaker ? 'speaker' : (finalMember || isMonika ? (approved ? 'approved' : 'rejected_short_time') : 'guest'))),
     };
   };
 
-  if (Array.isArray(participants) && participants.length > 0) {
-    return participants.map((p, i) => processParticipant(p, i));
+  const candidateList = (Array.isArray(participants) && participants.length > 0)
+    ? participants
+    : (Array.isArray(meeting?.participantRecords) && meeting.participantRecords.length > 0
+        ? meeting.participantRecords
+        : (Array.isArray(meeting?.attendees) && meeting.attendees.length > 0 && typeof meeting.attendees[0] === 'object'
+            ? meeting.attendees
+            : null));
+
+  if (Array.isArray(candidateList) && candidateList.length > 0) {
+    return candidateList.map((p, i) => processParticipant(p, i));
   }
 
   const keys = [
@@ -1517,6 +1530,9 @@ export default function AttendanceModal({
           organization_id: activeOrgId,
           orgTag: currentOrg?.tag || '',
           punkty: finalPts,
+          points: finalPts,
+          activities: extraActs,
+          daysAttended: attendeeDays,
           trybUdzialu: breakdown.isParticipantOnline ? 'ONLINE' : 'STACJONARNY',
         };
       });

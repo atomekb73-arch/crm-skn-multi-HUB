@@ -438,6 +438,12 @@ export function resolveParticipantFromSavedIndex(rawIdx, members = [], customSup
   if (matchedMember) {
     const memName = String(matchedMember.fullName || `${matchedMember.firstName || ''} ${matchedMember.lastName || ''}`).trim();
     const memIndex = String(matchedMember.index || matchedMember.nrIndeksu || '').trim();
+    let acts = Array.isArray(candidateObj?.activities) ? candidateObj.activities : [];
+    if (acts.length === 0 && typeof candidateObj?.opisAktywnosci === 'string' && candidateObj.opisAktywnosci.includes('(')) {
+      const matchActs = candidateObj.opisAktywnosci.match(/\((.*?)\)/)?.[1];
+      if (matchActs) acts = matchActs.split(',').map(s => s.trim().toUpperCase());
+    }
+    const memPts = Number(candidateObj?.punkty ?? candidateObj?.points ?? 1);
     return {
       id: `p_saved_mem_${i}_${memIndex || i}`,
       rawName: memName,
@@ -447,8 +453,10 @@ export function resolveParticipantFromSavedIndex(rawIdx, members = [], customSup
       durationStr: candidateObj?.durationStr || '60 min',
       durationMinutes: candidateObj?.durationMinutes || 60,
       timeMinutes: candidateObj?.timeMinutes || 60,
-      punkty: Number(candidateObj?.punkty ?? candidateObj?.points ?? 1),
+      punkty: memPts,
+      points: memPts,
       aktywnosc: candidateObj?.opisAktywnosci || candidateObj?.aktywnosc || 'Obecność',
+      opisAktywnosci: candidateObj?.opisAktywnosci || 'Obecność',
       member: matchedMember,
       nrIndeksu: memIndex,
       index: memIndex,
@@ -463,11 +471,15 @@ export function resolveParticipantFromSavedIndex(rawIdx, members = [], customSup
       manualApproved: true,
       hasManualOverride: false,
       status: 'approved',
+      activities: acts,
+      daysAttended: Number(candidateObj?.daysAttended || 1),
     };
   }
 
   // 5. Monika Łyniewska
   if (isMonikaLyniewska(cleanText) || isMonikaLyniewska(lookupCandidate)) {
+    const monikaPts = Number(candidateObj?.punkty ?? candidateObj?.points ?? 1);
+    const monikaActs = Array.isArray(candidateObj?.activities) ? candidateObj.activities : [];
     return {
       id: `p_saved_monika_${i}`,
       rawName: 'Monika Łyniewska',
@@ -477,8 +489,10 @@ export function resolveParticipantFromSavedIndex(rawIdx, members = [], customSup
       durationStr: '60 min',
       durationMinutes: 60,
       timeMinutes: 60,
-      punkty: 1,
-      aktywnosc: 'Obecność',
+      punkty: monikaPts,
+      points: monikaPts,
+      aktywnosc: candidateObj?.opisAktywnosci || candidateObj?.aktywnosc || 'Obecność',
+      opisAktywnosci: candidateObj?.opisAktywnosci || 'Obecność',
       member: { fullName: 'Monika Łyniewska', index: '34327', nrIndeksu: '34327', email: '34327@student.wskz.pl', status: 'active', statusWeryfikacji: 'Zatwierdzony' },
       nrIndeksu: '34327',
       index: '34327',
@@ -493,6 +507,8 @@ export function resolveParticipantFromSavedIndex(rawIdx, members = [], customSup
       manualApproved: true,
       hasManualOverride: true,
       status: 'approved',
+      activities: monikaActs,
+      daysAttended: Number(candidateObj?.daysAttended || 1),
     };
   }
 

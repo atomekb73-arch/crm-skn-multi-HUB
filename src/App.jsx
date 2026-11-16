@@ -1286,6 +1286,14 @@ export default function App() {
           const rawDurStr = parsedDesc?.durationStr || `${rawDurMinutes} min`;
           const rawStatus = parsedDesc?.status || (matchedMember ? (row.role || 'Członek koła') : (row.role || (isSupervisor ? 'Opiekun' : (isSpeaker ? 'Prelegent' : 'Gość'))));
 
+          let rawActivities = Array.isArray(parsedDesc?.activities) ? parsedDesc.activities : [];
+          if (rawActivities.length === 0 && typeof parsedDesc?.desc === 'string' && parsedDesc.desc.includes('(')) {
+            const mActs = parsedDesc.desc.match(/\((.*?)\)/)?.[1];
+            if (mActs) rawActivities = mActs.split(',').map(s => s.trim().toUpperCase());
+          }
+          const rawDaysAttended = Number(parsedDesc?.daysAttended || 1);
+          const rawPoints = Number(row.points ?? parsedDesc?.punkty ?? parsedDesc?.points ?? 1);
+
           const ewItem = {
             id: row.id,
             supabaseId: row.id,
@@ -1304,8 +1312,8 @@ export default function App() {
             rola: matchedMember ? (row.role || 'Członek koła') : (row.role || (isSupervisor ? 'Opiekun' : (isSpeaker ? 'Prelegent' : 'Gość'))),
             role: isSupervisor ? 'supervisor' : (isSpeaker ? 'speaker' : (matchedMember ? 'member' : 'guest')),
             roleDisplay: isSupervisor ? 'Opiekun' : (isSpeaker ? 'Prelegent' : (matchedMember ? 'Członek koła' : 'Gość')),
-            punkty: Number(row.points ?? 1),
-            points: Number(row.points ?? 1),
+            punkty: rawPoints,
+            points: rawPoints,
             isSupervisor,
             isSpeaker,
             isGuest: !isSupervisor && !isSpeaker && !matchedMember,
@@ -1316,6 +1324,8 @@ export default function App() {
             durationMinutes: rawDurMinutes,
             durationStr: rawDurStr,
             joinTime: rawJoinTime,
+            activities: rawActivities,
+            daysAttended: rawDaysAttended,
           };
           supabaseEwidencja.push(ewItem);
 
@@ -3017,6 +3027,37 @@ export default function App() {
         return m;
       })
     );
+
+    try {
+      const activeOrgId = (currentOrg?.id === 'skn-template' ? 'skn_seksuologii' : currentOrg?.id) || 'skn_seksuologii';
+      const storageKey = getOrgKey(activeOrgId, 'crm_ewidencja');
+      const rawEw = localStorage.getItem(storageKey);
+      let existingEw = rawEw ? JSON.parse(rawEw) : [];
+      if (!Array.isArray(existingEw)) existingEw = [];
+      const updatedCode = payloadCode || targetId;
+      const cleanUpCode = updatedCode.toUpperCase().replace(/^\[.*?\]\s*/, '').trim();
+      existingEw = existingEw.filter(item => {
+        const iCode = String(item.kodSpotkania || '').toUpperCase().trim();
+        const iClean = iCode.replace(/^\[.*?\]\s*/, '').trim();
+        return iCode !== updatedCode.toUpperCase().trim() && (!cleanUpCode || iClean !== cleanUpCode);
+      });
+      const newItems = (payload?.allVerifiedList || payload?.attendees || []).map(att => ({
+        kodSpotkania: payloadCode || targetId,
+        dataSpotkania: payload?.meetingDate || att.dataSpotkania || new Date().toISOString().slice(0, 10),
+        nrIndeksu: att.nrIndeksu || att.index || '',
+        fullName: att.fullName || att.name || '',
+        punkty: Number(att.punkty ?? att.points ?? 1),
+        points: Number(att.punkty ?? att.points ?? 1),
+        activities: Array.isArray(att.activities) ? att.activities : [],
+        daysAttended: Number(att.daysAttended || 1),
+        opisAktywnosci: att.opisAktywnosci || 'Obecność na spotkaniu',
+        rola: att.rola || att.roleDisplay || 'Członek koła',
+        role: att.role || 'member',
+        status: att.status || 'approved',
+      }));
+      existingEw.push(...newItems);
+      localStorage.setItem(storageKey, JSON.stringify(existingEw));
+    } catch {}
   }
 
   const pendingCount = quarantine.length;
