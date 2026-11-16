@@ -907,26 +907,48 @@ export default function ReportsTab({
       {/* ── Print Specific Styles ── */}
       <style>{`
         @media print {
-          body * {
-            visibility: hidden !important;
+          @page {
+            size: A4 portrait;
+            margin: 0;
           }
-          #reports-print-container,
-          #reports-print-container * {
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          /* Jeśli otwarty jest oficjalny modal A4 (#skn-a4-modal-backdrop), ukryj #root, a modal zrób w 100% widocznym */
+          body:has(#skn-a4-modal-backdrop) #root {
+            display: none !important;
+          }
+          body:has(#skn-a4-modal-backdrop) #skn-a4-modal-backdrop,
+          body:has(#skn-a4-modal-backdrop) #skn-a4-modal-backdrop * {
             visibility: visible !important;
           }
-          #reports-print-container {
-            position: absolute !important;
-            left: 0 !important;
-            right: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            max-width: 186mm !important;
+
+          /* Gdy drukujemy bezpośrednio z podglądu w zakładce (bez modala) */
+          body:not(:has(#skn-a4-modal-backdrop)) nav,
+          body:not(:has(#skn-a4-modal-backdrop)) header,
+          body:not(:has(#skn-a4-modal-backdrop)) aside,
+          body:not(:has(#skn-a4-modal-backdrop)) button,
+          body:not(:has(#skn-a4-modal-backdrop)) input,
+          body:not(:has(#skn-a4-modal-backdrop)) .no-print,
+          body:not(:has(#skn-a4-modal-backdrop)) .print\\:hidden,
+          body:not(:has(#skn-a4-modal-backdrop)) .tabs-container {
+            display: none !important;
+          }
+
+          body:not(:has(#skn-a4-modal-backdrop)) #reports-print-container {
+            position: static !important;
+            display: flex !important;
+            justify-content: center !important;
+            width: 210mm !important;
+            max-width: 210mm !important;
             margin: 0 auto !important;
             padding: 0 !important;
             box-sizing: border-box !important;
             box-shadow: none !important;
             border: none !important;
-            display: block !important;
+            overflow: visible !important;
           }
           .doc-a4-sheet {
             box-sizing: border-box !important;
@@ -1923,12 +1945,12 @@ export default function ReportsTab({
 
                     {selectedDocType === 'annual_report' && (
                       <AnnualReportProtocolTemplate
-                        org={currentOrg}
+                        members={members}
+                        meetings={legitimateMeetings}
                         supervisors={supervisors}
                         academicYear={academicYear}
                         docDate={docDate}
-                        membersCount={members.length}
-                        meetingsCount={legitimateMeetings.length}
+                        org={currentOrg}
                         isEditing={isEditing}
                         columnVisibility={columnVisibility}
                       />
@@ -2111,12 +2133,12 @@ export default function ReportsTab({
 
             {selectedDocType === 'annual_report' && (
               <AnnualReportProtocolTemplate
-                org={currentOrg}
+                members={members}
+                meetings={legitimateMeetings}
                 supervisors={supervisors}
                 academicYear={academicYear}
                 docDate={docDate}
-                membersCount={members.length}
-                meetingsCount={legitimateMeetings.length}
+                org={currentOrg}
                 isEditing={isEditing}
                 columnVisibility={columnVisibility}
               />

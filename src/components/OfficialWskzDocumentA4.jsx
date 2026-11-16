@@ -180,6 +180,7 @@ export default function OfficialWskzDocumentA4({
           #skn-a4-modal-backdrop {
             position: static !important;
             display: block !important;
+            visibility: visible !important;
             overflow: visible !important;
             width: 210mm !important;
             min-height: 297mm !important;
@@ -188,6 +189,9 @@ export default function OfficialWskzDocumentA4({
             -webkit-backdrop-filter: none !important;
             padding: 0 !important;
             margin: 0 !important;
+          }
+          #skn-a4-modal-backdrop * {
+            visibility: visible !important;
           }
           #skn-a4-print-area {
             position: relative !important;
