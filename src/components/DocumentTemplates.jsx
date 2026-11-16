@@ -158,13 +158,14 @@ export function DocumentStandardHeader({
   org = null,
   docNumber = null,
   docDate = new Date(),
-  docLabel = 'Dokument', // 'Dokument' | 'Rejestr' | 'Ewidencja' | 'Protokół' | 'Nr aktu' | 'Nr dokumentu' | 'Nr'
-  subtitle = null, // Opcjonalna Linia 4
-  dateLabel = 'Stan na dzień:', // 'Stan na dzień:' | 'Data:' | 'Wydano:'
+  docLabel = 'Nr dokumentu',
+  subtitle = null,
+  dateLabel = 'Wrocław, dn.',
   className = '',
   borderBottom = true,
   rightCustom = null,
-  showFullBanner = false, // Domyślnie false - nagłówek WSKZ jest renderowany przez OfficialWskzDocumentSheet
+  showFullBanner = false,
+  hideDocNumber = false,
 }) {
   const { name: orgName, tag: orgTag, unit: orgUnit } = getOrgMetadata(org);
 
@@ -182,36 +183,38 @@ export function DocumentStandardHeader({
         </div>
       )}
 
-      {/* 2. Kompaktowy pasek metadanych: Jednostka / Koło oraz Sygnatura / Data */}
-      <div className="flex items-start justify-between gap-3 text-left">
-        <div className="text-left space-y-0.5 min-w-0">
-          <p className="text-[8.5pt] font-normal tracking-wider text-slate-500 uppercase font-sans truncate">
+      {/* 2. Kompaktowy pasek metadanych: Jednostka / Data (Linia 1) oraz Pełna nazwa koła 100% szerokości (Linia 2) */}
+      <div className="w-full text-left space-y-0.5">
+        <div className="flex items-center justify-between w-full">
+          <p className="text-[8.5pt] font-normal tracking-wider text-slate-500 uppercase font-sans">
             {orgUnit.toUpperCase()}
           </p>
-          <p className="text-[10pt] font-bold tracking-tight text-indigo-950 uppercase font-sans truncate">
-            {orgName.toUpperCase()}
-          </p>
-          {subtitle && (
-            <p className="text-[8.5pt] font-normal text-slate-500 italic mt-0.5 font-sans truncate">
-              {subtitle}
-            </p>
+          {rightCustom ? (
+            rightCustom
+          ) : (
+            <div className="text-right flex items-center gap-2">
+              {!hideDocNumber && docNumber && (
+                <div className="inline-flex items-center gap-1 font-mono text-[8.5pt] font-semibold text-slate-800 bg-slate-100 px-2 py-0.2 rounded border border-slate-200 whitespace-nowrap shadow-2xs">
+                  {docLabel && <span className="text-slate-500 font-sans uppercase text-[7.5pt] tracking-wider font-normal">{docLabel}:</span>}
+                  <span>{docNumber}</span>
+                </div>
+              )}
+              <p className="text-[8.5pt] text-slate-500 font-sans whitespace-nowrap">
+                {dateLabel} {formatPolishDate(docDate)}
+              </p>
+            </div>
           )}
         </div>
 
-        {rightCustom ? (
-          rightCustom
-        ) : (
-          <div className="text-right shrink-0 space-y-0.5">
-            {docNumber && (
-              <div className="inline-flex items-center gap-1 font-mono text-[9pt] font-semibold text-slate-800 bg-slate-100 px-2.5 py-0.5 rounded border border-slate-200 whitespace-nowrap shadow-2xs">
-                {docLabel && <span className="text-slate-500 font-sans uppercase text-[8pt] tracking-wider font-normal">{docLabel}:</span>}
-                <span>{docNumber}</span>
-              </div>
-            )}
-            <p className="text-[8.5pt] text-slate-500 font-mono mt-0.5 whitespace-nowrap">
-              {dateLabel} {formatPolishDate(docDate)}
-            </p>
-          </div>
+        {/* Linia 2: Pełna nazwa koła na całą szerokość arkusza (bez truncate i bez ...) */}
+        <p className="w-full text-[9.5pt] sm:text-[10pt] font-bold tracking-tight text-indigo-950 uppercase font-sans leading-snug">
+          {orgName.toUpperCase()}
+        </p>
+
+        {subtitle && (
+          <p className="w-full text-[8.5pt] font-normal text-slate-500 italic mt-0.5 font-sans">
+            {subtitle}
+          </p>
         )}
       </div>
     </div>
@@ -224,6 +227,7 @@ export function DocumentStandardHeader({
 export function DocumentStandardFooter({
   org = null,
   docDate = new Date(),
+  docNumber = null,
   showBanner = false, // Domyślnie false - stopka WSKZ full-bleed jest renderowana przez OfficialWskzDocumentSheet
   pageNumberText = null,
   className = '',
@@ -233,24 +237,26 @@ export function DocumentStandardFooter({
 
   return (
     <div
-      className={`document-standard-footer w-full mt-auto pt-2 space-y-1 break-inside-avoid ${className}`}
+      className={`document-standard-footer w-full mt-auto pt-2 break-inside-avoid ${className}`}
       style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
     >
-      {/* Pasek techniczny z potwierdzeniem autentyczności */}
-      <div className="flex items-center justify-between text-[8pt] text-slate-400 font-sans px-0.5">
-        <div className="flex items-center gap-1">
-          <ShieldCheck size={11} className="text-indigo-600 shrink-0" />
-          <span>Autentyczność dokumentu potwierdzona w systemie CRM {orgGenitive}</span>
+      {/* Pasek techniczny z potwierdzeniem autentyczności (wyrównany do lewego marginesu, bez ikon AI) */}
+      <div className="flex items-end justify-between text-[8pt] text-slate-400 font-sans leading-tight select-text w-full">
+        <div className="text-left space-y-0.5">
+          <p className="text-[7.5pt] text-slate-400 leading-none">Autentyczność dokumentu potwierdzona w systemie</p>
+          <p className="text-[8pt] font-semibold text-slate-600 leading-none">CRM {orgGenitive}</p>
+          <p className="text-[7.5pt] text-slate-400 leading-none">Wygenerowano w systemie CRM SKN WSKZ</p>
         </div>
-        <div className="flex items-center gap-2">
-          {pageNumberText && <span className="font-semibold text-slate-500">{pageNumberText}</span>}
-          <span>Wrocław, dn. {formatPolishDate(docDate)}</span>
+        <div className="text-right shrink-0 space-y-0.5 font-sans">
+          {pageNumberText && <p className="font-semibold text-slate-600 text-[8pt]">{pageNumberText}</p>}
+          <p className="text-[8pt] text-slate-500">Wrocław, dn. {formatPolishDate(docDate)}</p>
+          {docNumber && <p className="font-mono text-[8pt] text-slate-600 font-medium">Nr ref.: {docNumber}</p>}
         </div>
       </div>
 
       {/* Oficjalna belka adresowo-rejestrowa WSKZ (tylko w trybie standalone bez wrapper A4) */}
       {showBanner && (
-        <div className="w-full overflow-hidden">
+        <div className="w-full overflow-hidden mt-1">
           <img
             src="/wskz-footer.png"
             alt="Wyższa Szkoła Kształcenia Zawodowego"
@@ -311,8 +317,27 @@ export function getActiveSupervisors(supervisors = [], org = null) {
 
 export function formatSupervisorName(s) {
   if (!s) return '';
-  if (typeof s === 'string') return s;
-  return `${s.academicTitle ? s.academicTitle + ' ' : ''}${s.name || s.fullName || ''}`.trim();
+  let text = '';
+  if (typeof s === 'string') {
+    text = s;
+  } else {
+    const rawTitle = (s.academicTitle || '').trim();
+    const rawName = (s.name || s.fullName || '').trim();
+    // Jeśli imię już zaczyna się od tytułu (np. name="mgr Martyna Dziekan" i academicTitle="mgr")
+    if (rawTitle && rawName.toLowerCase().startsWith(rawTitle.toLowerCase())) {
+      text = rawName;
+    } else {
+      text = `${rawTitle ? rawTitle + ' ' : ''}${rawName}`.trim();
+    }
+  }
+  // Wyeliminowanie podwójnych stopni / tytułów (np. "mgr mgr", "dr dr", "prof. prof.")
+  return text
+    .replace(/\b(mgr|dr|prof\.|hab\.)\s+\1\b/gi, '$1')
+    .replace(/\b(mgr|dr|prof\.|hab\.)\s+(mgr|dr|prof\.|hab\.)\b/gi, (match, p1, p2) => {
+      if (p1.toLowerCase() === p2.toLowerCase()) return p1;
+      return match;
+    })
+    .trim();
 }
 
 export function formatSupervisorRole(s) {
@@ -450,9 +475,10 @@ export function MembershipCertificateTemplate({
 
   const hasDataForYear = totalMeetings > 0 || safePresent > 0 || safePoints > 0;
 
-  // Visibility toggles for certificate sections (controlled via DocumentCustomizer)
+  // Visibility toggles for certificate sections (controlled via DocumentCustomizer & edit toggles)
   const showFreqSection = columnVisibility.cert_freq !== false;
   const showPointsSection = columnVisibility.cert_points !== false;
+  const showDetailedActivityRating = columnVisibility.cert_detailed_rating !== false;
   // Compute number of visible metric columns to adjust grid dynamically
   const visibleMetricCols = [showFreqSection, showPointsSection, true].filter(Boolean).length; // "Ocena" always shown
 
@@ -464,16 +490,22 @@ export function MembershipCertificateTemplate({
   const fieldName = member?.field || 'Psychologia';
   const yearLabel = member?.year ? `rok ${member.year}` : 'jednolite studia magisterskie';
 
+  // Dynamiczny nagłówek dokumentu:
+  // Domyślnie (gdy frekwencja jest włączona): ZAŚWIADCZENIE O CZŁONKOSTWIE I FREKWENCJI
+  // Gdy wyłączono opcję pokazywania frekwencji: ZAŚWIADCZENIE O CZŁONKOSTWIE
+  const certificateTitle = showFreqSection
+    ? 'Zaświadczenie o Członkostwie i Frekwencji'
+    : 'Zaświadczenie o Członkostwie';
+
   return (
     <div className="w-full flex-1 flex flex-col justify-between bg-white text-slate-900 font-sans select-text relative">
       {/* ── STREFA 1 (GÓRNA): Nagłówek Uczelni, Sygnatura, Tytuł i Formuła Wstępna ── */}
       <div className="relative z-10 space-y-2.5">
-        {/* Globalny Ujednolicony Nagłówek Uczelniany WSKZ i Koła */}
+        {/* Globalny Ujednolicony Nagłówek Uczelniany WSKZ i Koła (bez duplikatu numeru i bez ucinania ...) */}
         <DocumentStandardHeader
           org={org}
-          docNumber={docNumber}
           docDate={docDate}
-          docLabel="Nr dokumentu"
+          hideDocNumber={true}
           dateLabel="Wrocław, dn."
           borderBottom={true}
           className="border-indigo-900"
@@ -482,7 +514,7 @@ export function MembershipCertificateTemplate({
         {/* Tytuł Zaświadczenia */}
         <div className="text-center my-1.5 sm:my-2">
           <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-wide mt-1 uppercase [text-wrap:balance]">
-            Zaświadczenie o Członkostwie i Frekwencji
+            {certificateTitle}
           </h2>
           <p className="text-[10px] text-slate-500 font-normal tracking-wide mt-0.5">
             Rok akademicki {academicYear} &bull; Oficjalny Rejestr Działalności Studenckiej
@@ -542,27 +574,34 @@ export function MembershipCertificateTemplate({
               )}
               <div className="p-1.5 min-w-0 flex flex-col justify-center">
                 <span className="text-[9px] uppercase font-medium text-slate-500 tracking-wider block truncate">Ocena Aktywności</span>
-                <span className="text-xs font-normal text-indigo-950 block leading-tight mt-0.5 truncate">
-                  {safeFreq >= 90 ? 'Lider Koła' : safeFreq >= 75 ? 'Bardzo Aktywny' : (safeFreq >= 50 ? 'Aktywny Członek' : (isPastYear ? 'Brak zaliczenia' : 'W trakcie realizacji'))}
-                </span>
-                <span className={`text-[8.5px] font-medium flex items-center justify-center gap-0.5 mt-0.5 ${
-                  safeFreq >= 50 ? 'text-emerald-600' : (isPastYear ? 'text-rose-600' : 'text-slate-500')
-                }`}>
-                  {safeFreq >= 50 ? (
-                    <><CheckCircle2 size={10} /> Kryteria spełnione</>
-                  ) : isPastYear ? (
-                    <><AlertTriangle size={10} /> Kryteria niespełnione</>
-                  ) : (
-                    <><Clock size={10} /> Aktywność w toku</>
-                  )}
-                </span>
+                {showDetailedActivityRating ? (
+                  <>
+                    <span className="text-xs font-normal text-indigo-950 block leading-tight mt-0.5 truncate">
+                      {safeFreq >= 90 ? 'Lider Koła' : safeFreq >= 75 ? 'Bardzo Aktywny' : (safeFreq >= 50 ? 'Aktywny Członek' : (isPastYear ? 'Brak zaliczenia' : 'W trakcie realizacji'))}
+                    </span>
+                    <span className={`text-[8.5px] font-medium flex items-center justify-center gap-0.5 mt-0.5 ${
+                      safeFreq >= 50 ? 'text-emerald-600' : (isPastYear ? 'text-rose-600' : 'text-slate-500')
+                    }`}>
+                      {safeFreq >= 50 ? (
+                        <><CheckCircle2 size={10} /> Kryteria spełnione</>
+                      ) : isPastYear ? (
+                        <><AlertTriangle size={10} /> Kryteria niespełnione</>
+                      ) : (
+                        <><Clock size={10} /> Aktywność w toku</>
+                      )}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-xs font-bold text-indigo-950 block leading-tight mt-1">
+                    Aktywny członek koła naukowego
+                  </span>
+                )}
               </div>
             </div>
 
-            {/* ── Wyszczególnienie aktywności merytorycznej ── */}
+            {/* ── Wyszczególnienie aktywności merytorycznej (bez ikon AI) ── */}
             <div className="text-[10.5px] sm:text-[11px] text-slate-700 space-y-2 bg-indigo-50/40 p-3.5 sm:p-4 rounded-xl border border-indigo-100/90 shadow-2xs font-normal">
-              <p className="font-medium text-indigo-950 flex items-center gap-1.5 text-[11px] uppercase tracking-wide">
-                <Sparkles size={12} className="text-indigo-600 shrink-0" />
+              <p className="font-semibold text-indigo-950 text-[10.5px] sm:text-[11px] uppercase tracking-wide">
                 Wyszczególnienie aktywności merytorycznej:
               </p>
               {isEditing ? (
@@ -603,9 +642,6 @@ export function MembershipCertificateTemplate({
           chairpersonTitle="Zarząd Koła Naukowego"
           chairpersonSub={orgShortName}
         />
-
-        {/* Oficjalna Stopka WSKZ i CRM */}
-        <DocumentStandardFooter org={org} docDate={docDate} />
       </div>
     </div>
   );

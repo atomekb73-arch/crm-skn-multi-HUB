@@ -10,7 +10,7 @@ import {
   FileText,
   Building2,
 } from 'lucide-react';
-import { getOrgMetadata, getActiveSupervisors, formatSupervisorName, formatPolishDate } from './DocumentTemplates';
+import { getOrgMetadata, getActiveSupervisors, formatSupervisorName, formatPolishDate, formatOrgGenitive } from './DocumentTemplates';
 
 /**
  * Usuwa początkowy numer porządkowy z nazwy koła (np. "10 SKN Seksuologii" -> "SKN Seksuologii")
@@ -88,17 +88,20 @@ export function OfficialWskzDocumentSheet({
         style={{ width: '100%', margin: 0, padding: 0 }}
         className="break-inside-avoid select-none w-full mt-auto"
       >
-        {/* Dyskretny pasek metadanych systemu CRM SKN WSKZ */}
+        {/* Dyskretny, oficjalny pasek metadanych systemu CRM SKN WSKZ */}
         <div
           style={{ padding: '0 20mm 6px 20mm' }}
-          className="flex items-center justify-between text-[8.5pt] text-slate-400 font-sans leading-none"
+          className="flex items-end justify-between text-[8pt] text-slate-500 font-sans leading-tight select-text w-full"
         >
-          <span className="truncate pr-2">
-            Wygenerowano w systemie CRM SKN WSKZ • {activeOrgName}
-          </span>
-          <span className="shrink-0 font-mono text-[8pt]">
-            {docNumber ? `Nr ref.: ${docNumber}` : `Rok akad. ${academicYear || '2026/2027'}`}
-          </span>
+          <div className="text-left space-y-0.5">
+            <p className="text-[7.5pt] text-slate-400 leading-none">Autentyczność dokumentu potwierdzona w systemie</p>
+            <p className="text-[8pt] font-semibold text-slate-700 leading-none">CRM {formatOrgGenitive(activeOrgName)}</p>
+            <p className="text-[7.5pt] text-slate-400 leading-none">Wygenerowano w systemie CRM SKN WSKZ</p>
+          </div>
+          <div className="text-right shrink-0 space-y-0.5 font-sans">
+            <p className="text-[8pt] text-slate-500">Wrocław, dn. {formatPolishDate(docDate || new Date())}</p>
+            {docNumber && <p className="font-mono text-[8pt] text-slate-700 font-medium">Nr ref.: {docNumber}</p>}
+          </div>
         </div>
 
         {/* 1:1 Oficjalna Stopka Graficzna WSKZ Full-Bleed */}
@@ -129,6 +132,8 @@ export default function OfficialWskzDocumentA4({
   onClose,
   title = 'Podgląd i Druk Dokumentu A4',
   documentCode = null,
+  docNumber = null,
+  docDate = new Date(),
   academicYear = '2026/2027',
   org = null,
   isMultiPage = false,
@@ -136,6 +141,7 @@ export default function OfficialWskzDocumentA4({
   onToggleEdit = null,
   onExportExcel = null,
   docxUrl = '/szablon-pisma-wskz.docx',
+  extraActions = null,
   children,
 }) {
   if (!isOpen) return null;
@@ -289,6 +295,8 @@ export default function OfficialWskzDocumentA4({
 
         {/* Przyciski operacyjne */}
         <div className="flex items-center gap-2 flex-wrap justify-end w-full sm:w-auto">
+          {extraActions}
+
           {/* 1. Edytuj treść na żywo */}
           {onToggleEdit && (
             <button
@@ -358,7 +366,8 @@ export default function OfficialWskzDocumentA4({
       <OfficialWskzDocumentSheet
         org={org}
         academicYear={academicYear}
-        docNumber={documentCode}
+        docNumber={docNumber || documentCode}
+        docDate={docDate}
         isMultiPage={isMultiPage}
       >
         {children}

@@ -1249,6 +1249,64 @@ export default function ReportsTab({
                     </div>
                   </div>
                 )}
+
+                {/* Przełączniki widoczności dla Zaświadczenia (Frekwencja & Ocena Aktywności) */}
+                <div className="pt-2 border-t border-slate-200/80 space-y-2">
+                  <span className="text-[11px] font-bold text-slate-700 block">Opcje Zaświadczenia:</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {/* Przełącznik Frekwencji */}
+                    <button
+                      type="button"
+                      onClick={() => handleColumnVisibilityChange('cert_freq', columnVisibility.cert_freq === false)}
+                      className={`p-2 rounded-xl border text-xs font-semibold flex items-center justify-between gap-2 transition cursor-pointer select-none ${
+                        columnVisibility.cert_freq !== false
+                          ? 'bg-emerald-50/80 border-emerald-300 text-emerald-900 shadow-2xs'
+                          : 'bg-slate-50 border-slate-200 text-slate-500'
+                      }`}
+                      title="Włącza lub wyłącza blok frekwencji oraz dopisek w tytule zaświadczenia"
+                    >
+                      <div className="flex items-center gap-2">
+                        {columnVisibility.cert_freq !== false ? (
+                          <CheckSquare size={14} className="text-emerald-700 shrink-0" />
+                        ) : (
+                          <Square size={14} className="text-slate-400 shrink-0" />
+                        )}
+                        <span className="text-[11px]">Frekwencja i obecności</span>
+                      </div>
+                      <span className={`text-[9.5px] px-1.5 py-0.2 rounded font-mono ${
+                        columnVisibility.cert_freq !== false ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
+                      }`}>
+                        {columnVisibility.cert_freq !== false ? 'Włączona' : 'Ukryta'}
+                      </span>
+                    </button>
+
+                    {/* Przełącznik Szczegółowej Oceny Aktywności */}
+                    <button
+                      type="button"
+                      onClick={() => handleColumnVisibilityChange('cert_detailed_rating', columnVisibility.cert_detailed_rating === false)}
+                      className={`p-2 rounded-xl border text-xs font-semibold flex items-center justify-between gap-2 transition cursor-pointer select-none ${
+                        columnVisibility.cert_detailed_rating !== false
+                          ? 'bg-indigo-50/80 border-indigo-300 text-indigo-900 shadow-2xs'
+                          : 'bg-slate-50 border-slate-200 text-slate-500'
+                      }`}
+                      title="Przełącza pomiędzy szczegółową rangą (Lider/Kryteria spełnione) a czystym statusem Aktywny członek koła"
+                    >
+                      <div className="flex items-center gap-2">
+                        {columnVisibility.cert_detailed_rating !== false ? (
+                          <CheckSquare size={14} className="text-indigo-700 shrink-0" />
+                        ) : (
+                          <Square size={14} className="text-slate-400 shrink-0" />
+                        )}
+                        <span className="text-[11px]">Szczegółowa ranga</span>
+                      </div>
+                      <span className={`text-[9.5px] px-1.5 py-0.2 rounded font-mono ${
+                        columnVisibility.cert_detailed_rating !== false ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-200 text-slate-600'
+                      }`}>
+                        {columnVisibility.cert_detailed_rating !== false ? 'Pełna' : 'Prosta'}
+                      </span>
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1742,6 +1800,7 @@ export default function ReportsTab({
                 org={currentOrg}
                 academicYear={academicYear}
                 docNumber={currentDocNumber}
+                docDate={docDate}
                 isMultiPage={isMultiPageDoc}
               >
                 {isPrintingProtocol ? (
@@ -1877,6 +1936,8 @@ export default function ReportsTab({
         onClose={() => setIsA4ModalOpen(false)}
         title={isPrintingProtocol ? 'Oficjalny Protokół Zbiorczy Wydanych Dokumentów' : (DOCUMENT_CATEGORIES.find(d => d.id === selectedDocType)?.title || 'Dokument A4')}
         documentCode={currentDocNumber}
+        docNumber={currentDocNumber}
+        docDate={docDate}
         academicYear={academicYear}
         org={currentOrg}
         isMultiPage={isMultiPageDoc}
@@ -1888,6 +1949,38 @@ export default function ReportsTab({
             : (isPrintingProtocol ? handleExportToExcel : null)
         }
         docxUrl="/szablon-pisma-wskz.docx"
+        extraActions={
+          selectedDocType === 'membership' ? (
+            <div className="flex items-center gap-1.5 mr-1">
+              <button
+                type="button"
+                onClick={() => handleColumnVisibilityChange('cert_freq', columnVisibility.cert_freq === false)}
+                className={`px-2 py-1 rounded-lg border text-[11px] font-semibold transition cursor-pointer select-none flex items-center gap-1.5 ${
+                  columnVisibility.cert_freq !== false
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                    : 'bg-slate-100 text-slate-500 border-slate-300'
+                }`}
+                title="Włącz/wyłącz sekcję frekwencji w zaświadczeniu"
+              >
+                {columnVisibility.cert_freq !== false ? <CheckSquare size={13} className="text-emerald-700" /> : <Square size={13} />}
+                <span>Frekwencja: {columnVisibility.cert_freq !== false ? 'Wł.' : 'Wył.'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleColumnVisibilityChange('cert_detailed_rating', columnVisibility.cert_detailed_rating === false)}
+                className={`px-2 py-1 rounded-lg border text-[11px] font-semibold transition cursor-pointer select-none flex items-center gap-1.5 ${
+                  columnVisibility.cert_detailed_rating !== false
+                    ? 'bg-indigo-50 text-indigo-800 border-indigo-300'
+                    : 'bg-slate-100 text-slate-500 border-slate-300'
+                }`}
+                title="Przełącz szczegółową ocenę aktywności (ranga / aktywny członek)"
+              >
+                {columnVisibility.cert_detailed_rating !== false ? <CheckSquare size={13} className="text-indigo-700" /> : <Square size={13} />}
+                <span>Ocena: {columnVisibility.cert_detailed_rating !== false ? 'Ranga' : 'Prosta'}</span>
+              </button>
+            </div>
+          ) : null
+        }
       >
         {isPrintingProtocol ? (
           <OfficialRegistryProtocolTemplate
