@@ -283,7 +283,7 @@ export default function MeetingsTab({
   onCustomDateChange,
 }) {
   const { currentOrg, getStorageKey } = useOrg();
-  const { isViewer } = useAuth();
+  const { user, isViewer } = useAuth();
   const [selectedMeeting, setSelectedMeeting] = useState(null);
   const [activeMeetingId, setActiveMeetingId] = useState(null);
   const [isPending, startTransition] = useTransition();
@@ -1928,18 +1928,87 @@ export default function MeetingsTab({
         }));
     }
 
+    // 1. Dynamic event time calculation from calendar event data
+    const getHHMM = (val) => {
+      if (!val || typeof val !== 'string') return null;
+      if (val.includes('T')) {
+        const timePart = val.split('T')[1];
+        const match = timePart.match(/^(\d{2}:\d{2})/);
+        return match ? match[1] : null;
+      }
+      const match = val.match(/\b(\d{2}:\d{2})\b/);
+      return match ? match[1] : null;
+    };
+
+    const startH = selectedMeeting.startTime || getHHMM(selectedMeeting.start_dt);
+    const endH = selectedMeeting.endTime || getHHMM(selectedMeeting.end_dt);
+
+    let calculatedTime = '18:00 - 19:30';
+    if (startH && endH && startH !== endH) {
+      calculatedTime = `${startH} - ${endH}`;
+    } else if (startH) {
+      calculatedTime = startH;
+    } else if (selectedMeeting.time && typeof selectedMeeting.time === 'string' && selectedMeeting.time.trim()) {
+      calculatedTime = selectedMeeting.time.trim();
+    }
+
+    // 2. Dynamic recorder from logged-in user profile / active session
+    const activeUser = user || (() => {
+      try {
+        return JSON.parse(localStorage.getItem('crm_skn_auth_user') || localStorage.getItem('crm_skn_auth_session') || 'null');
+      } catch {
+        return null;
+      }
+    })();
+
+    let defaultRecorder = 'Protokolant Zarządu Koła';
+    if (activeUser?.name) {
+      const rawName = activeUser.name.trim();
+      const roleExtra = activeUser.roleTitle || activeUser.roleLabel;
+      if (roleExtra && !rawName.includes('(')) {
+        defaultRecorder = `${rawName} (${roleExtra})`;
+      } else {
+        defaultRecorder = rawName;
+      }
+    }
+
+    // 3. Dynamic content from calendar event description with prompt prefix
+    const cleanDescription = (htmlOrText) => {
+      if (!htmlOrText || typeof htmlOrText !== 'string') return '';
+      return htmlOrText
+        .replace(/<br\s*[\/]?>/gi, '\n')
+        .replace(/<\/p>/gi, '\n\n')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .trim();
+    };
+
+    const rawEventDesc = selectedMeeting.notes || selectedMeeting.description || selectedMeeting.opis || selectedMeeting.rawDescription || selectedMeeting.details || '';
+    const cleanEventDesc = cleanDescription(rawEventDesc);
+
+    const fallbackContent = `W dniu ${selectedMeeting.formattedDate || selectedMeeting.date} odbyło się oficjalne spotkanie naukowe Koła ${currentOrg.shortName}. Prelegent przedstawił referat dotyczący zagadnień: „${selectedMeeting.title}”.\n\nW części dyskusyjnej członkowie koła aktywnie analizowali zaprezentowane studia przypadków oraz metodologię badań naukowych.`;
+
+    const defaultContent = cleanEventDesc
+      ? `[Przejrzyj poniższy opis z kalendarza, uzupełnij przebieg spotkania i dokonaj odpowiednich korekt]\n\n${cleanEventDesc}`
+      : fallbackContent;
+
     if (savedProtocol) {
       setProtocolForm({
         protocolNumber: savedProtocol.protocolNumber || defNumber,
         date: savedProtocol.date || selectedMeeting.formattedDate || selectedMeeting.date || new Date().toISOString().slice(0, 10),
-        time: savedProtocol.time || '18:00 - 19:30',
+        time: savedProtocol.time || calculatedTime,
         location: savedProtocol.location || selectedMeeting.location || 'Google Meet / MS Teams (Tryb zdalny)',
         title: savedProtocol.title || selectedMeeting.title || '',
         speaker: savedProtocol.speaker || selectedMeeting.who || 'Zarząd Koła Naukowego',
         attendeesCount: savedProtocol.attendeesCount ?? confirmedCount,
-        recorder: savedProtocol.recorder || 'Protokolant Zarządu Koła',
+        recorder: savedProtocol.recorder || defaultRecorder,
         agenda: savedProtocol.agenda || `1. Otwarcie spotkania naukowego ${cleanCode} przez Przewodniczącego Koła.\n2. Wystąpienie prelegenta (${selectedMeeting.who || 'Zarząd'}) na temat: „${selectedMeeting.title}”.\n3. Dyskusja naukowa z udziałem członków koła i sesja pytań (Q&A).\n4. Podsumowanie, wolne wnioski i ustalenie terminu kolejnego zebrania.`,
-        content: savedProtocol.content || `W dniu ${selectedMeeting.formattedDate || selectedMeeting.date} odbyło się oficjalne spotkanie naukowe Koła ${currentOrg.shortName}. Prelegent przedstawił referat dotyczący zagadnień: „${selectedMeeting.title}”.\n\nW części dyskusyjnej członkowie koła aktywnie analizowali zaprezentowane studia przypadków oraz metodologię badań naukowych.`,
+        content: savedProtocol.content || defaultContent,
         conclusions: savedProtocol.conclusions || `1. Przyjęto sprawozdanie z referatu ${cleanCode} do dorobku naukowego Koła.\n2. Zweryfikowano i zatwierdzono listę obecności (${confirmedCount} uczestników).\n3. Zaplanowano kolejne wystąpienie seminaryjne.`,
         includeAttendeesList: savedProtocol.includeAttendeesList ?? true,
         attendees: savedProtocol.attendees && savedProtocol.attendees.length > 0 ? savedProtocol.attendees : currentAttendees,
@@ -1948,14 +2017,14 @@ export default function MeetingsTab({
       setProtocolForm({
         protocolNumber: defNumber,
         date: selectedMeeting.formattedDate || selectedMeeting.date || new Date().toISOString().slice(0, 10),
-        time: '18:00 - 19:30',
+        time: calculatedTime,
         location: selectedMeeting.location || 'Google Meet / MS Teams (Tryb zdalny)',
         title: selectedMeeting.title || '',
         speaker: selectedMeeting.who || 'Zarząd Koła Naukowego',
         attendeesCount: confirmedCount,
-        recorder: 'Protokolant Zarządu Koła',
+        recorder: defaultRecorder,
         agenda: `1. Otwarcie spotkania naukowego ${cleanCode} przez Przewodniczącego Koła.\n2. Wystąpienie prelegenta (${selectedMeeting.who || 'Zarząd'}) na temat: „${selectedMeeting.title}”.\n3. Dyskusja naukowa z udziałem członków koła i sesja pytań (Q&A).\n4. Podsumowanie, wolne wnioski i ustalenie terminu kolejnego zebrania.`,
-        content: `W dniu ${selectedMeeting.formattedDate || selectedMeeting.date} odbyło się oficjalne spotkanie naukowe Koła ${currentOrg.shortName}. Prelegent przedstawił referat dotyczący zagadnień: „${selectedMeeting.title}”.\n\nW części dyskusyjnej członkowie koła aktywnie analizowali zaprezentowane studia przypadków oraz metodologię badań naukowych.`,
+        content: defaultContent,
         conclusions: `1. Przyjęto sprawozdanie z referatu ${cleanCode} do dorobku naukowego Koła.\n2. Zweryfikowano i zatwierdzono listę obecności (${confirmedCount} uczestników).\n3. Zaplanowano kolejne wystąpienie seminaryjne.`,
         includeAttendeesList: true,
         attendees: currentAttendees,
