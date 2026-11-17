@@ -1962,15 +1962,18 @@ export default function MeetingsTab({
       }
     })();
 
+    const cleanRecorderName = (name) => {
+      if (!name || typeof name !== 'string') return '';
+      return name
+        .replace(/\s*\(\s*superadmin\s*\)/gi, '')
+        .replace(/\s*\(\s*admin\s*\)/gi, '')
+        .trim();
+    };
+
     let defaultRecorder = 'Protokolant Zarządu Koła';
     if (activeUser?.name) {
-      const rawName = activeUser.name.trim();
-      const roleExtra = activeUser.roleTitle || activeUser.roleLabel;
-      if (roleExtra && !rawName.includes('(')) {
-        defaultRecorder = `${rawName} (${roleExtra})`;
-      } else {
-        defaultRecorder = rawName;
-      }
+      const cleanName = cleanRecorderName(activeUser.name);
+      defaultRecorder = cleanName || 'Protokolant Zarządu Koła';
     }
 
     // 3. Dynamic content from calendar event description with prompt prefix
@@ -2007,7 +2010,7 @@ export default function MeetingsTab({
         title: savedProtocol.title || selectedMeeting.title || '',
         speaker: savedProtocol.speaker || selectedMeeting.who || 'Zarząd Koła Naukowego',
         attendeesCount: savedProtocol.attendeesCount ?? confirmedCount,
-        recorder: savedProtocol.recorder || defaultRecorder,
+        recorder: cleanRecorderName(savedProtocol.recorder) || defaultRecorder,
         agenda: savedProtocol.agenda || `1. Otwarcie spotkania naukowego ${cleanCode} przez Przewodniczącego Koła.\n2. Wystąpienie prelegenta (${selectedMeeting.who || 'Zarząd'}) na temat: „${selectedMeeting.title}”.\n3. Dyskusja naukowa z udziałem członków koła i sesja pytań (Q&A).\n4. Podsumowanie, wolne wnioski i ustalenie terminu kolejnego zebrania.`,
         content: savedProtocol.content || defaultContent,
         conclusions: savedProtocol.conclusions || `1. Przyjęto sprawozdanie z referatu ${cleanCode} do dorobku naukowego Koła.\n2. Zweryfikowano i zatwierdzono listę obecności (${formatPolishAttendeeCount(confirmedCount, 'nominative')}).\n3. Zaplanowano kolejne wystąpienie seminaryjne.`,
@@ -3368,7 +3371,7 @@ export default function MeetingsTab({
       {/* ── Meeting Protocol / Minutes Modal ── */}
       {isProtocolModalOpen && selectedMeeting && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden font-sans">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-4xl w-full max-h-[95vh] min-h-[88vh] flex flex-col overflow-hidden font-sans">
             
             {/* Modal Header */}
             <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
@@ -3522,10 +3525,10 @@ export default function MeetingsTab({
                 <textarea
                   id="protocol-agenda-textarea"
                   name="protocolAgenda"
-                  rows={3}
+                  rows={5}
                   value={protocolForm.agenda}
                   onChange={e => setProtocolForm({ ...protocolForm, agenda: e.target.value })}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:border-indigo-500 font-sans leading-relaxed text-xs resize-y min-h-[90px]"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:border-indigo-500 font-sans leading-relaxed text-xs resize-y min-h-[115px]"
                 />
               </div>
 
@@ -3536,10 +3539,10 @@ export default function MeetingsTab({
                 <textarea
                   id="protocol-content-textarea"
                   name="protocolContent"
-                  rows={4}
+                  rows={8}
                   value={protocolForm.content}
                   onChange={e => setProtocolForm({ ...protocolForm, content: e.target.value })}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:border-indigo-500 font-sans leading-relaxed text-xs resize-y min-h-[90px]"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:border-indigo-500 font-sans leading-relaxed text-xs resize-y min-h-[185px]"
                 />
               </div>
 
@@ -3550,10 +3553,10 @@ export default function MeetingsTab({
                 <textarea
                   id="protocol-conclusions-textarea"
                   name="protocolConclusions"
-                  rows={3}
+                  rows={4}
                   value={protocolForm.conclusions}
                   onChange={e => setProtocolForm({ ...protocolForm, conclusions: e.target.value })}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:border-indigo-500 font-sans leading-relaxed text-xs resize-y min-h-[90px]"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:border-indigo-500 font-sans leading-relaxed text-xs resize-y min-h-[95px]"
                 />
               </div>
 
