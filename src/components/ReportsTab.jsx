@@ -1877,6 +1877,7 @@ export default function ReportsTab({
                         termDates={termDates}
                         supervisors={supervisors}
                         academicYear={academicYear}
+                        docNumber={currentDocNumber}
                         docDate={docDate}
                         isEditing={isEditing}
                         customDuties={boardCustomDuties}
@@ -2065,6 +2066,7 @@ export default function ReportsTab({
                 termDates={termDates}
                 supervisors={supervisors}
                 academicYear={academicYear}
+                docNumber={currentDocNumber}
                 docDate={docDate}
                 isEditing={isEditing}
                 customDuties={boardCustomDuties}

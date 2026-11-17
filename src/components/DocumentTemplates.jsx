@@ -760,6 +760,7 @@ export function BoardCertificateTemplate({
   termDates = '1 października 2026 r. – 30 września 2027 r.',
   supervisors = [],
   academicYear = getCurrentAcademicYear(),
+  docNumber: propDocNumber = null,
   docDate = new Date(),
   isEditing = false,
   customDuties = null,
@@ -769,7 +770,7 @@ export function BoardCertificateTemplate({
   const { id: orgId, name: orgName, shortName: orgShortName, tag: orgTag, unit: orgUnit } = getOrgMetadata(org);
   const orgGenitive = formatOrgGenitive(orgName);
 
-  const docNumber = generateDocumentNumber('BOARD', member?.index || member?.indexNumber || '00000', academicYear, orgTag);
+  const docNumber = propDocNumber || generateDocumentNumber('BOARD', member?.index || member?.indexNumber || '00000', academicYear, orgTag);
   const activeSupervisors = getActiveSupervisors(supervisors, org);
 
   const studentName = member?.fullName || `${member?.firstName || ''} ${member?.lastName || ''}`.trim() || 'Imię i Nazwisko Członka';
@@ -791,13 +792,12 @@ export function BoardCertificateTemplate({
     <div className="w-full flex-1 flex flex-col justify-between bg-white text-slate-900 font-sans select-text relative">
       {/* ── STREFA 1 (GÓRNA): Nagłówek Uczelni, Sygnatura, Tytuł i Formuła Wstępna ── */}
       <div className="relative z-10 space-y-2.5">
-        {/* Globalny Ujednolicony Nagłówek Uczelniany i Koła */}
+        {/* Globalny Ujednolicony Nagłówek Uczelniany WSKZ i Koła (bez duplikatu numeru i bez ucinania ...) */}
         <DocumentStandardHeader
           org={org}
-          docNumber={docNumber}
           docDate={docDate}
-          docLabel="Nr aktu"
-          dateLabel="Data:"
+          hideDocNumber={true}
+          dateLabel="Wrocław, dn."
           borderBottom={true}
           className="border-indigo-900"
         />
@@ -867,8 +867,8 @@ export function BoardCertificateTemplate({
         </div>
       </div>
 
-      {/* ── STREFA 3 (DOLNA): Podpisy i Stopka ── */}
-      <div className="relative z-10 mt-auto pt-2 space-y-2">
+      {/* ── STREFA 3 (DOLNA): Podpisy i Stopka WSKZ ── */}
+      <div className="relative z-10 mt-auto pt-1 space-y-1">
         <DocumentSignaturesBlock
           activeSupervisors={activeSupervisors}
           orgShortName={orgShortName}
@@ -876,9 +876,8 @@ export function BoardCertificateTemplate({
           orgUnit={orgUnit}
           chairpersonTitle="Dziekanat / Dyrekcja"
           chairpersonSub={orgUnit}
+          className="pt-1.5 sm:pt-2"
         />
-
-        <DocumentStandardFooter org={org} docDate={docDate} />
       </div>
     </div>
   );
