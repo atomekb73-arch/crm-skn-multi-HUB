@@ -41,10 +41,11 @@ export function OfficialWskzDocumentSheet({
       style={{
         fontFamily: 'Arial, Helvetica, sans-serif',
         width: '210mm',
-        minHeight: '297mm',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
+        minHeight: isMultiPage ? 'auto' : '297mm',
+        height: isMultiPage ? 'auto' : '297mm',
+        display: isMultiPage ? 'block' : 'flex',
+        flexDirection: isMultiPage ? undefined : 'column',
+        justifyContent: isMultiPage ? undefined : 'space-between',
         padding: 0,
         margin: '0 auto',
         background: '#ffffff',
@@ -52,20 +53,19 @@ export function OfficialWskzDocumentSheet({
         ...style,
       }}
       className={`w-full max-w-[210mm] shrink-0 bg-white text-slate-900 rounded-xs shadow-2xl border border-slate-300 relative select-text mb-8 print:mb-0 print:border-none print:shadow-none ${
-        isMultiPage ? 'min-h-[297mm] h-auto' : 'h-[297mm] min-h-[297mm] max-h-[297mm] overflow-hidden'
+        isMultiPage ? 'min-h-auto h-auto' : 'h-[297mm] min-h-[297mm] max-h-[297mm] overflow-hidden'
       } ${className}`}
     >
       {/* ── STREFA GÓRNA: Padding 15mm 20mm 0 20mm + Oficjalny Nagłówek WSKZ ── */}
       <div
         style={{
-          flex: 1,
           display: 'flex',
           flexDirection: 'column',
           padding: '15mm 20mm 0 20mm',
           width: '100%',
           boxSizing: 'border-box',
         }}
-        className="w-full select-text"
+        className={`w-full select-text ${isMultiPage ? 'print:!p-0 print:!w-full print:!block' : 'flex-1'}`}
       >
         {/* 1:1 Oficjalny Nagłówek Graficzny WSKZ (Logo + Cytat Marka Twaina) */}
         <div className="pb-3 select-none w-full">
@@ -83,43 +83,45 @@ export function OfficialWskzDocumentSheet({
         </div>
       </div>
 
-      {/* ── STREFA DOLNA: Full-Bleed Stopka WSKZ (0 mm spadu do dolnej krawędzi) ── */}
-      <div
-        style={{ width: '100%', margin: 0, padding: 0 }}
-        className="break-inside-avoid select-none w-full mt-auto"
-      >
-        {/* Dyskretny, oficjalny pasek metadanych systemu CRM SKN WSKZ */}
+      {/* ── STREFA DOLNA: Full-Bleed Stopka WSKZ (tylko dla dokumentów jednostronicowych) ── */}
+      {!isMultiPage && (
         <div
-          style={{ padding: '0 20mm 16px 20mm' }}
-          className="flex items-end justify-between text-[8pt] text-slate-500 font-sans leading-tight select-text w-full"
+          style={{ width: '100%', margin: 0, padding: 0 }}
+          className="break-inside-avoid select-none w-full mt-auto"
         >
-          <div className="text-left space-y-0.5">
-            <p className="text-[7.5pt] text-slate-400 leading-none">Autentyczność dokumentu potwierdzona w systemie</p>
-            <p className="text-[8pt] font-semibold text-slate-700 leading-none">CRM {formatOrgGenitive(activeOrgName)}</p>
-            <p className="text-[7.5pt] text-slate-400 leading-none">Wygenerowano w systemie CRM SKN WSKZ</p>
+          {/* Dyskretny, oficjalny pasek metadanych systemu CRM SKN WSKZ */}
+          <div
+            style={{ padding: '0 20mm 16px 20mm' }}
+            className="flex items-end justify-between text-[8pt] text-slate-500 font-sans leading-tight select-text w-full"
+          >
+            <div className="text-left space-y-0.5">
+              <p className="text-[7.5pt] text-slate-400 leading-none">Autentyczność dokumentu potwierdzona w systemie</p>
+              <p className="text-[8pt] font-semibold text-slate-700 leading-none">CRM {formatOrgGenitive(activeOrgName)}</p>
+              <p className="text-[7.5pt] text-slate-400 leading-none">Wygenerowano w systemie CRM SKN WSKZ</p>
+            </div>
+            <div className="text-right shrink-0 space-y-0.5 font-sans">
+              <p className="text-[8pt] text-slate-500">Wrocław, dn. {formatPolishDate(docDate || new Date())}</p>
+              {docNumber && <p className="font-mono text-[8pt] text-slate-700 font-medium">Nr ref.: {docNumber}</p>}
+            </div>
           </div>
-          <div className="text-right shrink-0 space-y-0.5 font-sans">
-            <p className="text-[8pt] text-slate-500">Wrocław, dn. {formatPolishDate(docDate || new Date())}</p>
-            {docNumber && <p className="font-mono text-[8pt] text-slate-700 font-medium">Nr ref.: {docNumber}</p>}
-          </div>
-        </div>
 
-        {/* 1:1 Oficjalna Stopka Graficzna WSKZ Full-Bleed */}
-        <img
-          src="/wskz-footer.png"
-          alt="Wyższa Szkoła Kształcenia Zawodowego — Stopka oficjalna"
-          style={{
-            width: '100%',
-            height: 'auto',
-            display: 'block',
-            margin: 0,
-            padding: 0,
-            verticalAlign: 'bottom',
-          }}
-          className="w-full h-auto block object-cover print:object-cover"
-          loading="eager"
-        />
-      </div>
+          {/* 1:1 Oficjalna Stopka Graficzna WSKZ Full-Bleed */}
+          <img
+            src="/wskz-footer.png"
+            alt="Wyższa Szkoła Kształcenia Zawodowego — Stopka oficjalna"
+            style={{
+              width: '100%',
+              height: 'auto',
+              display: 'block',
+              margin: 0,
+              padding: 0,
+              verticalAlign: 'bottom',
+            }}
+            className="w-full h-auto block object-cover print:object-cover"
+            loading="eager"
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -160,7 +162,7 @@ export default function OfficialWskzDocumentA4({
         @media print {
           @page {
             size: A4 portrait;
-            margin: 0;
+            margin: ${isMultiPage ? '14mm 15mm 16mm 15mm' : '0'};
           }
           * {
             -webkit-print-color-adjust: exact !important;
@@ -169,7 +171,7 @@ export default function OfficialWskzDocumentA4({
           html, body {
             margin: 0 !important;
             padding: 0 !important;
-            width: 210mm !important;
+            width: ${isMultiPage ? '100%' : '210mm'} !important;
             background: #ffffff !important;
             overflow: visible !important;
           }
@@ -182,8 +184,8 @@ export default function OfficialWskzDocumentA4({
             display: block !important;
             visibility: visible !important;
             overflow: visible !important;
-            width: 210mm !important;
-            min-height: 297mm !important;
+            width: ${isMultiPage ? '100%' : '210mm'} !important;
+            min-height: auto !important;
             background: transparent !important;
             backdrop-filter: none !important;
             -webkit-backdrop-filter: none !important;
@@ -194,10 +196,10 @@ export default function OfficialWskzDocumentA4({
             visibility: visible !important;
           }
           #skn-a4-print-area {
-            position: relative !important;
-            width: 210mm !important;
-            max-width: 210mm !important;
-            min-height: 297mm !important;
+            position: static !important;
+            width: 100% !important;
+            max-width: ${isMultiPage ? '100%' : '210mm'} !important;
+            min-height: ${isMultiPage ? 'auto' : '297mm'} !important;
             height: ${isMultiPage ? 'auto' : '297mm'} !important;
             max-height: ${isMultiPage ? 'none' : '297mm'} !important;
             margin: 0 auto !important;
@@ -205,9 +207,9 @@ export default function OfficialWskzDocumentA4({
             box-sizing: border-box !important;
             box-shadow: none !important;
             border: none !important;
-            display: flex !important;
-            flex-direction: column !important;
-            justify-content: space-between !important;
+            display: ${isMultiPage ? 'block' : 'flex'} !important;
+            flex-direction: ${isMultiPage ? 'unset' : 'column'} !important;
+            justify-content: ${isMultiPage ? 'unset' : 'space-between'} !important;
             page-break-inside: ${isMultiPage ? 'auto' : 'avoid'} !important;
             break-inside: ${isMultiPage ? 'auto' : 'avoid'} !important;
             page-break-after: ${isMultiPage ? 'auto' : 'avoid'} !important;
@@ -215,6 +217,16 @@ export default function OfficialWskzDocumentA4({
             overflow: ${isMultiPage ? 'visible' : 'hidden'} !important;
             background: #ffffff !important;
           }
+
+          /* Dla wielostronicowych tabel: usunięcie wewnętrznego bocznego paddingu 20mm w druku */
+          ${isMultiPage ? `
+          #skn-a4-print-area > div:first-child {
+            padding: 0 !important;
+            width: 100% !important;
+            display: block !important;
+          }
+          ` : ''}
+
           #skn-a4-print-area img {
             max-width: 100% !important;
             -webkit-print-color-adjust: exact !important;
@@ -250,9 +262,11 @@ export default function OfficialWskzDocumentA4({
           }
           #skn-a4-print-area th,
           #skn-a4-print-area td {
+            padding: 6px 8px !important;
             word-break: normal !important;
             overflow-wrap: break-word !important;
             hyphens: manual !important;
+            box-sizing: border-box !important;
           }
           #skn-a4-print-area .whitespace-nowrap,
           #skn-a4-print-area th.whitespace-nowrap,
@@ -262,14 +276,16 @@ export default function OfficialWskzDocumentA4({
             word-break: keep-all !important;
             overflow-wrap: normal !important;
           }
-          /* Podpisy: zakotwiczone nad stopką */
+          /* Nierozdzielny blok końcowy: podpisy + nota + stopka WSKZ */
+          .multipage-closing-block,
+          #skn-a4-print-area .multipage-closing-block,
           #skn-a4-print-area .signature-block,
           #skn-a4-print-area .signatures-block,
           #skn-a4-print-area .inter-club-signatures,
           #skn-a4-print-area [data-signature-block] {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
-            margin-top: auto !important;
+            margin-top: 24px !important;
             width: 100% !important;
           }
           /* Usunięcie obramowań kontenerów wewnątrz kartki */

@@ -909,7 +909,7 @@ export default function ReportsTab({
         @media print {
           @page {
             size: A4 portrait;
-            margin: 0;
+            margin: ${isMultiPageDoc ? '14mm 15mm 16mm 15mm' : '0'};
           }
           * {
             -webkit-print-color-adjust: exact !important;
@@ -951,10 +951,9 @@ export default function ReportsTab({
 
           body:not(:has(#skn-a4-modal-backdrop)) #reports-print-container {
             position: static !important;
-            display: flex !important;
-            justify-content: center !important;
-            width: 210mm !important;
-            max-width: 210mm !important;
+            display: block !important;
+            width: 100% !important;
+            max-width: 100% !important;
             margin: 0 auto !important;
             padding: 0 !important;
             box-sizing: border-box !important;
@@ -962,6 +961,41 @@ export default function ReportsTab({
             border: none !important;
             overflow: visible !important;
           }
+
+          ${isMultiPageDoc ? `
+          #reports-print-container #skn-a4-print-area {
+            position: static !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            height: auto !important;
+            min-height: auto !important;
+            max-height: none !important;
+            display: block !important;
+            overflow: visible !important;
+            box-shadow: none !important;
+            border: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          #reports-print-container #skn-a4-print-area > div:first-child {
+            padding: 0 !important;
+            width: 100% !important;
+            display: block !important;
+          }
+          ` : `
+          #reports-print-container #skn-a4-print-area {
+            width: 210mm !important;
+            max-width: 210mm !important;
+            height: 297mm !important;
+            min-height: 297mm !important;
+            max-height: 297mm !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+            overflow: hidden !important;
+          }
+          `}
+
           .doc-a4-sheet {
             box-sizing: border-box !important;
             display: flex !important;
@@ -1011,10 +1045,13 @@ export default function ReportsTab({
             inset: 4.5mm !important;
             pointer-events: none !important;
           }
+          .multipage-closing-block,
           .signature-block,
           .signatures-block {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
+            margin-top: 24px !important;
+            width: 100% !important;
           }
           #reports-print-container table,
           #skn-a4-print-area table,
@@ -1026,24 +1063,33 @@ export default function ReportsTab({
             table-layout: fixed !important;
             border-collapse: collapse !important;
           }
+          #reports-print-container thead,
+          #skn-a4-print-area thead,
           .doc-a4-sheet thead {
             display: table-header-group !important;
           }
+          #reports-print-container tr,
+          #skn-a4-print-area tr,
           .doc-a4-sheet tr {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
             page-break-after: auto !important;
           }
+          #reports-print-container td,
+          #reports-print-container th,
+          #skn-a4-print-area td,
+          #skn-a4-print-area th,
           .doc-a4-sheet td,
           .doc-a4-sheet th {
             padding: 6px 8px !important;
             word-break: normal !important;
             overflow-wrap: break-word !important;
             line-height: 1.3 !important;
+            box-sizing: border-box !important;
           }
-          .doc-a4-sheet .whitespace-nowrap,
-          .doc-a4-sheet th.whitespace-nowrap,
-          .doc-a4-sheet td.whitespace-nowrap {
+          #reports-print-container .whitespace-nowrap,
+          #skn-a4-print-area .whitespace-nowrap,
+          .doc-a4-sheet .whitespace-nowrap {
             white-space: nowrap !important;
             word-break: keep-all !important;
             overflow-wrap: normal !important;

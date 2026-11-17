@@ -340,6 +340,62 @@ export function DocumentStandardFooter({
 }
 
 /**
+ * ─── NIEROZDZIELNY BLOK KOŃCOWY DLA DOKUMENTÓW WIELOSTRONICOWYCH ─────────────
+ * Podpisy + Pasek autentyczności CRM + Stopka graficzna WSKZ (break-inside: avoid)
+ */
+export function MultipageClosingBlock({
+  children,
+  org = null,
+  docDate = new Date(),
+  docNumber = null,
+  className = '',
+}) {
+  const { name: orgName, id: orgId } = getOrgMetadata(org);
+  const orgGenitive = formatOrgGenitive(orgName, orgId);
+
+  return (
+    <div
+      className={`w-full multipage-closing-block break-inside-avoid page-break-inside-avoid select-text ${className}`}
+      style={{ breakInside: 'avoid', pageBreakInside: 'avoid', marginTop: '24px' }}
+    >
+      {/* 1. Podpisy (np. DocumentSignaturesBlock) */}
+      {children}
+
+      {/* 2. Dyskretny pasek metadanych systemu CRM SKN WSKZ */}
+      <div className="flex items-end justify-between text-[8pt] text-slate-500 font-sans leading-tight w-full pt-4 pb-2">
+        <div className="text-left space-y-0.5">
+          <p className="text-[7.5pt] text-slate-400 leading-none">Autentyczność dokumentu potwierdzona w systemie</p>
+          <p className="text-[8pt] font-semibold text-slate-700 leading-none">CRM {orgGenitive}</p>
+          <p className="text-[7.5pt] text-slate-400 leading-none">Wygenerowano w systemie CRM SKN WSKZ</p>
+        </div>
+        <div className="text-right shrink-0 space-y-0.5 font-sans">
+          <p className="text-[8pt] text-slate-500">Wrocław, dn. {formatPolishDate(docDate || new Date())}</p>
+          {docNumber && <p className="font-mono text-[8pt] text-slate-700 font-medium">Nr ref.: {docNumber}</p>}
+        </div>
+      </div>
+
+      {/* 3. 1:1 Oficjalna Stopka Graficzna WSKZ */}
+      <div className="w-full overflow-hidden mt-1 select-none">
+        <img
+          src="/wskz-footer.png"
+          alt="Wyższa Szkoła Kształcenia Zawodowego — Stopka oficjalna"
+          style={{
+            width: '100%',
+            height: 'auto',
+            display: 'block',
+            margin: 0,
+            padding: 0,
+            verticalAlign: 'bottom',
+          }}
+          className="w-full h-auto block object-cover print:object-cover"
+          loading="eager"
+        />
+      </div>
+    </div>
+  );
+}
+
+/**
  * Generuje unikalny, powtarzalny hash i numer dokumentu
  */
 export function generateDocumentNumber(prefix, indexNumber, seed = getCurrentAcademicYear(), orgTag = 'SKN') {
@@ -1280,8 +1336,12 @@ export function MeetingsSummaryTableTemplate({
         </div>
       )}
 
-      {/* ── Dolna sekcja: Podpisy i Stopka CRM z gwarancją zakotwiczenia na dole strony ── */}
-      <div className="mt-auto shrink-0 pt-6 signature-block break-inside-avoid page-break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+      {/* ── Dolna sekcja: Podpisy, Nota Autentyczności i Stopka WSKZ (Nierozdzielny blok końcowy) ── */}
+      <MultipageClosingBlock
+        org={org}
+        docDate={docDate}
+        docNumber={docNumber}
+      >
         <DocumentSignaturesBlock
           activeSupervisors={activeSupervisors}
           orgShortName={orgShortName}
@@ -1290,9 +1350,7 @@ export function MeetingsSummaryTableTemplate({
           chairpersonTitle="Zarząd Koła Naukowego"
           chairpersonSub={orgShortName}
         />
-
-        <DocumentStandardFooter org={org} docDate={docDate} />
-      </div>
+      </MultipageClosingBlock>
     </div>
   );
 }
@@ -1590,11 +1648,11 @@ export function MembersRegistryTemplate({
               {showStatus && <col style={{ width: colWidths.status }} />}
             </colgroup>
             <thead
-              className="bg-slate-100 text-slate-700 font-medium border-b border-slate-200"
+              className="bg-slate-100 text-slate-700 font-medium border-b border-slate-200 print:text-[8.5pt]"
               style={{ display: 'table-header-group' }}
             >
               <tr className="hidden print:table-row bg-white border-b border-slate-300">
-                <th colSpan={activeColCount} className="p-0 pb-1 text-left font-normal">
+                <th colSpan={activeColCount} className="p-0 pb-1 text-left font-normal" style={{ padding: '2px 4px' }}>
                   <div className="flex items-center justify-between text-[8px] text-slate-600 font-sans pb-1 mb-1 border-b border-slate-200">
                     <span className="font-semibold text-slate-800 uppercase tracking-tight">{orgName}</span>
                     <div className="font-mono text-slate-500">
@@ -1606,20 +1664,21 @@ export function MembersRegistryTemplate({
               <tr>
                 {showLp && (
                   <th
-                    className="py-2 px-2 text-center text-[10px] whitespace-nowrap font-semibold text-slate-700"
-                    style={{ width: colWidths.lp, whiteSpace: 'nowrap' }}
+                    className="py-1.5 px-2 text-center text-[9.5px] print:text-[8pt] print:tracking-tight whitespace-nowrap font-semibold text-slate-700"
+                    style={{ width: colWidths.lp, whiteSpace: 'nowrap', padding: '6px 8px' }}
                   >
                     LP.
                   </th>
                 )}
                 {showName && (
                   <th
-                    className="py-2 px-2.5 text-left text-[10px] font-semibold text-slate-700"
+                    className="py-1.5 px-2.5 text-left text-[9.5px] print:text-[8pt] font-semibold text-slate-700"
                     style={{
                       width: colWidths.name,
                       whiteSpace: 'normal',
                       wordBreak: 'normal',
                       overflowWrap: 'break-word',
+                      padding: '6px 8px',
                     }}
                   >
                     Imię i Nazwisko
@@ -1627,20 +1686,21 @@ export function MembersRegistryTemplate({
                 )}
                 {showIndex && (
                   <th
-                    className="py-2 px-2 text-center text-[10px] whitespace-nowrap font-semibold text-slate-700"
-                    style={{ width: colWidths.index, whiteSpace: 'nowrap' }}
+                    className="py-1.5 px-2 text-center text-[9.5px] print:text-[8pt] print:tracking-tight whitespace-nowrap font-semibold text-slate-700"
+                    style={{ width: colWidths.index, whiteSpace: 'nowrap', padding: '6px 8px' }}
                   >
                     Nr Albumu
                   </th>
                 )}
                 {showField && (
                   <th
-                    className="py-2 px-2.5 text-left text-[10px] font-semibold text-slate-700"
+                    className="py-1.5 px-2.5 text-left text-[9.5px] print:text-[8pt] font-semibold text-slate-700"
                     style={{
                       width: colWidths.field,
                       whiteSpace: 'normal',
                       wordBreak: 'normal',
                       overflowWrap: 'break-word',
+                      padding: '6px 8px',
                     }}
                   >
                     Kierunek Studiów
@@ -1648,40 +1708,40 @@ export function MembersRegistryTemplate({
                 )}
                 {showYear && (
                   <th
-                    className="py-2 px-2 text-center text-[10px] whitespace-nowrap font-semibold text-slate-700"
-                    style={{ width: colWidths.year, whiteSpace: 'nowrap' }}
+                    className="py-1.5 px-2 text-center text-[9.5px] print:text-[8pt] print:tracking-tight whitespace-nowrap font-semibold text-slate-700"
+                    style={{ width: colWidths.year, whiteSpace: 'nowrap', padding: '6px 8px' }}
                   >
                     Rok
                   </th>
                 )}
                 {showPresent && (
                   <th
-                    className="py-2 px-2 text-center text-[10px] whitespace-nowrap font-semibold text-slate-700"
-                    style={{ width: colWidths.present, whiteSpace: 'nowrap' }}
+                    className="py-1.5 px-2 text-center text-[9.5px] print:text-[8pt] print:tracking-tight whitespace-nowrap font-semibold text-slate-700"
+                    style={{ width: colWidths.present, whiteSpace: 'nowrap', padding: '6px 8px' }}
                   >
                     Obecności
                   </th>
                 )}
                 {showFreq && (
                   <th
-                    className="py-2 px-2 text-center text-[10px] whitespace-nowrap font-semibold text-slate-700"
-                    style={{ width: colWidths.freq, whiteSpace: 'nowrap' }}
+                    className="py-1.5 px-2 text-center text-[9.5px] print:text-[8pt] print:tracking-tight whitespace-nowrap font-semibold text-slate-700"
+                    style={{ width: colWidths.freq, whiteSpace: 'nowrap', padding: '6px 8px' }}
                   >
                     Frekwencja
                   </th>
                 )}
                 {showPoints && (
                   <th
-                    className="py-2 px-2 text-center text-[10px] whitespace-nowrap font-semibold text-slate-700"
-                    style={{ width: colWidths.points, whiteSpace: 'nowrap' }}
+                    className="py-1.5 px-2 text-center text-[9.5px] print:text-[8pt] print:tracking-tight whitespace-nowrap font-semibold text-slate-700"
+                    style={{ width: colWidths.points, whiteSpace: 'nowrap', padding: '6px 8px' }}
                   >
                     Punkty
                   </th>
                 )}
                 {showStatus && (
                   <th
-                    className="py-2 px-2 text-center text-[10px] whitespace-nowrap font-semibold text-slate-700"
-                    style={{ width: colWidths.status, whiteSpace: 'nowrap' }}
+                    className="py-1.5 px-2 text-center text-[9.5px] print:text-[8pt] print:tracking-tight whitespace-nowrap font-semibold text-slate-700"
+                    style={{ width: colWidths.status, whiteSpace: 'nowrap', padding: '6px 8px' }}
                   >
                     Zaliczenie
                   </th>
@@ -1704,20 +1764,21 @@ export function MembersRegistryTemplate({
                   >
                     {showLp && (
                       <td
-                        className="py-2 px-2 text-center text-slate-400 font-mono text-[9.5px] whitespace-nowrap align-top"
-                        style={{ width: colWidths.lp, whiteSpace: 'nowrap' }}
+                        className="py-1.5 px-2 text-center text-slate-400 font-mono text-[9px] print:text-[8pt] whitespace-nowrap align-top"
+                        style={{ width: colWidths.lp, whiteSpace: 'nowrap', padding: '6px 8px' }}
                       >
                         {row.lp}
                       </td>
                     )}
                     {showName && (
                       <td
-                        className="py-2 px-2.5 font-medium text-slate-900 text-[10px] align-top"
+                        className="py-1.5 px-2.5 font-medium text-slate-900 text-[9.5px] print:text-[8pt] align-top"
                         style={{
                           width: colWidths.name,
                           whiteSpace: 'normal',
                           wordBreak: 'normal',
                           overflowWrap: 'break-word',
+                          padding: '6px 8px',
                         }}
                       >
                         {row.name}
@@ -1725,20 +1786,21 @@ export function MembersRegistryTemplate({
                     )}
                     {showIndex && (
                       <td
-                        className="py-2 px-2 text-center font-mono text-[9.5px] text-slate-700 whitespace-nowrap align-top"
-                        style={{ width: colWidths.index, whiteSpace: 'nowrap' }}
+                        className="py-1.5 px-2 text-center font-mono text-[9px] print:text-[8pt] text-slate-700 whitespace-nowrap align-top"
+                        style={{ width: colWidths.index, whiteSpace: 'nowrap', padding: '6px 8px' }}
                       >
                         {row.cleanIndex}
                       </td>
                     )}
                     {showField && (
                       <td
-                        className="py-2 px-2.5 text-slate-600 text-[9.5px] align-top"
+                        className="py-1.5 px-2.5 text-slate-600 text-[9px] print:text-[8pt] align-top"
                         style={{
                           width: colWidths.field,
                           whiteSpace: 'normal',
                           wordBreak: 'normal',
                           overflowWrap: 'break-word',
+                          padding: '6px 8px',
                         }}
                       >
                         {row.field}
@@ -1746,24 +1808,24 @@ export function MembersRegistryTemplate({
                     )}
                     {showYear && (
                       <td
-                        className="py-2 px-2 text-center text-[9.5px] text-slate-700 whitespace-nowrap align-top"
-                        style={{ width: colWidths.year, whiteSpace: 'nowrap' }}
+                        className="py-1.5 px-2 text-center text-[9px] print:text-[8pt] text-slate-700 whitespace-nowrap align-top"
+                        style={{ width: colWidths.year, whiteSpace: 'nowrap', padding: '6px 8px' }}
                       >
                         {row.yearDisplay}
                       </td>
                     )}
                     {showPresent && (
                       <td
-                        className="py-2 px-2 text-center font-mono text-[9.5px] whitespace-nowrap align-top"
-                        style={{ width: colWidths.present, whiteSpace: 'nowrap' }}
+                        className="py-1.5 px-2 text-center font-mono text-[9px] print:text-[8pt] whitespace-nowrap align-top"
+                        style={{ width: colWidths.present, whiteSpace: 'nowrap', padding: '6px 8px' }}
                       >
                         {row.isZeroActivity && isPastYear ? '—' : `${row.present} / ${row.memberTotalMeetings}`}
                       </td>
                     )}
                     {showFreq && (
                       <td
-                        className="py-2 px-2 text-center font-mono font-medium text-[9.5px] whitespace-nowrap align-top"
-                        style={{ width: colWidths.freq, whiteSpace: 'nowrap' }}
+                        className="py-1.5 px-2 text-center font-mono font-medium text-[9px] print:text-[8pt] whitespace-nowrap align-top"
+                        style={{ width: colWidths.freq, whiteSpace: 'nowrap', padding: '6px 8px' }}
                       >
                         <span className={row.freq >= 50 ? 'text-emerald-700' : (row.isZeroActivity && isPastYear ? 'text-slate-400' : 'text-slate-600')}>
                           {row.isZeroActivity && isPastYear ? '—' : `${row.freq}%`}
@@ -1772,8 +1834,8 @@ export function MembersRegistryTemplate({
                     )}
                     {showPoints && (
                       <td
-                        className="py-2 px-2 text-center font-mono font-semibold text-[9.5px] whitespace-nowrap align-top"
-                        style={{ width: colWidths.points, whiteSpace: 'nowrap' }}
+                        className="py-1.5 px-2 text-center font-mono font-semibold text-[9px] print:text-[8pt] whitespace-nowrap align-top"
+                        style={{ width: colWidths.points, whiteSpace: 'nowrap', padding: '6px 8px' }}
                       >
                         <span className={row.points > 0 ? 'text-purple-700' : 'text-slate-400'}>
                           {row.isZeroActivity && isPastYear ? '—' : `${row.points} pkt`}
@@ -1782,8 +1844,8 @@ export function MembersRegistryTemplate({
                     )}
                     {showStatus && (
                       <td
-                        className="py-2 px-2 text-center whitespace-nowrap align-top"
-                        style={{ width: colWidths.status, whiteSpace: 'nowrap' }}
+                        className="py-1.5 px-2 text-center whitespace-nowrap align-top"
+                        style={{ width: colWidths.status, whiteSpace: 'nowrap', padding: '6px 8px' }}
                       >
                         <span className={`inline-block px-1.5 py-0.5 rounded text-[8px] font-semibold border whitespace-nowrap ${row.statusInfo.badgeClass}`}>
                           {row.statusInfo.label}
@@ -1802,8 +1864,12 @@ export function MembersRegistryTemplate({
         * Pełny rejestr wszystkich {activeMembers.length} aktywnych członków koła znajduje się w centralnej bazie danych CRM WSKZ.
       </p>
 
-      {/* ── Dolna sekcja: Podpisy z gwarancją zakotwiczenia na dole strony ── */}
-      <div className="mt-auto shrink-0 pt-6 signature-block break-inside-avoid page-break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+      {/* ── Dolna sekcja: Podpisy, Nota Autentyczności i Stopka WSKZ (Nierozdzielny blok końcowy) ── */}
+      <MultipageClosingBlock
+        org={org}
+        docDate={docDate}
+        docNumber={docNumber}
+      >
         <DocumentSignaturesBlock
           activeSupervisors={activeSupervisors}
           orgShortName={orgShortName}
@@ -1812,7 +1878,7 @@ export function MembersRegistryTemplate({
           chairpersonTitle="Zarząd Koła Naukowego"
           chairpersonSub={orgShortName}
         />
-      </div>
+      </MultipageClosingBlock>
     </div>
   );
 }
@@ -2079,8 +2145,12 @@ export function ResearchConferencesRegistryTemplate({
         </div>
       )}
 
-      {/* ── Dolna sekcja: Podpisy i Stopka CRM z gwarancją zakotwiczenia na dole strony ── */}
-      <div className="mt-auto shrink-0 pt-6 signature-block break-inside-avoid page-break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+      {/* ── Dolna sekcja: Podpisy, Nota Autentyczności i Stopka WSKZ (Nierozdzielny blok końcowy) ── */}
+      <MultipageClosingBlock
+        org={org}
+        docDate={docDate}
+        docNumber={docNumber}
+      >
         <DocumentSignaturesBlock
           activeSupervisors={activeSupervisors}
           orgShortName={orgShortName}
@@ -2089,9 +2159,7 @@ export function ResearchConferencesRegistryTemplate({
           chairpersonTitle="Zarząd Koła Naukowego"
           chairpersonSub={`Koordynator ds. Badań i Nauki – ${orgShortName}`}
         />
-
-        <DocumentStandardFooter org={org} docDate={docDate} />
-      </div>
+      </MultipageClosingBlock>
     </div>
   );
 }
@@ -2255,8 +2323,12 @@ export function AnnualReportProtocolTemplate({
         </p>
       </div>
 
-      {/* ── Dolna sekcja: Podpisy i Stopka CRM z gwarancją zakotwiczenia na dole strony ── */}
-      <div className="mt-auto shrink-0 pt-6 signature-block break-inside-avoid page-break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+      {/* ── Dolna sekcja: Podpisy, Nota Autentyczności i Stopka WSKZ (Nierozdzielny blok końcowy) ── */}
+      <MultipageClosingBlock
+        org={org}
+        docDate={docDate}
+        docNumber={docNumber}
+      >
         <DocumentSignaturesBlock
           activeSupervisors={activeSupervisors}
           orgShortName={orgShortName}
@@ -2265,9 +2337,7 @@ export function AnnualReportProtocolTemplate({
           chairpersonTitle="Zarząd Koła Naukowego"
           chairpersonSub={orgShortName}
         />
-
-        <DocumentStandardFooter org={org} docDate={docDate} />
-      </div>
+      </MultipageClosingBlock>
     </div>
   );
 }

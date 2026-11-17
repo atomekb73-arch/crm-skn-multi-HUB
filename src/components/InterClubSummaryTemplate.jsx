@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatPolishDate } from './DocumentTemplates';
 import {
   Calendar,
   Users,
@@ -496,24 +497,60 @@ export default function InterClubSummaryTemplate({
           </div>
         </div>
 
-        {/* ── Stopka z Podpisami Władz Uczelni (Dla Dziekanatu) ── */}
-        <div className="inter-club-signatures pt-6 mt-5 border-t border-slate-300 grid grid-cols-1 sm:grid-cols-3 gap-6 text-center text-xs print:pt-5 print:mt-4 print:break-inside-avoid break-inside-avoid">
-          <div className="space-y-1">
-            <div className="border-b border-dashed border-slate-400 h-8 w-40 mx-auto mb-1.5"></div>
-            <div className="font-bold text-slate-900 text-[11px]">Koordynator ds. Kół Naukowych</div>
-            <div className="text-[10px] text-slate-500">Wydział Psychologii WSKZ</div>
+        {/* ── Stopka z Podpisami Władz Uczelni, Notą i Stopką Graficzną WSKZ (Nierozdzielny blok końcowy) ── */}
+        <div
+          className="w-full multipage-closing-block break-inside-avoid page-break-inside-avoid select-text"
+          style={{ breakInside: 'avoid', pageBreakInside: 'avoid', marginTop: '24px' }}
+        >
+          <div className="inter-club-signatures pt-6 border-t border-slate-300 grid grid-cols-1 sm:grid-cols-3 gap-6 text-center text-xs print:pt-5">
+            <div className="space-y-1">
+              <div className="border-b border-dashed border-slate-400 h-8 w-40 mx-auto mb-1.5"></div>
+              <div className="font-bold text-slate-900 text-[11px]">Koordynator ds. Kół Naukowych</div>
+              <div className="text-[10px] text-slate-500">Wydział Psychologii WSKZ</div>
+            </div>
+
+            <div className="space-y-1">
+              <div className="border-b border-dashed border-slate-400 h-8 w-40 mx-auto mb-1.5"></div>
+              <div className="font-bold text-slate-900 text-[11px]">Opiekunowie Naukowi Kół</div>
+              <div className="text-[10px] text-slate-500">Wydział Psychologii WSKZ</div>
+            </div>
+
+            <div className="space-y-1">
+              <div className="border-b border-dashed border-slate-400 h-8 w-40 mx-auto mb-1.5"></div>
+              <div className="font-bold text-slate-900 text-[11px]">Dziekan Wydziału Psychologii</div>
+              <div className="text-[10px] text-slate-500">Wyższa Szkoła Kształcenia Zawodowego</div>
+            </div>
           </div>
 
-          <div className="space-y-1">
-            <div className="border-b border-dashed border-slate-400 h-8 w-40 mx-auto mb-1.5"></div>
-            <div className="font-bold text-slate-900 text-[11px]">Opiekunowie Naukowi Kół</div>
-            <div className="text-[10px] text-slate-500">Wydział Psychologii WSKZ</div>
+          {/* Dyskretny pasek metadanych systemu CRM SKN WSKZ */}
+          <div className="flex items-end justify-between text-[8pt] text-slate-500 font-sans leading-tight w-full pt-4 pb-2">
+            <div className="text-left space-y-0.5">
+              <p className="text-[7.5pt] text-slate-400 leading-none">Autentyczność dokumentu potwierdzona w systemie</p>
+              <p className="text-[8pt] font-semibold text-slate-700 leading-none">CRM Studenckich Kół Naukowych WSKZ</p>
+              <p className="text-[7.5pt] text-slate-400 leading-none">Wygenerowano w systemie CRM SKN WSKZ</p>
+            </div>
+            <div className="text-right shrink-0 space-y-0.5 font-sans">
+              <p className="text-[8pt] text-slate-500">Wrocław, dn. {formatPolishDate(docDate || new Date())}</p>
+              <p className="font-mono text-[8pt] text-slate-700 font-medium">Nr ref.: ZESTAWIENIE-WSKZ</p>
+            </div>
           </div>
 
-          <div className="space-y-1">
-            <div className="border-b border-dashed border-slate-400 h-8 w-40 mx-auto mb-1.5"></div>
-            <div className="font-bold text-slate-900 text-[11px]">Dziekan Wydziału Psychologii</div>
-            <div className="text-[10px] text-slate-500">Wyższa Szkoła Kształcenia Zawodowego</div>
+          {/* 1:1 Oficjalna Stopka Graficzna WSKZ */}
+          <div className="w-full overflow-hidden mt-1 select-none">
+            <img
+              src="/wskz-footer.png"
+              alt="Wyższa Szkoła Kształcenia Zawodowego — Stopka oficjalna"
+              style={{
+                width: '100%',
+                height: 'auto',
+                display: 'block',
+                margin: 0,
+                padding: 0,
+                verticalAlign: 'bottom',
+              }}
+              className="w-full h-auto block object-cover print:object-cover"
+              loading="eager"
+            />
           </div>
         </div>
       </div>
