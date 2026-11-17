@@ -248,36 +248,36 @@ export default function InterClubSummaryTemplate({
             <table className="w-full text-left text-xs border-collapse table-fixed">
               <colgroup>
                 <col style={{ width: '4%' }} />
-                <col style={{ width: '11%' }} />
+                <col style={{ width: '10%' }} />
+                <col style={{ width: '15%' }} />
+                <col style={{ width: '16%' }} />
+                <col style={{ width: '27%' }} />
                 <col style={{ width: '18%' }} />
-                <col style={{ width: '13%' }} />
-                <col style={{ width: '20%' }} />
-                <col style={{ width: '25%' }} />
-                <col style={{ width: '9%' }} />
+                <col style={{ width: '10%' }} />
               </colgroup>
               <thead>
                 <tr className="bg-slate-100/90 text-slate-700 font-bold border-b border-slate-200 text-[10px]">
-                  <th className="p-2 text-center whitespace-nowrap">Lp.</th>
-                  <th className="p-2 text-center whitespace-nowrap">Data</th>
-                  <th className="p-2 whitespace-nowrap">Koło wiodące</th>
-                  <th className="p-2 text-center whitespace-nowrap">Współorganizatorzy</th>
-                  <th className="p-2">Temat / Tytuł spotkania</th>
-                  <th className="p-2">Prelegent / Prowadzący</th>
-                  <th className="p-2 text-center whitespace-nowrap bg-emerald-50/70">Frekwencja</th>
+                  <th className="py-2 px-2 text-center whitespace-nowrap" style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>Lp.</th>
+                  <th className="py-2 px-2 text-center whitespace-nowrap" style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>Data</th>
+                  <th className="py-2 px-2 text-left whitespace-nowrap" style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>Koło wiodące</th>
+                  <th className="py-2 px-2.5 text-center whitespace-nowrap" style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>Współorganizatorzy</th>
+                  <th className="py-2 px-2.5 text-left" style={{ padding: '6px 10px', wordBreak: 'normal', overflowWrap: 'break-word' }}>Temat / Tytuł spotkania</th>
+                  <th className="py-2 px-2 text-left" style={{ padding: '6px 8px', wordBreak: 'normal', overflowWrap: 'break-word' }}>Prelegent / Prowadzący</th>
+                  <th className="py-2 px-2 text-center whitespace-nowrap bg-emerald-50/70" style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>Frekwencja</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 text-slate-800">
                 {substantiveMeetings.length > 0 ? (
                   substantiveMeetings.map((m, idx) => (
                     <tr key={m.id || idx} className="hover:bg-slate-50/80 transition-colors break-inside-avoid print:break-inside-avoid">
-                      <td className="p-2 text-center font-mono text-slate-500 font-semibold">{idx + 1}</td>
-                      <td className="p-2 text-center text-slate-700 whitespace-nowrap text-[10px]">{m.date}</td>
-                      <td className="p-2">
+                      <td className="py-1.5 px-2 text-center font-mono text-slate-500 font-semibold" style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>{idx + 1}</td>
+                      <td className="py-1.5 px-2 text-center text-slate-700 whitespace-nowrap text-[10px]" style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>{m.date}</td>
+                      <td className="py-1.5 px-2" style={{ padding: '6px 8px' }}>
                         <span className="font-semibold text-slate-900 block break-words" title={m.primaryOrg?.name}>
                           {cleanOrgName(m.primaryOrg?.shortName || m.primaryOrg?.name)}
                         </span>
                       </td>
-                      <td className="p-2 text-center">
+                      <td className="py-1.5 px-2 text-center" style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>
                         {m.coOrgs && m.coOrgs.length > 0 ? (
                           <div className="flex flex-wrap gap-1 justify-center">
                             {m.coOrgs.map(co => (
@@ -293,9 +293,9 @@ export default function InterClubSummaryTemplate({
                           <span className="text-slate-400 text-[10px]">—</span>
                         )}
                       </td>
-                      <td className="p-2 font-medium text-slate-900 break-words">{m.title}</td>
-                      <td className="p-2 text-slate-600 text-[10.5px] break-words">{m.speaker}</td>
-                      <td className="p-2 text-center whitespace-nowrap font-mono font-bold text-emerald-800 bg-emerald-50/40">
+                      <td className="py-1.5 px-2.5 font-medium text-slate-900 break-words" style={{ padding: '6px 10px', overflowWrap: 'break-word' }}>{m.title}</td>
+                      <td className="py-1.5 px-2 text-slate-600 text-[10.5px] break-words" style={{ padding: '6px 8px', overflowWrap: 'break-word' }}>{m.speaker}</td>
+                      <td className="py-1.5 px-2 text-center whitespace-nowrap font-mono font-bold text-emerald-800 bg-emerald-50/40" style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>
                         {m.totalParticipants > 0 ? `${m.totalParticipants} os.` : '—'}
                       </td>
                     </tr>
@@ -328,36 +328,36 @@ export default function InterClubSummaryTemplate({
             <table className="w-full text-left text-xs border-collapse table-fixed">
               <colgroup>
                 <col style={{ width: '4%' }} />
-                <col style={{ width: '11%' }} />
+                <col style={{ width: '10%' }} />
+                <col style={{ width: '15%' }} />
+                <col style={{ width: '16%' }} />
+                <col style={{ width: '27%' }} />
                 <col style={{ width: '18%' }} />
-                <col style={{ width: '13%' }} />
-                <col style={{ width: '20%' }} />
-                <col style={{ width: '25%' }} />
-                <col style={{ width: '9%' }} />
+                <col style={{ width: '10%' }} />
               </colgroup>
               <thead>
                 <tr className="bg-slate-100/90 text-slate-700 font-bold border-b border-slate-200 text-[10px]">
-                  <th className="p-2 text-center whitespace-nowrap">Lp.</th>
-                  <th className="p-2 text-center whitespace-nowrap">Data</th>
-                  <th className="p-2 whitespace-nowrap">Koło wiodące</th>
-                  <th className="p-2 text-center whitespace-nowrap">Współorganizatorzy</th>
-                  <th className="p-2">Temat / Cel prac projektowych</th>
-                  <th className="p-2">Koordynator / Prelegent</th>
-                  <th className="p-2 text-center whitespace-nowrap bg-cyan-50/70">Frekwencja</th>
+                  <th className="py-2 px-2 text-center whitespace-nowrap" style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>Lp.</th>
+                  <th className="py-2 px-2 text-center whitespace-nowrap" style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>Data</th>
+                  <th className="py-2 px-2 text-left whitespace-nowrap" style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>Koło wiodące</th>
+                  <th className="py-2 px-2.5 text-center whitespace-nowrap" style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>Współorganizatorzy</th>
+                  <th className="py-2 px-2.5 text-left" style={{ padding: '6px 10px', wordBreak: 'normal', overflowWrap: 'break-word' }}>Temat / Cel prac projektowych</th>
+                  <th className="py-2 px-2 text-left" style={{ padding: '6px 8px', wordBreak: 'normal', overflowWrap: 'break-word' }}>Koordynator / Prelegent</th>
+                  <th className="py-2 px-2 text-center whitespace-nowrap bg-cyan-50/70" style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>Frekwencja</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 text-slate-800">
                 {projectMeetings.length > 0 ? (
                   projectMeetings.map((m, idx) => (
                     <tr key={m.id || idx} className="hover:bg-slate-50/80 transition-colors break-inside-avoid print:break-inside-avoid">
-                      <td className="p-2 text-center font-mono text-slate-500 font-semibold">{idx + 1}</td>
-                      <td className="p-2 text-center text-slate-700 whitespace-nowrap text-[10px]">{m.date}</td>
-                      <td className="p-2">
+                      <td className="py-1.5 px-2 text-center font-mono text-slate-500 font-semibold" style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>{idx + 1}</td>
+                      <td className="py-1.5 px-2 text-center text-slate-700 whitespace-nowrap text-[10px]" style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>{m.date}</td>
+                      <td className="py-1.5 px-2" style={{ padding: '6px 8px' }}>
                         <span className="font-semibold text-slate-900 block break-words">
                           {cleanOrgName(m.primaryOrg?.shortName || m.primaryOrg?.name)}
                         </span>
                       </td>
-                      <td className="p-2 text-center">
+                      <td className="py-1.5 px-2 text-center" style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>
                         {m.coOrgs && m.coOrgs.length > 0 ? (
                           <div className="flex flex-wrap gap-1 justify-center">
                             {m.coOrgs.map(co => (
@@ -373,9 +373,9 @@ export default function InterClubSummaryTemplate({
                           <span className="text-slate-400 text-[10px]">—</span>
                         )}
                       </td>
-                      <td className="p-2 font-medium text-slate-900 break-words">{m.title}</td>
-                      <td className="p-2 text-slate-600 text-[10.5px] break-words">{m.speaker}</td>
-                      <td className="p-2 text-center whitespace-nowrap font-mono font-bold text-cyan-800 bg-cyan-50/40">
+                      <td className="py-1.5 px-2.5 font-medium text-slate-900 break-words" style={{ padding: '6px 10px', overflowWrap: 'break-word' }}>{m.title}</td>
+                      <td className="py-1.5 px-2 text-slate-600 text-[10.5px] break-words" style={{ padding: '6px 8px', overflowWrap: 'break-word' }}>{m.speaker}</td>
+                      <td className="py-1.5 px-2 text-center whitespace-nowrap font-mono font-bold text-cyan-800 bg-cyan-50/40" style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>
                         {m.totalParticipants > 0 ? `${m.totalParticipants} os.` : '—'}
                       </td>
                     </tr>

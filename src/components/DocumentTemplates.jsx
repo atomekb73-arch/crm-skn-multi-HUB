@@ -1727,7 +1727,7 @@ export function MembersRegistryTemplate({
                     className="py-1.5 px-2 text-center text-[9.5px] print:text-[8pt] print:tracking-tight whitespace-nowrap font-semibold text-slate-700"
                     style={{ width: colWidths.freq, whiteSpace: 'nowrap', padding: '6px 8px' }}
                   >
-                    Frekwencja
+                    Udział
                   </th>
                 )}
                 {showPoints && (
@@ -1735,7 +1735,7 @@ export function MembersRegistryTemplate({
                     className="py-1.5 px-2 text-center text-[9.5px] print:text-[8pt] print:tracking-tight whitespace-nowrap font-semibold text-slate-700"
                     style={{ width: colWidths.points, whiteSpace: 'nowrap', padding: '6px 8px' }}
                   >
-                    Punkty
+                    PKT
                   </th>
                 )}
                 {showStatus && (
