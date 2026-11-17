@@ -341,19 +341,21 @@ export function resolveParticipantFromSavedIndex(rawIdx, members = [], customSup
   // 1. Opiekun Koła
   if (isExplicitSup || isFacultySupervisor(cleanText, customSupervisors)) {
     const supObj = matchSupervisorExact(cleanText, customSupervisors) || findMatchingSupervisor(cleanText, customSupervisors);
-    const supName = String(supObj ? (supObj.fullName || `${supObj.academicTitle || 'mgr'} ${supObj.name}`) : (cleanText || 'Opiekun Koła')).trim();
+    const rawSupName = String(supObj ? (supObj.fullName || `${supObj.academicTitle || 'mgr'} ${supObj.name}`) : (cleanText || 'Opiekun Koła')).trim();
+    const supName = rawSupName.replace(/^(?:(?:mgr|dr|prof|inż|hab)\.?\s*)+/gi, (m) => m.trim().split(/\s+/)[0] + ' ').trim();
     return {
-      id: `p_saved_sup_${i}_${Date.now()}`,
-      rawName: supName,
+      id: candidateObj?.id || `p_saved_sup_${i}_${Date.now()}`,
+      rawName: candidateObj?.rawName || supName,
       fullName: supName,
       name: supName,
-      nrIndeksu: '',
-      index: '',
-      joinTime: '18:00',
-      durationStr: '60 min',
-      durationMinutes: 60,
-      timeMinutes: 60,
-      punkty: 1,
+      nrIndeksu: '[OPIEKUN]',
+      index: '[OPIEKUN]',
+      joinTime: candidateObj?.joinTime || '18:00',
+      durationStr: candidateObj?.durationStr || '60 min',
+      durationMinutes: candidateObj?.durationMinutes ?? 60,
+      timeMinutes: candidateObj?.timeMinutes ?? 60,
+      punkty: 0,
+      points: 0,
       aktywnosc: 'Obecność',
       member: null,
       role: 'supervisor',
@@ -367,6 +369,7 @@ export function resolveParticipantFromSavedIndex(rawIdx, members = [], customSup
       manualApproved: true,
       hasManualOverride: true,
       status: 'supervisor',
+      activities: [],
     };
   }
 

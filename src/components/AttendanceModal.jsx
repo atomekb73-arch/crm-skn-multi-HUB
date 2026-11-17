@@ -85,8 +85,24 @@ function resolveInitialParticipants(meeting = {}, members = [], participants = [
       p.role === 'speaker' || p.role === 'prelegent' || p.rola === 'speaker' || p.rola === 'prelegent' || p.isSpeaker || String(p.status).toLowerCase() === 'speaker';
 
     const matchedSup = !isExplicitSpeaker ? matchSupervisorExact(rawName, supervisors) : null;
-    const isSup = !isExplicitSpeaker && (matchedSup != null || isFacultySupervisor(rawName, supervisors));
-    const supervisorFormattedName = matchedSup ? (matchedSup.fullName || `${matchedSup.academicTitle || 'mgr'} ${matchedSup.name}`) : rawName;
+    const isSup = !isExplicitSpeaker && (
+      matchedSup != null ||
+      isFacultySupervisor(rawName, supervisors) ||
+      p.isSupervisor ||
+      p.role === 'supervisor' ||
+      p.rola === 'Opiekun' ||
+      p.status === 'supervisor' ||
+      p.nrIndeksu === '[OPIEKUN]' ||
+      p.index === '[OPIEKUN]' ||
+      String(rawName).includes('[OPIEKUN]') ||
+      String(p.name || '').includes('[OPIEKUN]') ||
+      String(p.fullName || '').includes('[OPIEKUN]')
+    );
+    const rawSupName = matchedSup ? (matchedSup.fullName || `${matchedSup.academicTitle || 'mgr'} ${matchedSup.name}`) : rawName;
+    const supervisorFormattedName = String(rawSupName || '')
+      .replace(/^\[OPIEKUN\]:\s*/i, '')
+      .replace(/^(mgr\s+)+/i, 'mgr ')
+      .trim();
 
     const dur = typeof p.durationMinutes === 'number' ? p.durationMinutes : (parseInt(p.durationMinutes || p.durationStr, 10) || 60);
 
@@ -173,13 +189,14 @@ function resolveInitialParticipants(meeting = {}, members = [], participants = [
       durationMinutes: Number(dur) || 60,
       timeMinutes: Number(dur) || 60,
       member: finalMember,
-      nrIndeksu: String(isSup ? '' : (finalMember?.index || candidateIndex || p.nrIndeksu || p.index || '')).trim(),
-      index: String(isSup ? '' : (finalMember?.index || candidateIndex || p.index || p.nrIndeksu || '')).trim(),
+      nrIndeksu: String(isSup ? '[OPIEKUN]' : (finalMember?.index || candidateIndex || p.nrIndeksu || p.index || '')).trim(),
+      index: String(isSup ? '[OPIEKUN]' : (finalMember?.index || candidateIndex || p.index || p.nrIndeksu || '')).trim(),
       role: String(isSup ? 'supervisor' : (isExplicitSpeaker ? 'speaker' : (finalMember || isMonika ? 'member' : 'guest'))),
       roleDisplay: String(isSup ? 'Opiekun' : (isExplicitSpeaker ? 'Prelegent' : (finalMember || isMonika ? 'Członek koła' : 'Gość'))),
       rola: String(isSup ? 'Opiekun' : (isExplicitSpeaker ? 'Prelegent' : (finalMember || isMonika ? 'Członek koła' : 'Gość'))),
-      punkty: Number(p.punkty || p.points || 1),
-      aktywnosc: p.aktywnosc || (isExplicitSpeaker ? 'Prelekcja' : 'Obecność'),
+      punkty: isSup ? 0 : Number(p.punkty || p.points || 1),
+      points: isSup ? 0 : Number(p.punkty || p.points || 1),
+      aktywnosc: p.aktywnosc || (isExplicitSpeaker ? 'Prelekcja' : (isSup ? 'Opieka naukowa' : 'Obecność')),
       isSpeaker: Boolean(isExplicitSpeaker),
       isSupervisor: Boolean(isSup),
       isGuest: Boolean(!isSup && !isExplicitSpeaker && !finalMember && !isMonika),
@@ -1327,7 +1344,22 @@ export default function AttendanceModal({
   // Helper to determine if participant is a Faculty Supervisor
   const isSupervisorPerson = (p) => {
     if (!p) return false;
-    return p.role === 'supervisor' || p.rola === 'Opiekun' || p.rola === 'supervisor' || p.isSupervisor || isFacultySupervisor(p.rawName, supervisors);
+    return (
+      p.role === 'supervisor' ||
+      p.rola === 'Opiekun' ||
+      p.rola === 'Opiekun Koła' ||
+      p.rola === 'supervisor' ||
+      p.status === 'supervisor' ||
+      p.isSupervisor ||
+      p.nrIndeksu === '[OPIEKUN]' ||
+      p.index === '[OPIEKUN]' ||
+      String(p.rawName || '').includes('[OPIEKUN]') ||
+      String(p.name || '').includes('[OPIEKUN]') ||
+      String(p.fullName || '').includes('[OPIEKUN]') ||
+      isFacultySupervisor(p.rawName, supervisors) ||
+      isFacultySupervisor(p.name, supervisors) ||
+      isFacultySupervisor(p.fullName, supervisors)
+    );
   };
 
   // Helper to determine if participant is a Speaker / Special Guest
@@ -1454,12 +1486,15 @@ export default function AttendanceModal({
           const isGst = isGuestPerson(p);
           const rawCandidateIdx = (!isSup && !isSpk && !isGst)
             ? String(p.member?.index || p.nrIndeksu || p.index || (isMonikaLyniewska(safeRawName) ? '34327' : (safeRawName.match(/\d{4,6}/)?.[0] || ''))).replace(/\D/g, '').trim()
-            : '';
+            : (isSup ? '[OPIEKUN]' : (isSpk ? '[SPEAKER]' : ''));
           const nrIndeksu = rawCandidateIdx;
           const finalIsGst = isGst || (!isSup && !isSpk && !nrIndeksu && p.role !== 'member');
-          const cleanNameBase = String(p.member?.fullName || p.fullName || p.name || safeRawName || '')
+          let cleanNameBase = String(p.member?.fullName || p.fullName || p.name || safeRawName || '')
             .replace(/^\[(?:OPIEKUN|SPEAKER|PRELEGENT|GOŚĆ|GOSC)\]:\s*/i, '')
             .trim();
+          if (isSup) {
+            cleanNameBase = cleanNameBase.replace(/^(mgr\s+)+/i, 'mgr ');
+          }
           const name = cleanNameBase || (finalIsGst ? `Gość #${idx + 1}` : (isSup ? `Opiekun #${idx + 1}` : (isSpk ? `Prelegent #${idx + 1}` : `Uczestnik #${idx + 1}`)));
           const rola = String(isSup ? 'Opiekun' : (isSpk ? 'Prelegent' : (finalIsGst ? 'Gość' : 'Członek koła'))).trim();
 
@@ -1484,7 +1519,7 @@ export default function AttendanceModal({
             nrIndeksu,
             name,
             fullName: name,
-            rawName: safeRawName || name,
+            rawName: isSup ? (name.startsWith('[OPIEKUN]') ? name : `[OPIEKUN]: ${name}`) : (safeRawName || name),
             joinTime: p.joinTime || '',
             durationMinutes: p.durationMinutes ?? null,
             durationStr: p.durationStr || '',
@@ -1495,13 +1530,14 @@ export default function AttendanceModal({
             isSpeaker: isSpk,
             isGuest: finalIsGst,
             punkty: finalPointsForMeeting,
+            points: finalPointsForMeeting,
             trybUdzialu: breakdown.isParticipantOnline ? 'ONLINE' : 'STACJONARNY',
             opisAktywnosci: activityDesc,
           };
         })
         .filter(item => item.nrIndeksu || item.name);
 
-      const confirmedIndexes = allVerifiedList.map(m => m.nrIndeksu || m.name).filter(Boolean);
+      const confirmedIndexes = allVerifiedList.map(m => m.isSupervisor ? (m.name.startsWith('[OPIEKUN]') ? m.name : `[OPIEKUN]: ${m.name}`) : (m.nrIndeksu || m.name)).filter(Boolean);
 
       // Zapis bezpośrednio do tabeli attendance w Supabase — błędy NIE mogą być połykane po cichu
       await saveMeetingAttendanceToSupabase({
@@ -1523,12 +1559,18 @@ export default function AttendanceModal({
         });
         const isSup = isSupervisorPerson(p);
         const isSpk = p.role === 'speaker';
-        const isGst = p.role === 'guest' || p.isGuest || p.isExternalGuest || (!p.nrIndeksu && p.role !== 'member');
+        const isGst = p.role === 'guest' || p.isGuest || p.isExternalGuest || (!p.nrIndeksu && p.role !== 'member' && !isSup && !isSpk);
         const finalPts = (!isSup && !isSpk && !isGst && isApprovedParticipant(p)) ? breakdown.totalPoints : 0;
         return {
           ...p,
           organization_id: activeOrgId,
           orgTag: currentOrg?.tag || '',
+          nrIndeksu: isSup ? '[OPIEKUN]' : (p.nrIndeksu || p.member?.index || ''),
+          index: isSup ? '[OPIEKUN]' : (p.index || p.member?.index || ''),
+          isSupervisor: isSup,
+          role: isSup ? 'supervisor' : (isSpk ? 'speaker' : (isGst ? 'guest' : 'member')),
+          rola: isSup ? 'Opiekun' : (isSpk ? 'Prelegent' : (isGst ? 'Gość' : 'Członek koła')),
+          status: isSup ? 'supervisor' : (isSpk ? 'speaker' : p.status),
           punkty: finalPts,
           points: finalPts,
           activities: extraActs,

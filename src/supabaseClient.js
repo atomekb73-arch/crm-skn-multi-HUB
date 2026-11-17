@@ -110,16 +110,14 @@ export async function fetchAllTenantRows(table, orgId, options = {}) {
   const pageSize = 1000;
   let from = 0;
   let allRows = [];
+  const orderByCol = options.orderBy || 'id';
 
   while (true) {
     let query = tenantClient
       .from(table)
       .select(options.select || '*')
-      .eq('organization_id', cleanOrg);
-
-    if (options.orderBy) {
-      query = query.order(options.orderBy, { ascending: options.ascending !== false });
-    }
+      .eq('organization_id', cleanOrg)
+      .order(orderByCol, { ascending: options.ascending !== false });
 
     const { data, error } = await query.range(from, from + pageSize - 1);
     if (error) {

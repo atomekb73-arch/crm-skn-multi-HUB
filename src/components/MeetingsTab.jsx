@@ -1502,15 +1502,18 @@ export default function MeetingsTab({
       .filter(p => p.manualApproved)
       .map((p, idx) => {
         const safeRawName = String(p.rawName || '').trim();
-        const isSup = p.role === 'supervisor' || p.isSupervisor || isFacultySupervisor(safeRawName);
+        const isSup = isSupervisorAttendee(p);
         const isSpk = !isSup && (p.role === 'speaker' || p.isSpeaker);
         const rawGst = !isSup && !isSpk && (p.role === 'guest' || p.rola === 'Gość' || p.isGuest || p.isExternalGuest);
         const nrIndeksu = (!isSup && !isSpk && !rawGst)
           ? String(p.member?.index || p.nrIndeksu || p.index || (isMonikaLyniewska(safeRawName) ? '34327' : (safeRawName.match(/\d{4,6}/)?.[0] || ''))).replace(/\D/g, '').trim()
-          : '';
+          : (isSup ? '[OPIEKUN]' : (isSpk ? '[SPEAKER]' : ''));
         const isGst = rawGst || (!isSup && !isSpk && !nrIndeksu && p.role !== 'member');
         let name = String(p.member?.fullName || p.fullName || p.name || safeRawName || '').replace(/^\[(?:OPIEKUN|SPEAKER|PRELEGENT|GOŚĆ|GOSC)\]:\s*/i, '').trim();
-        if (/^\d+$/.test(name) && nrIndeksu) {
+        if (isSup) {
+          name = name.replace(/^(mgr\s+)+/i, 'mgr ');
+        }
+        if (/^\d+$/.test(name) && nrIndeksu && !isSup && !isSpk) {
           name = (p.member && !/^\d+$/.test(p.member.fullName || '')) ? p.member.fullName : '';
         }
         if (!name && !nrIndeksu) {
@@ -1521,7 +1524,7 @@ export default function MeetingsTab({
           nrIndeksu: nrIndeksu || '',
           name,
           fullName: name,
-          rawName: safeRawName || name,
+          rawName: isSup ? (name.startsWith('[OPIEKUN]') ? name : `[OPIEKUN]: ${name}`) : (safeRawName || name),
           joinTime: p.joinTime || '',
           durationMinutes: p.durationMinutes ?? null,
           durationStr: p.durationStr || '',
@@ -1549,7 +1552,7 @@ export default function MeetingsTab({
         orgId: activeOrgId
       });
 
-      const confirmedIndexes = verifiedList.map(item => item.nrIndeksu || item.name).filter(Boolean);
+      const confirmedIndexes = verifiedList.map(item => item.isSupervisor ? (item.name.startsWith('[OPIEKUN]') ? item.name : `[OPIEKUN]: ${item.name}`) : (item.nrIndeksu || item.name)).filter(Boolean);
       setCustomMeetings(prev => prev.map(m => (m.id === targetMeeting?.id || m.code === targetMeeting?.code) ? { ...m, isNewlyCreated: false } : m));
       setSelectedMeeting(prev => prev ? ({
         ...prev,
@@ -1906,25 +1909,25 @@ export default function MeetingsTab({
     const currentSaved = getSavedMeetingAttendance(selectedMeeting);
     const confirmedCount = currentSaved?.confirmedCount ??
       (currentSaved?.confirmedIndexes?.length) ??
-      (Array.isArray(currentSaved?.attendees) ? currentSaved.attendees.filter(p => p.manualApproved && p.member?.index).length : (selectedMeeting.attendeesCount || selectedMeeting.attendees?.length || 0));
+      (Array.isArray(currentSaved?.attendees) ? currentSaved.attendees.filter(p => (p.manualApproved !== false) && (p.member?.index || isSupervisorAttendee(p))).length : (selectedMeeting.attendeesCount || selectedMeeting.attendees?.length || 0));
 
     let currentAttendees = [];
     if (Array.isArray(currentSaved?.attendees) && currentSaved.attendees.length > 0) {
       currentAttendees = currentSaved.attendees
-        .filter(p => p.manualApproved && p.member?.index)
+        .filter(p => (p.manualApproved !== false) && (p.member?.index || isSupervisorAttendee(p)))
         .map(p => ({
-          name: p.member?.name || p.rawName,
+          name: p.member?.name || p.fullName || p.name || p.rawName,
           rawName: p.rawName,
-          index: p.member?.index,
+          index: p.member?.index || (isSupervisorAttendee(p) ? '[OPIEKUN]' : ''),
           durationStr: p.durationStr || `${p.durationMinutes || 60} min`,
         }));
     } else if (parsedParticipants.length > 0) {
       currentAttendees = parsedParticipants
-        .filter(p => (manualOverrides[p.id]?.status === 'approved' || (!manualOverrides[p.id] && p.status === 'approved')) && p.member?.index)
+        .filter(p => (manualOverrides[p.id]?.status === 'approved' || (!manualOverrides[p.id] && p.status === 'approved') || isSupervisorAttendee(p)) && (p.member?.index || isSupervisorAttendee(p)))
         .map(p => ({
-          name: p.member?.name || p.rawName,
+          name: p.member?.name || p.fullName || p.name || p.rawName,
           rawName: p.rawName,
-          index: p.member?.index,
+          index: p.member?.index || (isSupervisorAttendee(p) ? '[OPIEKUN]' : ''),
           durationStr: p.durationStr || `${p.durationMinutes || 60} min`,
         }));
     }
@@ -2140,7 +2143,21 @@ export default function MeetingsTab({
 
   // Verified attendance statistics (Aggregated by status "Zaliczono")
   const isSpeakerAttendee = (p) => p.role === 'speaker' || p.role === 'prelegent' || p.rola === 'speaker' || p.isSpeaker || String(p.rawName || '').includes('[SPEAKER]') || String(p.name || '').includes('[SPEAKER]');
-  const isSupervisorAttendee = (p) => p.role === 'supervisor' || p.rola === 'supervisor' || isFacultySupervisor(p.rawName);
+  const isSupervisorAttendee = (p) =>
+    p?.isSupervisor ||
+    p?.role === 'supervisor' ||
+    p?.rola === 'Opiekun' ||
+    p?.rola === 'Opiekun Koła' ||
+    p?.rola === 'supervisor' ||
+    p?.status === 'supervisor' ||
+    p?.nrIndeksu === '[OPIEKUN]' ||
+    p?.index === '[OPIEKUN]' ||
+    String(p?.rawName || '').includes('[OPIEKUN]') ||
+    String(p?.name || '').includes('[OPIEKUN]') ||
+    String(p?.fullName || '').includes('[OPIEKUN]') ||
+    isFacultySupervisor(p?.rawName) ||
+    isFacultySupervisor(p?.name) ||
+    isFacultySupervisor(p?.fullName);
 
   const approvedParticipantsCount = parsedParticipants.filter(p => {
     if (isSupervisorAttendee(p) || isSpeakerAttendee(p)) return true;
@@ -2846,7 +2863,7 @@ export default function MeetingsTab({
                       ));
                       const currentSavedCount = currentSaved?.confirmedCount ??
                         (Array.isArray(currentSaved?.attendees)
-                          ? currentSaved.attendees.filter(p => p.role === 'supervisor' || isFacultySupervisor(p.rawName) || p.role === 'speaker' || (p.manualApproved !== undefined ? p.manualApproved : (p.isEligible || p.status === 'approved' || p.status === 'Zaliczona'))).length
+                          ? currentSaved.attendees.filter(p => isSupervisorAttendee(p) || p.role === 'speaker' || (p.manualApproved !== undefined ? p.manualApproved : (p.isEligible || p.status === 'approved' || p.status === 'Zaliczona'))).length
                           : (currentSaved?.confirmedIndexes?.length ?? (selectedMeeting?.attendees?.length || 0)));
 
                       if (!isCurrentVerified) return null;
@@ -3087,7 +3104,7 @@ export default function MeetingsTab({
                   {filteredParticipants.map((p, idx) => {
                     const isApproved = p.manualApproved;
                     const isSpeaker = p.role === 'speaker' || p.role === 'prelegent' || p.rola === 'speaker' || p.rola === 'prelegent' || p.isSpeaker || String(p.rawName || '').includes('[SPEAKER]') || String(p.name || '').includes('[SPEAKER]');
-                    const isSup = !isSpeaker && (p.role === 'supervisor' || p.rola === 'supervisor' || p.rola === 'Opiekun Koła' || isFacultySupervisor(p.rawName) || isFacultySupervisor(p.name));
+                    const isSup = !isSpeaker && isSupervisorAttendee(p);
                     const isGuest = !isSpeaker && !isSup && (p.isGuest || p.role === 'guest' || p.rola === 'guest');
                     const isShortTime = !isSpeaker && !isSup && !isGuest && p.durationMinutes < minDurationThreshold;
                     const candidateRaw = p.member

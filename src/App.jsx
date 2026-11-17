@@ -68,6 +68,7 @@ import {
   getMeetingOverrides,
   getCorrespondenceLog,
   setOrgStorage,
+  getMeetingAttendanceStorageKeys,
 } from './utils/storage';
 
 const TABS = [
@@ -761,7 +762,11 @@ export default function App() {
             const seenPersons = new Set();
             for (const rec of candidateRecords) {
               if (!isEwidencjaMatchForMeeting(rec, m)) continue;
-              const personId = String(rec.nrIndeksu || rec.index || rec.identyfikator || rec.fullName || '').trim().toLowerCase();
+              const personId = rec.isSupervisor
+                ? '[opiekun]_' + String(rec.fullName || rec.name || '').trim().toLowerCase()
+                : (rec.isSpeaker
+                  ? '[speaker]_' + String(rec.fullName || rec.name || '').trim().toLowerCase()
+                  : String(rec.nrIndeksu || rec.index || rec.identyfikator || rec.fullName || '').trim().toLowerCase());
               if (personId && !seenPersons.has(personId)) {
                 seenPersons.add(personId);
                 uniqueRecords.push(rec);
@@ -769,8 +774,45 @@ export default function App() {
             }
           }
 
-          const attendeesList = uniqueRecords.map(p => p.index || p.nrIndeksu || p.fullName);
+          const attendeesList = uniqueRecords.map(p => {
+            if (p.isSupervisor) {
+              const name = String(p.fullName || p.name || '').trim();
+              return name.startsWith('[OPIEKUN]') ? name : `[OPIEKUN]: ${name}`;
+            }
+            if (p.isSpeaker) {
+              const name = String(p.fullName || p.name || '').trim();
+              return name.startsWith('[SPEAKER]') ? name : `[SPEAKER]: ${name}`;
+            }
+            return p.index || p.nrIndeksu || p.fullName;
+          });
           const count = attendeesList.length;
+
+          // Hydratacja zbuforowanej obecności w localStorage bezpośrednio z Supabase (SSOT)
+          if (typeof window !== 'undefined' && window.localStorage && uniqueRecords.length > 0) {
+            const keys = getMeetingAttendanceStorageKeys(targetOrgId, m);
+            if (keys && keys.length > 0) {
+              const supervisorsList = uniqueRecords.filter(r => r.isSupervisor).map(r => r.fullName || r.name);
+              const storagePayload = {
+                organization_id: targetOrgId,
+                meetingId: m.id || m.date,
+                meetingDate: m.date,
+                meetingCode: m.code,
+                attendees: uniqueRecords,
+                allVerifiedList: uniqueRecords,
+                obecnosci: uniqueRecords,
+                participantRecords: uniqueRecords,
+                confirmedIndexes: attendeesList,
+                confirmedCount: count,
+                supervisors: supervisorsList,
+                savedAt: new Date().toISOString(),
+              };
+              keys.forEach(k => {
+                try {
+                  localStorage.setItem(k, JSON.stringify(storagePayload));
+                } catch {}
+              });
+            }
+          }
           const acad = getAcademicYearFromDate(m.date || m.start_dt);
           const metaKey1 = String(m.id || '').trim();
           const metaKey2 = String(m.code || '').trim();
@@ -894,7 +936,11 @@ export default function App() {
             const seenPersons = new Set();
             for (const rec of candidateRecords) {
               if (!isEwidencjaMatchForMeeting(rec, m)) continue;
-              const personId = String(rec.nrIndeksu || rec.index || rec.identyfikator || rec.fullName || '').trim().toLowerCase();
+              const personId = rec.isSupervisor
+                ? '[opiekun]_' + String(rec.fullName || rec.name || '').trim().toLowerCase()
+                : (rec.isSpeaker
+                  ? '[speaker]_' + String(rec.fullName || rec.name || '').trim().toLowerCase()
+                  : String(rec.nrIndeksu || rec.index || rec.identyfikator || rec.fullName || '').trim().toLowerCase());
               if (personId && !seenPersons.has(personId)) {
                 seenPersons.add(personId);
                 uniqueRecords.push(rec);
@@ -902,8 +948,45 @@ export default function App() {
             }
           }
 
-          const attendeesList = uniqueRecords.map(p => p.index || p.nrIndeksu || p.fullName);
+          const attendeesList = uniqueRecords.map(p => {
+            if (p.isSupervisor) {
+              const name = String(p.fullName || p.name || '').trim();
+              return name.startsWith('[OPIEKUN]') ? name : `[OPIEKUN]: ${name}`;
+            }
+            if (p.isSpeaker) {
+              const name = String(p.fullName || p.name || '').trim();
+              return name.startsWith('[SPEAKER]') ? name : `[SPEAKER]: ${name}`;
+            }
+            return p.index || p.nrIndeksu || p.fullName;
+          });
           const count = attendeesList.length;
+
+          // Hydratacja zbuforowanej obecności w localStorage bezpośrednio z Supabase (SSOT)
+          if (typeof window !== 'undefined' && window.localStorage && uniqueRecords.length > 0) {
+            const keys = getMeetingAttendanceStorageKeys(targetOrgId, m);
+            if (keys && keys.length > 0) {
+              const supervisorsList = uniqueRecords.filter(r => r.isSupervisor).map(r => r.fullName || r.name);
+              const storagePayload = {
+                organization_id: targetOrgId,
+                meetingId: m.id || m.date,
+                meetingDate: m.date,
+                meetingCode: m.code,
+                attendees: uniqueRecords,
+                allVerifiedList: uniqueRecords,
+                obecnosci: uniqueRecords,
+                participantRecords: uniqueRecords,
+                confirmedIndexes: attendeesList,
+                confirmedCount: count,
+                supervisors: supervisorsList,
+                savedAt: new Date().toISOString(),
+              };
+              keys.forEach(k => {
+                try {
+                  localStorage.setItem(k, JSON.stringify(storagePayload));
+                } catch {}
+              });
+            }
+          }
           const acad = getAcademicYearFromDate(m.date || m.start_dt);
           const metaKey1 = String(m.id || '').trim();
           const metaKey2 = String(m.code || '').trim();
@@ -1041,7 +1124,7 @@ export default function App() {
         ] = await Promise.all([
           fetchAllTenantRows('members', orgId, { orderBy: 'full_name', ascending: true }),
           fetchAllTenantRows('quarantine_submissions', orgId, { orderBy: 'created_at', ascending: false }),
-          fetchAllTenantRows('attendance', orgId),
+          fetchAllTenantRows('attendance', orgId, { orderBy: 'id', ascending: true }),
           fetchMeetingMetadata(orgId).catch(() => ({})),
           fetchTeamupSubcalendars(effectiveCalId, effectiveToken, effectiveSubId).catch(() => []),
           fetchTeamupEvents({
@@ -1264,7 +1347,7 @@ export default function App() {
             : null;
 
           const cleanCode = code.toUpperCase().replace(/^\[.*?\]\s*/, '');
-          const resolvedName = isSupervisor
+          let resolvedName = isSupervisor
             ? rawIdxStr.replace(/^\[OPIEKUN\]:\s*/i, '').trim()
             : isSpeaker
             ? rawIdxStr.replace(/^\[SPEAKER\]:\s*/i, '').trim()
@@ -1272,7 +1355,11 @@ export default function App() {
             ? rawIdxStr.replace(/^\[(?:GOŚĆ|GOSC)\]:\s*/i, '').trim()
             : (matchedMember ? matchedMember.fullName : rawIdxStr);
 
-          const resolvedIndex = isSupervisor ? '' : (isSpeaker ? '[SPEAKER]' : (isGuestRow ? '' : (matchedMember ? matchedMember.index : (cleanIdxStr || rawIdxStr))));
+          if (isSupervisor) {
+            resolvedName = resolvedName.replace(/^(mgr\s+)+/i, 'mgr ');
+          }
+
+          const resolvedIndex = isSupervisor ? '[OPIEKUN]' : (isSpeaker ? '[SPEAKER]' : (isGuestRow ? '' : (matchedMember ? matchedMember.index : (cleanIdxStr || rawIdxStr))));
 
           let parsedDesc = null;
           try {
@@ -1284,7 +1371,7 @@ export default function App() {
           const rawJoinTime = parsedDesc?.joinTime || '20:00';
           const rawDurMinutes = Number(parsedDesc?.durationMinutes ?? 60);
           const rawDurStr = parsedDesc?.durationStr || `${rawDurMinutes} min`;
-          const rawStatus = parsedDesc?.status || (matchedMember ? (row.role || 'Członek koła') : (row.role || (isSupervisor ? 'Opiekun' : (isSpeaker ? 'Prelegent' : 'Gość'))));
+          const rawStatus = isSupervisor ? 'supervisor' : (parsedDesc?.status || (matchedMember ? (row.role || 'Członek koła') : (row.role || (isSpeaker ? 'Prelegent' : 'Gość'))));
 
           let rawActivities = Array.isArray(parsedDesc?.activities) ? parsedDesc.activities : [];
           if (rawActivities.length === 0 && typeof parsedDesc?.desc === 'string' && parsedDesc.desc.includes('(')) {
@@ -1292,7 +1379,7 @@ export default function App() {
             if (mActs) rawActivities = mActs.split(',').map(s => s.trim().toUpperCase());
           }
           const rawDaysAttended = Number(parsedDesc?.daysAttended || 1);
-          const rawPoints = Number(row.points ?? parsedDesc?.punkty ?? parsedDesc?.points ?? 1);
+          const rawPoints = isSupervisor ? 0 : Number(row.points ?? parsedDesc?.punkty ?? parsedDesc?.points ?? 1);
 
           const ewItem = {
             id: row.id,
@@ -1304,22 +1391,22 @@ export default function App() {
             index: resolvedIndex,
             fullName: resolvedName,
             name: resolvedName,
-            rawName: parsedDesc?.rawName || parsedDesc?.name || resolvedName,
+            rawName: isSupervisor ? `[OPIEKUN]: ${resolvedName}` : (parsedDesc?.rawName || parsedDesc?.name || resolvedName),
             imieNazwisko: resolvedName,
             email: matchedMember?.email || parsedDesc?.email || '',
             member: matchedMember,
-            status: rawStatus,
+            status: isSupervisor ? 'supervisor' : rawStatus,
             rola: matchedMember ? (row.role || 'Członek koła') : (row.role || (isSupervisor ? 'Opiekun' : (isSpeaker ? 'Prelegent' : 'Gość'))),
             role: isSupervisor ? 'supervisor' : (isSpeaker ? 'speaker' : (matchedMember ? 'member' : 'guest')),
             roleDisplay: isSupervisor ? 'Opiekun' : (isSpeaker ? 'Prelegent' : (matchedMember ? 'Członek koła' : 'Gość')),
-            punkty: rawPoints,
-            points: rawPoints,
+            punkty: isSupervisor ? 0 : rawPoints,
+            points: isSupervisor ? 0 : rawPoints,
             isSupervisor,
             isSpeaker,
             isGuest: !isSupervisor && !isSpeaker && !matchedMember,
             isExternalGuest: !isSupervisor && !isSpeaker && !matchedMember,
-            isEligible: parsedDesc?.isEligible !== undefined ? parsedDesc.isEligible : (matchedMember || isSpeaker || isSupervisor ? true : false),
-            manualApproved: parsedDesc?.manualApproved !== undefined ? parsedDesc.manualApproved : (matchedMember || isSpeaker || isSupervisor ? true : false),
+            isEligible: isSupervisor ? true : (parsedDesc?.isEligible !== undefined ? parsedDesc.isEligible : (matchedMember || isSpeaker ? true : false)),
+            manualApproved: isSupervisor ? true : (parsedDesc?.manualApproved !== undefined ? parsedDesc.manualApproved : (matchedMember || isSpeaker ? true : false)),
             opisAktywnosci: parsedDesc?.desc || parsedDesc?.opisAktywnosci || row.activity_description || 'Obecność na spotkaniu',
             durationMinutes: rawDurMinutes,
             durationStr: rawDurStr,

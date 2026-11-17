@@ -388,20 +388,21 @@ export async function saveMeetingAttendanceToSupabase({
         activity_description: 'Obecność na spotkaniu naukowym'
       };
     }
-    const isSup = item.role === 'supervisor' || item.rola === 'Opiekun' || item.rola === 'Opiekun Koła' || item.isSupervisor;
+    const isSup = item.role === 'supervisor' || item.rola === 'Opiekun' || item.rola === 'Opiekun Koła' || item.isSupervisor || isFacultySupervisor(item.name || item.fullName || item.rawName);
     const isSpk = !isSup && (item.role === 'speaker' || item.rola === 'Prelegent' || item.isSpeaker);
     const nrIndeksu = (!isSup && !isSpk) ? String(item.nrIndeksu || item.index || '').replace(/\D/g, '').trim() : '';
-    const isGst = !isSup && !isSpk && (item.role === 'guest' || item.rola === 'Gość' || item.rola === 'Gość' || item.isGuest || item.isExternalGuest || (!nrIndeksu && item.role !== 'member'));
+    const isGst = !isSup && !isSpk && (item.role === 'guest' || item.rola === 'Gość' || item.isGuest || item.isExternalGuest || (!nrIndeksu && item.role !== 'member'));
     const rawItemName = String(item.name || item.fullName || item.rawName || '').trim();
     const cleanItemName = rawItemName.replace(/^\[(?:OPIEKUN|SPEAKER|PRELEGENT|GOŚĆ|GOSC)\]:\s*/i, '').trim();
-    const name = cleanItemName || (isGst ? `Gość #${idx + 1}` : (isSup ? `Opiekun #${idx + 1}` : (isSpk ? `Prelegent #${idx + 1}` : `Uczestnik #${idx + 1}`)));
-    const rola = String(item.rola || (isSup ? 'Opiekun' : (isSpk ? 'Prelegent' : (isGst ? 'Gość' : 'Członek koła')))).trim();
+    const normalizedSupName = cleanItemName.replace(/^(?:(?:mgr|dr|prof|inż|hab)\.?\s*)+/gi, (m) => m.trim().split(/\s+/)[0] + ' ').trim();
+    const name = isSup ? (normalizedSupName || cleanItemName || 'Opiekun Koła') : (cleanItemName || (isGst ? `Gość #${idx + 1}` : (isSpk ? `Prelegent #${idx + 1}` : `Uczestnik #${idx + 1}`)));
+    const rola = String(isSup ? 'Opiekun' : (item.rola || (isSpk ? 'Prelegent' : (isGst ? 'Gość' : 'Członek koła')))).trim();
     const rawPts = item.punkty !== undefined ? item.punkty : (item.points !== undefined ? item.points : 1);
     const punkty = (isSup || isSpk || isGst) ? 0 : (Number(rawPts) >= 0 ? Number(rawPts) : 1);
     const opisAktywnosci = String(item.opisAktywnosci || item.description || 'Obecność na spotkaniu naukowym').trim();
 
     const identifier = isSup
-      ? `[OPIEKUN]: ${name}`
+      ? (name.startsWith('[OPIEKUN]') ? name : `[OPIEKUN]: ${name}`)
       : (isSpk
         ? `[SPEAKER]: ${name}`
         : (isGst
@@ -1239,14 +1240,17 @@ export async function fetchMeetingAttendanceFromSupabase(meetingCode, sheetId = 
         }
 
         const fallbackName = parsedDesc?.fullName || parsedDesc?.rawName || cleanName;
+        const normalizedSupName = cleanName.replace(/^(?:(?:mgr|dr|prof|inż|hab)\.?\s*)+/gi, (m) => m.trim().split(/\s+/)[0] + ' ').trim();
         const finalName = isSupervisor
-          ? cleanName
+          ? (normalizedSupName || cleanName || 'Opiekun Koła')
           : (isSpeaker ? cleanName : (matchedMember ? (matchedMember.fullName || `${matchedMember.firstName || ''} ${matchedMember.lastName || ''}`.trim()) : fallbackName));
-        const finalIndex = isSupervisor ? '' : (isSpeaker ? '[SPEAKER]' : (isExplicitGuest ? '' : (matchedMember?.index || (/^\d+$/.test(cleanName) ? cleanName : ''))));
+        const finalIndex = isSupervisor ? '[OPIEKUN]' : (isSpeaker ? '[SPEAKER]' : (isExplicitGuest ? '' : (matchedMember?.index || (/^\d+$/.test(cleanName) ? cleanName : ''))));
         const finalRole = isSupervisor ? 'supervisor' : (isSpeaker ? 'speaker' : (isExplicitGuest ? 'Gość' : (item.role || (matchedMember || finalIndex ? 'Członek koła' : 'Gość'))));
 
         let formattedRawName = parsedDesc?.rawName || finalName;
-        if (isSpeaker) {
+        if (isSupervisor) {
+          formattedRawName = finalName.startsWith('[OPIEKUN]') ? finalName : `[OPIEKUN]: ${finalName}`;
+        } else if (isSpeaker) {
           formattedRawName = finalName.startsWith('[SPEAKER]') ? finalName : `[SPEAKER]: ${finalName}`;
         } else if (finalRole === 'Gość' || isExplicitGuest) {
           formattedRawName = finalName.startsWith('[GOŚĆ]') ? finalName : `[GOŚĆ]: ${finalName}`;
@@ -1259,7 +1263,7 @@ export async function fetchMeetingAttendanceFromSupabase(meetingCode, sheetId = 
           rawName: formattedRawName,
           fullName: finalName,
           name: finalName,
-          index: (isSpeaker || isSupervisor) ? '' : finalIndex,
+          index: isSupervisor ? '[OPIEKUN]' : (isSpeaker ? '[SPEAKER]' : finalIndex),
           nrIndeksu: isSupervisor ? '[OPIEKUN]' : (isSpeaker ? '[SPEAKER]' : finalIndex),
           email: matchedMember?.email || '',
           member: matchedMember || null,
@@ -1271,8 +1275,8 @@ export async function fetchMeetingAttendanceFromSupabase(meetingCode, sheetId = 
           manualApproved: true,
           isEligible: true,
           status: isSupervisor ? 'supervisor' : (isSpeaker ? 'speaker' : 'approved'),
-          punkty: Number(item.points ?? 1),
-          points: Number(item.points ?? 1),
+          punkty: isSupervisor ? 0 : Number(item.points ?? 1),
+          points: isSupervisor ? 0 : Number(item.points ?? 1),
           opisAktywnosci: parsedDesc?.desc || rawDesc || 'Obecność na spotkaniu naukowym',
           activities: Array.isArray(parsedDesc?.activities) ? parsedDesc.activities : [],
           daysAttended: Number(parsedDesc?.daysAttended || 1),

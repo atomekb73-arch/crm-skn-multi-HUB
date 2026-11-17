@@ -1,32 +1,100 @@
-// ─── Special Roles & Faculty Supervisors (Clean Template) ───────────────────
+// ─── Special Roles & Faculty Supervisors (Production SSOT) ───────────────────
 
-export const DEFAULT_FACULTY_SUPERVISORS = [];
+export const DEFAULT_FACULTY_SUPERVISORS = [
+  {
+    id: 1793560805774,
+    academicTitle: "mgr",
+    name: "Martyna Dziekan",
+    fullName: "mgr Martyna Dziekan",
+    affiliation: "Instytut Psychologii WSKZ",
+    role: "Opiekun Naukowy Koła",
+    email: "martyna.dziekan@wskz.pl",
+    organization_id: "skn_seksuologii",
+    orgId: "skn_seksuologii",
+    startDate: "2025-10-01",
+    endDate: "",
+    isActive: true,
+    aliases: ["martyna dziekan", "mgr martyna dziekan", "dziekan"]
+  },
+  {
+    id: "sup_pietrzak",
+    academicTitle: "mgr",
+    name: "Sławomir Pietrzak",
+    fullName: "mgr Sławomir Pietrzak",
+    affiliation: "Instytut Psychologii WSKZ",
+    role: "Opiekun Koła Naukowego",
+    email: "slawomir.pietrzak@wskz.pl",
+    organization_id: "uzaleznienia",
+    orgId: "uzaleznienia",
+    isActive: true,
+    aliases: ["sławomir pietrzak", "slawomir pietrzak", "mgr sławomir pietrzak"]
+  },
+  {
+    id: 1793993988367,
+    academicTitle: "mgr",
+    name: "Ewa Skupińska",
+    fullName: "mgr Ewa Skupińska",
+    affiliation: "Wydział Psychologii WSKZ",
+    role: "Opiekun Naukowy Koła",
+    email: "ewa.skupinska@wskz.pl",
+    organization_id: "uzaleznienia",
+    orgId: "uzaleznienia",
+    startDate: "2025-10-01",
+    endDate: "",
+    isActive: true,
+    aliases: ["ewa skupińska", "ewa skupinska", "mgr ewa skupińska", "mgr ewa skupinska"]
+  },
+  {
+    id: 1793996822236,
+    academicTitle: "mgr",
+    name: "Ewa Skup",
+    fullName: "mgr Ewa Skup",
+    affiliation: "Wydział Psychologii WSKZ",
+    role: "Opiekun Naukowy Koła",
+    email: "ewa@ewa.pl",
+    organization_id: "psychoonkologia",
+    orgId: "psychoonkologia",
+    startDate: "2025-10-01",
+    endDate: "",
+    isActive: true,
+    aliases: ["ewa skup", "mgr ewa skup"]
+  }
+];
 
 export const FACULTY_SUPERVISORS = DEFAULT_FACULTY_SUPERVISORS;
 
 export function getStoredSupervisors(orgId = null) {
-  if (typeof window === 'undefined') return [];
-  try {
-    const activeOrg = orgId || localStorage.getItem('crm_skn_current_org_id') || 'skn_seksuologii';
-    const key = `crm_skn_${activeOrg}_supervisors`;
-    const saved = localStorage.getItem(key);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+  const activeOrg = orgId || (typeof window !== 'undefined' ? (localStorage.getItem('crm_skn_current_org_id') || localStorage.getItem('crm_active_org_id')) : null) || 'skn_seksuologii';
+  if (typeof window !== 'undefined') {
+    try {
+      const key = `crm_skn_${activeOrg}_supervisors`;
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
       }
-    }
-    // Sprawdzenie fallbacku z crm_skn_organizations
-    const orgsRaw = localStorage.getItem('crm_skn_organizations');
-    if (orgsRaw) {
-      const orgs = JSON.parse(orgsRaw);
-      const match = Array.isArray(orgs) ? orgs.find(o => o.id === activeOrg) : null;
-      if (match && Array.isArray(match.supervisors) && match.supervisors.length > 0) {
-        return match.supervisors;
+      const legacyKey = localStorage.getItem('skn_supervisors_config');
+      if (legacyKey) {
+        const parsedLegacy = JSON.parse(legacyKey);
+        if (Array.isArray(parsedLegacy) && parsedLegacy.length > 0) {
+          return parsedLegacy;
+        }
       }
-    }
-  } catch {}
-  return [];
+      // Sprawdzenie fallbacku z crm_skn_organizations
+      const orgsRaw = localStorage.getItem('crm_skn_organizations');
+      if (orgsRaw) {
+        const orgs = JSON.parse(orgsRaw);
+        const match = Array.isArray(orgs) ? orgs.find(o => o.id === activeOrg) : null;
+        if (match && Array.isArray(match.supervisors) && match.supervisors.length > 0) {
+          return match.supervisors;
+        }
+      }
+    } catch {}
+  }
+  const orgDefaults = DEFAULT_FACULTY_SUPERVISORS.filter(s => !s.organization_id || s.organization_id === activeOrg || s.orgId === activeOrg);
+  return orgDefaults.length > 0 ? orgDefaults : DEFAULT_FACULTY_SUPERVISORS;
 }
 
 export const PARTICIPANT_ROLES = {
@@ -108,10 +176,8 @@ export function getCustomMappedMember(nameOrEmailOrIndex) {
 export function findMatchingSupervisor(nameOrEmail, customSupervisors = null) {
   if (!nameOrEmail) return null;
   const raw = String(nameOrEmail)
-    .replace(/^\[SPEAKER\]:\s*/i, '')
-    .replace(/^\[GOŚĆ\]:\s*/i, '')
-    .replace(/^\[GOSC\]:\s*/i, '')
-    .replace(/^\[PRELEGENT\]:\s*/i, '')
+    .replace(/^\[(?:OPIEKUN|SPEAKER|PRELEGENT|GOŚĆ|GOSC)\]:\s*/i, '')
+    .replace(/^\[(?:OPIEKUN|SPEAKER|PRELEGENT|GOŚĆ|GOSC)\]\s*/i, '')
     .replace(/\([^)]*\)/g, ' ')
     .replace(/\[[^\]]*\]/g, ' ')
     .trim();
