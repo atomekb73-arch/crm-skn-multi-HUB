@@ -175,7 +175,7 @@ export function extractCleanRoleTitle(roleStr = '', isFemale = false) {
 
   // Wytnij z etykiety dopisek koła, np. "Przewodniczący Koła Naukowego Seksuologii" -> "Przewodniczący"
   let clean = String(roleStr)
-    .replace(/\s+(Koła Naukowego|Koła|SKN|Studenckiego Koła).*$/i, '')
+    .replace(/\s*[-–—:]?\s*(Studenckiego Koła Naukowego|Studenckie Koło Naukowe|Koła Naukowego|Koło Naukowe|Koła|SKN).*$/i, '')
     .trim();
 
   if (isFemale) {
@@ -854,6 +854,13 @@ export function BoardCertificateTemplate({
     return extractCleanRoleTitle(boardRole, isFemale);
   }, [boardRole, isFemale]);
 
+  // Pełna nazwa funkcji połączona z dopełniaczem nazwy koła, np. "Przewodniczący Studenckiego Koła Naukowego Seksuologii WSKZ"
+  const fullRoleWithGenitive = useMemo(() => {
+    if (!cleanRoleTitle) return orgGenitive;
+    if (cleanRoleTitle.includes(orgGenitive)) return cleanRoleTitle;
+    return `${cleanRoleTitle} ${orgGenitive}`;
+  }, [cleanRoleTitle, orgGenitive]);
+
   return (
     <div className="w-full flex-1 flex flex-col justify-between bg-white text-slate-900 font-sans select-text relative">
       {/* ── STREFA 1 (GÓRNA): Nagłówek Uczelni, Sygnatura, Tytuł i Formuła Wstępna ── */}
@@ -894,21 +901,17 @@ export function BoardCertificateTemplate({
 
       {/* ── STREFA 2 (ŚRODKOWA): Boks Funkcji w Zarządzie i Zakres Obowiązków ── */}
       <div className="relative z-10 flex-grow flex flex-col justify-center my-2 sm:my-3.5 space-y-3 sm:space-y-3.5">
-        {/* Boks Oficjalnej Funkcji w Zarządzie w układzie 2-wierszowym */}
+        {/* Boks Oficjalnej Funkcji w Zarządzie z nagłówkiem łączącym funkcję z nazwą koła w dopełniaczu */}
         <div className="p-3.5 sm:p-4 rounded-xl bg-indigo-50/70 border border-indigo-200 text-center shadow-2xs space-y-1.5 font-normal">
           <span className="text-[9px] font-semibold uppercase text-indigo-700 tracking-widest block mb-1">
             Oficjalna Funkcja w&nbsp;Zarządzie Koła Naukowego
           </span>
-          {/* Linia 1: Sama nazwa funkcji (większa, pogrubiona) */}
-          <span className="text-xl sm:text-2xl font-bold text-indigo-950 block tracking-tight leading-tight">
-            {cleanRoleTitle}
+          {/* Główny duży nagłówek: funkcja połączona z pełną nazwą koła w dopełniaczu */}
+          <span className="text-lg sm:text-xl font-bold text-indigo-950 block tracking-tight leading-snug">
+            {fullRoleWithGenitive}
           </span>
-          {/* Linia 2: Pełna nazwa koła w dopełniaczu (nieco mniejsza, pod spodem) */}
-          <span className="text-xs sm:text-[13px] font-semibold text-indigo-900/90 block leading-snug">
-            {orgGenitive}
-          </span>
-          {/* Okres kadencji */}
-          <span className="text-[10px] text-slate-500 font-normal block pt-0.5">
+          {/* Okres kadencji bezpośrednio pod nagłówkiem */}
+          <span className="text-[10px] sm:text-[10.5px] text-slate-500 font-normal block pt-0.5">
             w&nbsp;okresie kadencji: {termDates}
           </span>
         </div>
