@@ -232,6 +232,7 @@ export default function OfficialWskzDocumentA4({
           /* Tabele wielostronicowe */
           #skn-a4-print-area table {
             width: 100% !important;
+            min-width: 100% !important;
             border-collapse: collapse !important;
             table-layout: fixed !important;
             page-break-inside: auto !important;

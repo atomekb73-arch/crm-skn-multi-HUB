@@ -937,6 +937,18 @@ export default function ReportsTab({
             display: none !important;
           }
 
+          body:not(:has(#skn-a4-modal-backdrop)) .lg\\:col-span-7 {
+            width: 100% !important;
+            max-width: 100% !important;
+            display: block !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          body:not(:has(#skn-a4-modal-backdrop)) .grid {
+            display: block !important;
+            width: 100% !important;
+          }
+
           body:not(:has(#skn-a4-modal-backdrop)) #reports-print-container {
             position: static !important;
             display: flex !important;
@@ -1004,10 +1016,13 @@ export default function ReportsTab({
             page-break-inside: avoid !important;
             break-inside: avoid !important;
           }
+          #reports-print-container table,
+          #skn-a4-print-area table,
           .doc-a4-sheet table {
             page-break-inside: auto !important;
             break-inside: auto !important;
             width: 100% !important;
+            min-width: 100% !important;
             table-layout: fixed !important;
             border-collapse: collapse !important;
           }
@@ -1038,10 +1053,6 @@ export default function ReportsTab({
             background: transparent !important;
             padding: 0 !important;
             box-shadow: none !important;
-          }
-          @page {
-            size: A4 portrait;
-            margin: 12mm 14mm;
           }
         }
       `}</style>
@@ -1678,7 +1689,7 @@ export default function ReportsTab({
         </div>
 
         {/* ── SECTOR B: Live Print Preview (col-span-7) ── */}
-        <div className="lg:col-span-7 space-y-4">
+        <div className="lg:col-span-7 space-y-4 print:w-full print:block print:max-w-full print:m-0 print:p-0">
 
           {/* Action Bar Above Preview (Hidden during print) */}
           <div className="bg-white p-3.5 sm:px-5 rounded-2xl shadow-sm border border-slate-200 text-slate-800 flex flex-wrap items-center justify-between gap-3 print:hidden">
@@ -1923,6 +1934,7 @@ export default function ReportsTab({
                         supervisors={supervisors}
                         academicYear={academicYear}
                         docDate={docDate}
+                        docNumber={currentDocNumber}
                         org={currentOrg}
                         columnVisibility={columnVisibility}
                         customMeetingTypes={customMeetingTypes}
@@ -2112,6 +2124,7 @@ export default function ReportsTab({
                 supervisors={supervisors}
                 academicYear={academicYear}
                 docDate={docDate}
+                docNumber={currentDocNumber}
                 org={currentOrg}
                 columnVisibility={columnVisibility}
                 customMeetingTypes={customMeetingTypes}

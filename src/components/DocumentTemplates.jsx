@@ -1304,6 +1304,7 @@ export function MembersRegistryTemplate({
   supervisors = [],
   academicYear = getCurrentAcademicYear(),
   docDate = new Date(),
+  docNumber: propDocNumber = null,
   org = null,
   columnVisibility = {},
   customMeetingTypes = {},
@@ -1362,7 +1363,7 @@ export function MembersRegistryTemplate({
   const totalMeetings = conductedMeetingsCount > 0 ? conductedMeetingsCount : scopedMeetings.length;
   const hasDataForYear = conductedMeetingsCount > 0 || scopedEwidencja.length > 0;
 
-  const docNumber = generateDocumentNumber('EWIDENCJA', orgTag, academicYear, orgTag);
+  const docNumber = propDocNumber || generateDocumentNumber('EWIDENCJA', orgTag, academicYear, orgTag);
   const activeSupervisors = getActiveSupervisors(supervisors, org);
 
   const activeMembers = useMemo(() => {
@@ -1386,17 +1387,19 @@ export function MembersRegistryTemplate({
   const showStatus = columnVisibility.status === true;
 
   // Dynamiczny, proporcjonalny rozkład szerokości kolumn dopasowany w 100% do ramki A4
+  // Zgodnie z wytycznymi: LP 5%, Imię i Nazwisko 24%, Nr Albumu 11%, Kierunek 24%, Rok 11%, Obecności 9%, Frekwencja 8%, Punkty 8%
+  // Przy włączonym Zaliczeniu: Imię i Nazwisko 20% (-4%), Kierunek 20% (-4%), Zaliczenie 8%
   const colWidths = useMemo(() => {
     const baseWeights = {
-      lp: showStatus ? 4 : 4,
-      name: showStatus ? 22 : 25,
-      index: showStatus ? 9 : 10,
-      field: showStatus ? 20 : 23,
-      year: showStatus ? 6 : 7,
-      present: showStatus ? 9 : 10,
-      freq: showStatus ? 9 : 10,
-      points: showStatus ? 9 : 11,
-      status: showStatus ? 12 : 0,
+      lp: 5,
+      name: showStatus ? 20 : 24,
+      index: 11,
+      field: showStatus ? 20 : 24,
+      year: 11,
+      present: 9,
+      freq: 8,
+      points: 8,
+      status: showStatus ? 8 : 0,
     };
 
     const activeCols = [];
@@ -1418,7 +1421,7 @@ export function MembersRegistryTemplate({
 
     activeCols.forEach((colKey, idx) => {
       if (idx === activeCols.length - 1) {
-        const lastWidth = (100 - allocatedTotal).toFixed(1);
+        const lastWidth = Number((100 - allocatedTotal).toFixed(1));
         widths[colKey] = `${lastWidth}%`;
       } else {
         const pct = Number(((baseWeights[colKey] / totalWeight) * 100).toFixed(1));
@@ -1428,6 +1431,20 @@ export function MembersRegistryTemplate({
     });
 
     return widths;
+  }, [showLp, showName, showIndex, showField, showYear, showPresent, showFreq, showPoints, showStatus]);
+
+  const activeColCount = useMemo(() => {
+    let count = 0;
+    if (showLp) count++;
+    if (showName) count++;
+    if (showIndex) count++;
+    if (showField) count++;
+    if (showYear) count++;
+    if (showPresent) count++;
+    if (showFreq) count++;
+    if (showPoints) count++;
+    if (showStatus) count++;
+    return count || 8;
   }, [showLp, showName, showIndex, showField, showYear, showPresent, showFreq, showPoints, showStatus]);
 
   // Memoizowane wiersze ewidencji – eliminuje przeliczanie 150+ studentów przy każdym renderze
@@ -1547,11 +1564,37 @@ export function MembersRegistryTemplate({
         </div>
       ) : (
         /* ── Tabela członków ze zoptymalizowanymi kolumnami dopasowanymi w 100% do A4 ── */
-        <div className="w-full max-w-full border border-slate-200 rounded-lg overflow-hidden text-[10px] flex-1 min-h-[300px] flex flex-col mb-4 print:border-none print:rounded-none print:overflow-visible box-border">
-          <table className="w-full text-left border-collapse print:text-[9.5px]" style={{ tableLayout: 'fixed', width: '100%', pageBreakInside: 'auto', breakInside: 'auto' }}>
-            <thead className="bg-slate-100 text-slate-700 font-medium border-b border-slate-200" style={{ display: 'table-header-group' }}>
+        <div
+          className="w-full max-w-full border border-slate-200 rounded-lg overflow-hidden text-[10px] min-h-[300px] mb-4 print:border-none print:rounded-none print:overflow-visible box-border"
+          style={{ width: '100%', minWidth: '100%' }}
+        >
+          <table
+            className="w-full text-left border-collapse print:text-[9.5px]"
+            style={{
+              tableLayout: 'fixed',
+              width: '100%',
+              minWidth: '100%',
+              pageBreakInside: 'auto',
+              breakInside: 'auto',
+            }}
+          >
+            <colgroup>
+              {showLp && <col style={{ width: colWidths.lp }} />}
+              {showName && <col style={{ width: colWidths.name }} />}
+              {showIndex && <col style={{ width: colWidths.index }} />}
+              {showField && <col style={{ width: colWidths.field }} />}
+              {showYear && <col style={{ width: colWidths.year }} />}
+              {showPresent && <col style={{ width: colWidths.present }} />}
+              {showFreq && <col style={{ width: colWidths.freq }} />}
+              {showPoints && <col style={{ width: colWidths.points }} />}
+              {showStatus && <col style={{ width: colWidths.status }} />}
+            </colgroup>
+            <thead
+              className="bg-slate-100 text-slate-700 font-medium border-b border-slate-200"
+              style={{ display: 'table-header-group' }}
+            >
               <tr className="hidden print:table-row bg-white border-b border-slate-300">
-                <th colSpan={10} className="p-0 pb-1 text-left font-normal">
+                <th colSpan={activeColCount} className="p-0 pb-1 text-left font-normal">
                   <div className="flex items-center justify-between text-[8px] text-slate-600 font-sans pb-1 mb-1 border-b border-slate-200">
                     <span className="font-semibold text-slate-800 uppercase tracking-tight">{orgName}</span>
                     <div className="font-mono text-slate-500">
@@ -1561,15 +1604,88 @@ export function MembersRegistryTemplate({
                 </th>
               </tr>
               <tr>
-                {showLp && <th className="py-2 px-2 text-center text-[10px] whitespace-nowrap" style={{ width: colWidths.lp }}>LP.</th>}
-                {showName && <th className="py-2 px-2.5 text-[10px]" style={{ width: colWidths.name }}>Imię i Nazwisko</th>}
-                {showIndex && <th className="py-2 px-2 text-center text-[10px] whitespace-nowrap" style={{ width: colWidths.index }}>Nr Albumu</th>}
-                {showField && <th className="py-2 px-2.5 text-[10px]" style={{ width: colWidths.field }}>Kierunek Studiów</th>}
-                {showYear && <th className="py-2 px-2 text-center text-[10px] whitespace-nowrap" style={{ width: colWidths.year }}>Rok</th>}
-                {showPresent && <th className="py-2 px-2 text-center text-[10px] whitespace-nowrap" style={{ width: colWidths.present }}>Obecności</th>}
-                {showFreq && <th className="py-2 px-2 text-center text-[10px] whitespace-nowrap" style={{ width: colWidths.freq }}>Frekwencja</th>}
-                {showPoints && <th className="py-2 px-2 text-center text-[10px] whitespace-nowrap" style={{ width: colWidths.points }}>Punkty</th>}
-                {showStatus && <th className="py-2 px-2 text-center text-[10px] whitespace-nowrap" style={{ width: colWidths.status }}>Zaliczenie</th>}
+                {showLp && (
+                  <th
+                    className="py-2 px-2 text-center text-[10px] whitespace-nowrap font-semibold text-slate-700"
+                    style={{ width: colWidths.lp, whiteSpace: 'nowrap' }}
+                  >
+                    LP.
+                  </th>
+                )}
+                {showName && (
+                  <th
+                    className="py-2 px-2.5 text-left text-[10px] font-semibold text-slate-700"
+                    style={{
+                      width: colWidths.name,
+                      whiteSpace: 'normal',
+                      wordBreak: 'normal',
+                      overflowWrap: 'break-word',
+                    }}
+                  >
+                    Imię i Nazwisko
+                  </th>
+                )}
+                {showIndex && (
+                  <th
+                    className="py-2 px-2 text-center text-[10px] whitespace-nowrap font-semibold text-slate-700"
+                    style={{ width: colWidths.index, whiteSpace: 'nowrap' }}
+                  >
+                    Nr Albumu
+                  </th>
+                )}
+                {showField && (
+                  <th
+                    className="py-2 px-2.5 text-left text-[10px] font-semibold text-slate-700"
+                    style={{
+                      width: colWidths.field,
+                      whiteSpace: 'normal',
+                      wordBreak: 'normal',
+                      overflowWrap: 'break-word',
+                    }}
+                  >
+                    Kierunek Studiów
+                  </th>
+                )}
+                {showYear && (
+                  <th
+                    className="py-2 px-2 text-center text-[10px] whitespace-nowrap font-semibold text-slate-700"
+                    style={{ width: colWidths.year, whiteSpace: 'nowrap' }}
+                  >
+                    Rok
+                  </th>
+                )}
+                {showPresent && (
+                  <th
+                    className="py-2 px-2 text-center text-[10px] whitespace-nowrap font-semibold text-slate-700"
+                    style={{ width: colWidths.present, whiteSpace: 'nowrap' }}
+                  >
+                    Obecności
+                  </th>
+                )}
+                {showFreq && (
+                  <th
+                    className="py-2 px-2 text-center text-[10px] whitespace-nowrap font-semibold text-slate-700"
+                    style={{ width: colWidths.freq, whiteSpace: 'nowrap' }}
+                  >
+                    Frekwencja
+                  </th>
+                )}
+                {showPoints && (
+                  <th
+                    className="py-2 px-2 text-center text-[10px] whitespace-nowrap font-semibold text-slate-700"
+                    style={{ width: colWidths.points, whiteSpace: 'nowrap' }}
+                  >
+                    Punkty
+                  </th>
+                )}
+                {showStatus && (
+                  <th
+                    className="py-2 px-2 text-center text-[10px] whitespace-nowrap font-semibold text-slate-700"
+                    style={{ width: colWidths.status, whiteSpace: 'nowrap' }}
+                  >
+                    Zaliczenie
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -1578,34 +1694,97 @@ export function MembersRegistryTemplate({
                   <tr
                     key={row.id}
                     className="hover:bg-slate-50 break-inside-avoid page-break-inside-avoid align-top"
-                    style={{ pageBreakInside: 'avoid', breakInside: 'avoid', pageBreakAfter: 'auto', contentVisibility: 'auto', containIntrinsicSize: '0 26px' }}
+                    style={{
+                      pageBreakInside: 'avoid',
+                      breakInside: 'avoid',
+                      pageBreakAfter: 'auto',
+                      contentVisibility: 'auto',
+                      containIntrinsicSize: '0 26px',
+                    }}
                   >
-                    {showLp && <td className="py-2 px-2 text-center text-slate-400 font-mono text-[9.5px] whitespace-nowrap align-top">{row.lp}</td>}
-                    {showName && <td className="py-2 px-2.5 font-medium text-slate-900 text-[10px] align-top">{row.name}</td>}
-                    {showIndex && <td className="py-2 px-2 text-center font-mono text-[9.5px] whitespace-nowrap align-top">{row.cleanIndex}</td>}
-                    {showField && <td className="py-2 px-2.5 text-slate-600 text-[9.5px] align-top">{row.field}</td>}
-                    {showYear && <td className="py-2 px-2 text-center text-[9.5px] whitespace-nowrap align-top">{row.yearDisplay}</td>}
+                    {showLp && (
+                      <td
+                        className="py-2 px-2 text-center text-slate-400 font-mono text-[9.5px] whitespace-nowrap align-top"
+                        style={{ width: colWidths.lp, whiteSpace: 'nowrap' }}
+                      >
+                        {row.lp}
+                      </td>
+                    )}
+                    {showName && (
+                      <td
+                        className="py-2 px-2.5 font-medium text-slate-900 text-[10px] align-top"
+                        style={{
+                          width: colWidths.name,
+                          whiteSpace: 'normal',
+                          wordBreak: 'normal',
+                          overflowWrap: 'break-word',
+                        }}
+                      >
+                        {row.name}
+                      </td>
+                    )}
+                    {showIndex && (
+                      <td
+                        className="py-2 px-2 text-center font-mono text-[9.5px] text-slate-700 whitespace-nowrap align-top"
+                        style={{ width: colWidths.index, whiteSpace: 'nowrap' }}
+                      >
+                        {row.cleanIndex}
+                      </td>
+                    )}
+                    {showField && (
+                      <td
+                        className="py-2 px-2.5 text-slate-600 text-[9.5px] align-top"
+                        style={{
+                          width: colWidths.field,
+                          whiteSpace: 'normal',
+                          wordBreak: 'normal',
+                          overflowWrap: 'break-word',
+                        }}
+                      >
+                        {row.field}
+                      </td>
+                    )}
+                    {showYear && (
+                      <td
+                        className="py-2 px-2 text-center text-[9.5px] text-slate-700 whitespace-nowrap align-top"
+                        style={{ width: colWidths.year, whiteSpace: 'nowrap' }}
+                      >
+                        {row.yearDisplay}
+                      </td>
+                    )}
                     {showPresent && (
-                      <td className="py-2 px-2 text-center font-mono text-[9.5px] whitespace-nowrap align-top">
+                      <td
+                        className="py-2 px-2 text-center font-mono text-[9.5px] whitespace-nowrap align-top"
+                        style={{ width: colWidths.present, whiteSpace: 'nowrap' }}
+                      >
                         {row.isZeroActivity && isPastYear ? '—' : `${row.present} / ${row.memberTotalMeetings}`}
                       </td>
                     )}
                     {showFreq && (
-                      <td className="py-2 px-2 text-center font-mono font-medium text-[9.5px] whitespace-nowrap align-top">
+                      <td
+                        className="py-2 px-2 text-center font-mono font-medium text-[9.5px] whitespace-nowrap align-top"
+                        style={{ width: colWidths.freq, whiteSpace: 'nowrap' }}
+                      >
                         <span className={row.freq >= 50 ? 'text-emerald-700' : (row.isZeroActivity && isPastYear ? 'text-slate-400' : 'text-slate-600')}>
                           {row.isZeroActivity && isPastYear ? '—' : `${row.freq}%`}
                         </span>
                       </td>
                     )}
                     {showPoints && (
-                      <td className="py-2 px-2 text-center font-mono font-semibold text-[9.5px] whitespace-nowrap align-top">
+                      <td
+                        className="py-2 px-2 text-center font-mono font-semibold text-[9.5px] whitespace-nowrap align-top"
+                        style={{ width: colWidths.points, whiteSpace: 'nowrap' }}
+                      >
                         <span className={row.points > 0 ? 'text-purple-700' : 'text-slate-400'}>
                           {row.isZeroActivity && isPastYear ? '—' : `${row.points} pkt`}
                         </span>
                       </td>
                     )}
                     {showStatus && (
-                      <td className="py-2 px-2 text-center align-top">
+                      <td
+                        className="py-2 px-2 text-center whitespace-nowrap align-top"
+                        style={{ width: colWidths.status, whiteSpace: 'nowrap' }}
+                      >
                         <span className={`inline-block px-1.5 py-0.5 rounded text-[8px] font-semibold border whitespace-nowrap ${row.statusInfo.badgeClass}`}>
                           {row.statusInfo.label}
                         </span>
@@ -1623,7 +1802,7 @@ export function MembersRegistryTemplate({
         * Pełny rejestr wszystkich {activeMembers.length} aktywnych członków koła znajduje się w centralnej bazie danych CRM WSKZ.
       </p>
 
-      {/* ── Dolna sekcja: Podpisy i Stopka CRM z gwarancją zakotwiczenia na dole strony ── */}
+      {/* ── Dolna sekcja: Podpisy z gwarancją zakotwiczenia na dole strony ── */}
       <div className="mt-auto shrink-0 pt-6 signature-block break-inside-avoid page-break-inside-avoid" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
         <DocumentSignaturesBlock
           activeSupervisors={activeSupervisors}
@@ -1633,8 +1812,6 @@ export function MembersRegistryTemplate({
           chairpersonTitle="Zarząd Koła Naukowego"
           chairpersonSub={orgShortName}
         />
-
-        <DocumentStandardFooter org={org} docDate={docDate} />
       </div>
     </div>
   );
