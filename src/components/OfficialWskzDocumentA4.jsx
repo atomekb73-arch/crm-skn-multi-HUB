@@ -288,6 +288,52 @@ export default function OfficialWskzDocumentA4({
             margin-top: 24px !important;
             width: 100% !important;
           }
+          /* Sprawozdanie Zbiorcze Aktywności: pełna wysokość elastyczna i zakotwiczenie stopki na dole ostatniej strony */
+          #skn-a4-print-area:has(.inter-club-report-print) {
+            display: flex !important;
+            flex-direction: column !important;
+            min-height: 100vh !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+          #skn-a4-print-area:has(.inter-club-report-print) > div:first-child {
+            display: flex !important;
+            flex-direction: column !important;
+            flex: 1 0 auto !important;
+            min-height: 100vh !important;
+            height: auto !important;
+            padding: 0 !important;
+            width: 100% !important;
+          }
+          #skn-a4-print-area:has(.inter-club-report-print) > div:first-child > div:last-child {
+            display: flex !important;
+            flex-direction: column !important;
+            flex: 1 0 auto !important;
+            min-height: 100% !important;
+            width: 100% !important;
+          }
+          #skn-a4-print-area .inter-club-report-print {
+            display: flex !important;
+            flex-direction: column !important;
+            flex: 1 0 auto !important;
+            min-height: 100vh !important;
+            height: auto !important;
+            overflow: visible !important;
+            width: 100% !important;
+          }
+          #skn-a4-print-area .inter-club-report-print .inter-club-main-section {
+            flex: 1 0 auto !important;
+            display: flex !important;
+            flex-direction: column !important;
+            width: 100% !important;
+          }
+          #skn-a4-print-area .inter-club-report-print .multipage-closing-block,
+          #skn-a4-print-area .inter-club-report-print .inter-club-closing-block {
+            margin-top: auto !important;
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+            width: 100% !important;
+          }
           /* Usunięcie obramowań kontenerów wewnątrz kartki */
           #skn-a4-print-area .border,
           #skn-a4-print-area .rounded-xl,
