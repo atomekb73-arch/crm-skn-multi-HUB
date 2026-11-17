@@ -105,9 +105,22 @@ export function getOrgMetadata(org) {
 /**
  * Zwraca dopełniacz nazwy koła (np. do formuły autentyczności certyfikatu w systemie CRM ...)
  */
-export function formatOrgGenitive(orgName = '') {
-  if (!orgName) return 'Studenckiego Koła Naukowego';
-  let str = orgName.trim();
+export function formatOrgGenitive(orgName = '', orgId = null) {
+  const cleanId = String(orgId || '').toLowerCase().trim();
+  const str = String(orgName || '').trim();
+  const lower = str.toLowerCase();
+
+  if (cleanId === 'skn_seksuologii' || lower.includes('seksuolog')) {
+    return 'Studenckiego Koła Naukowego Seksuologii WSKZ';
+  }
+  if (cleanId === 'uzaleznienia' || lower.includes('uzależnie') || lower.includes('ryzykownych')) {
+    return 'Studenckiego Koła Naukowego Zachowań Ryzykownych i Uzależnień WSKZ';
+  }
+  if (cleanId === 'psychoonkologia' || lower.includes('psychoonkolog')) {
+    return 'Studenckiego Koła Naukowego Psychoonkologii WSKZ';
+  }
+
+  if (!str) return 'Studenckiego Koła Naukowego';
   if (str.startsWith('Studenckie Koło Naukowe')) {
     return str.replace(/^Studenckie Koło Naukowe\s*/i, 'Studenckiego Koła Naukowego ');
   }
@@ -115,6 +128,63 @@ export function formatOrgGenitive(orgName = '') {
     return str.replace(/^Koło Naukowe\s*/i, 'Studenckiego Koła Naukowego ');
   }
   return `Studenckiego Koła Naukowego ${str}`;
+}
+
+/**
+ * Automatyczne wykrywanie płci na podstawie imienia w języku polskim:
+ * - Imiona kończące się na '-a' to forma żeńska
+ * - Wyjątki męskie kończące się na '-a': Kuba, Barnaba, Bonawentura, Kosma, Jarema, Zawisza
+ */
+export function detectPolishGender(nameOrFullName) {
+  if (!nameOrFullName || typeof nameOrFullName !== 'string') return 'male';
+  const firstName = nameOrFullName.trim().split(/\s+/)[0].toLowerCase();
+  if (!firstName) return 'male';
+
+  const maleExceptions = new Set(['kuba', 'barnaba', 'bonawentura', 'kosma', 'jarema', 'zawisza']);
+  if (maleExceptions.has(firstName)) {
+    return 'male';
+  }
+
+  if (firstName.endsWith('a')) {
+    return 'female';
+  }
+
+  return 'male';
+}
+
+/**
+ * Wyodrębnia samą nazwę funkcji z etykiety roli (np. 'Przewodniczący', 'Sekretarz', 'Wiceprzewodnicząca')
+ */
+export function extractCleanRoleTitle(roleStr = '', isFemale = false) {
+  if (!roleStr) return isFemale ? 'Członkini Zarządu' : 'Członek Zarządu';
+
+  const roleIdMap = {
+    chairman_m: 'Przewodniczący',
+    chairman_f: 'Przewodnicząca',
+    vice_chairman_m: 'Wiceprzewodniczący',
+    vice_chairman_f: 'Wiceprzewodnicząca',
+    secretary: 'Sekretarz',
+    coordinator: 'Koordynator ds. Naukowych i Badań',
+    board_member_m: 'Członek Zarządu',
+    board_member_f: 'Członkini Zarządu',
+  };
+
+  if (roleIdMap[roleStr]) {
+    return roleIdMap[roleStr];
+  }
+
+  // Wytnij z etykiety dopisek koła, np. "Przewodniczący Koła Naukowego Seksuologii" -> "Przewodniczący"
+  let clean = String(roleStr)
+    .replace(/\s+(Koła Naukowego|Koła|SKN|Studenckiego Koła).*$/i, '')
+    .trim();
+
+  if (isFemale) {
+    if (clean === 'Przewodniczący') clean = 'Przewodnicząca';
+    if (clean === 'Wiceprzewodniczący') clean = 'Wiceprzewodnicząca';
+    if (clean === 'Członek Zarządu') clean = 'Członkini Zarządu';
+  }
+
+  return clean || roleStr;
 }
 
 /**
@@ -491,6 +561,7 @@ export function MembershipCertificateTemplate({
   const activeSupervisors = getActiveSupervisors(supervisors, org);
 
   const studentName = member?.fullName || `${member?.firstName || ''} ${member?.lastName || ''}`.trim() || 'Imię i Nazwisko Studenta';
+  const isFemale = detectPolishGender(member?.firstName || studentName) === 'female';
   const indexNumber = member?.index || member?.indexNumber || '—';
   const fieldName = member?.field || 'Psychologia';
   const yearLabel = member?.year ? `rok ${member.year}` : 'jednolite studia magisterskie';
@@ -528,11 +599,11 @@ export function MembershipCertificateTemplate({
 
         {/* Formuła Wstępna */}
         <p className="text-[11px] sm:text-[11.5px] leading-relaxed text-slate-700 text-justify [text-justify:inter-word] [text-wrap:pretty] indent-4 font-normal">
-          Niniejszym zaświadcza się, że Pan/Pani{' '}
+          Niniejszym zaświadcza się, że {isFemale ? 'Pani' : 'Pan'}{' '}
           <strong className="text-slate-800 font-semibold border-b border-slate-300 pb-0.5 px-1">{studentName}</strong>,{' '}
-          legitymujący/a się numerem indeksu: <strong className="font-mono text-slate-800 font-semibold">{indexNumber}</strong>,{' '}
-          będący/a studentem/ką kierunku: <strong className="font-semibold text-slate-800">{fieldName}</strong> ({yearLabel}), w&nbsp;roku akademickim{' '}
-          <strong className="font-semibold text-slate-800">{academicYear}</strong> brał/a aktywny udział w&nbsp;działalności naukowo-badawczej i&nbsp;spotkaniach Koła:{' '}
+          {isFemale ? 'legitymująca się' : 'legitymujący się'} numerem indeksu: <strong className="font-mono text-slate-800 font-semibold">{indexNumber}</strong>,{' '}
+          {isFemale ? 'będąca studentką' : 'będący studentem'} kierunku: <strong className="font-semibold text-slate-800">{fieldName}</strong> ({yearLabel}), w&nbsp;roku akademickim{' '}
+          <strong className="font-semibold text-slate-800">{academicYear}</strong> {isFemale ? 'brała' : 'brał'} aktywny udział w&nbsp;działalności naukowo-badawczej i&nbsp;spotkaniach Koła:{' '}
           <strong className="text-slate-800 font-semibold">{orgName}</strong> przy&nbsp;{orgUnit}.
         </p>
       </div>
@@ -768,25 +839,20 @@ export function BoardCertificateTemplate({
   org = null,
 }) {
   const { id: orgId, name: orgName, shortName: orgShortName, tag: orgTag, unit: orgUnit } = getOrgMetadata(org);
-  const orgGenitive = formatOrgGenitive(orgName);
+  const orgGenitive = formatOrgGenitive(orgName, orgId);
 
   const docNumber = propDocNumber || generateDocumentNumber('BOARD', member?.index || member?.indexNumber || '00000', academicYear, orgTag);
   const activeSupervisors = getActiveSupervisors(supervisors, org);
 
   const studentName = member?.fullName || `${member?.firstName || ''} ${member?.lastName || ''}`.trim() || 'Imię i Nazwisko Członka';
+  const isFemale = detectPolishGender(member?.firstName || studentName) === 'female';
   const indexNumber = member?.index || member?.indexNumber || '00000';
   const fieldName = member?.field || 'Psychologia';
 
-  // Dynamiczne doprecyzowanie roli w Zarządzie na podstawie nazwy aktywnego koła
-  const formattedRole = useMemo(() => {
-    if (!boardRole || boardRole === 'Przewodniczący Koła Naukowego Seksuologii') {
-      return `Przewodniczący ${orgName}`;
-    }
-    if (boardRole === 'Przewodniczący Koła Naukowego') {
-      return `Przewodniczący ${orgName}`;
-    }
-    return boardRole;
-  }, [boardRole, orgName]);
+  // Wyodrębniona sama nazwa funkcji (np. Przewodniczący, Sekretarz, Wiceprzewodnicząca)
+  const cleanRoleTitle = useMemo(() => {
+    return extractCleanRoleTitle(boardRole, isFemale);
+  }, [boardRole, isFemale]);
 
   return (
     <div className="w-full flex-1 flex flex-col justify-between bg-white text-slate-900 font-sans select-text relative">
@@ -802,43 +868,48 @@ export function BoardCertificateTemplate({
           className="border-indigo-900"
         />
 
-        {/* Tytuł Zaświadczenia z estetycznym podziałem (Główny, dominujący element) */}
-        <div className="text-center my-1.5 sm:my-2">
-          <div className="mt-1">
-            <span className="text-[10.5px] font-normal text-slate-500 uppercase tracking-widest block">
-              Zaświadczenie o:
-            </span>
-            <h2 className="text-xl sm:text-2xl font-normal text-slate-900 tracking-wide uppercase [text-wrap:balance]">
-              Pełnieniu Funkcji w&nbsp;Zarządzie Koła
-            </h2>
-          </div>
-          <p className="text-[10px] text-slate-500 font-normal tracking-wide mt-0.5">
+        {/* Tytuł Zaświadczenia z estetycznym podziałem i oddechem od górnej linii */}
+        <div className="text-center mt-7 mb-2">
+          <span className="text-[10.5px] font-normal text-slate-500 uppercase tracking-widest block mb-2.5">
+            Zaświadczenie o:
+          </span>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-wide uppercase whitespace-nowrap leading-snug">
+            Pełnieniu Funkcji w&nbsp;Zarządzie Koła
+          </h2>
+          <p className="text-[10px] text-slate-500 font-normal tracking-wide mt-1.5">
             Kadencja Zarządu Koła &bull; Rok Akademicki {academicYear}
           </p>
         </div>
 
-        {/* Formuła Wstępna */}
-        <p className="text-[11px] sm:text-[11.5px] leading-relaxed text-slate-700 text-justify [text-justify:inter-word] [text-wrap:pretty] indent-4 font-normal">
-          Niniejszym zaświadcza się, że Pan/Pani{' '}
+        {/* Formuła Wstępna z oddechem od nagłówka i poprawną odmianą płci */}
+        <p className="mt-8 pt-2 text-[11px] sm:text-[11.5px] leading-relaxed text-slate-700 text-justify [text-justify:inter-word] [text-wrap:pretty] indent-4 font-normal">
+          Niniejszym zaświadcza się, że {isFemale ? 'Pani' : 'Pan'}{' '}
           <strong className="text-slate-800 font-semibold border-b border-slate-300 pb-0.5 px-1">{studentName}</strong>,{' '}
           numer indeksu: <strong className="font-mono text-slate-800 font-semibold">{indexNumber}</strong>,{' '}
-          student/ka kierunku: <strong className="font-semibold text-slate-800">{fieldName}</strong>, w&nbsp;roku akademickim <strong className="font-semibold text-slate-800">{academicYear}</strong>{' '}
-          pełnił/a z&nbsp;wyboru funkcję w&nbsp;Zarządzie Koła Naukowego:
+          {isFemale ? 'studentka' : 'student'} kierunku: <strong className="font-semibold text-slate-800">{fieldName}</strong>, w&nbsp;roku akademickim{' '}
+          <strong className="font-semibold text-slate-800">{academicYear}</strong>{' '}
+          {isFemale ? 'pełniła' : 'pełnił'} z&nbsp;wyboru funkcję w&nbsp;Zarządzie Koła Naukowego:
         </p>
       </div>
 
       {/* ── STREFA 2 (ŚRODKOWA): Boks Funkcji w Zarządzie i Zakres Obowiązków ── */}
       <div className="relative z-10 flex-grow flex flex-col justify-center my-2 sm:my-3.5 space-y-3 sm:space-y-3.5">
-        {/* Boks Oficjalnej Funkcji w Zarządzie */}
-        <div className="p-3.5 sm:p-4 rounded-xl bg-indigo-50/70 border border-indigo-200 text-center shadow-2xs space-y-1 font-normal">
-          <span className="text-[9px] font-medium uppercase text-indigo-700 tracking-widest block">
+        {/* Boks Oficjalnej Funkcji w Zarządzie w układzie 2-wierszowym */}
+        <div className="p-3.5 sm:p-4 rounded-xl bg-indigo-50/70 border border-indigo-200 text-center shadow-2xs space-y-1.5 font-normal">
+          <span className="text-[9px] font-semibold uppercase text-indigo-700 tracking-widest block mb-1">
             Oficjalna Funkcja w&nbsp;Zarządzie Koła Naukowego
           </span>
-          <span className="text-lg sm:text-xl font-normal text-indigo-950 block tracking-wide">
-            {formattedRole}
+          {/* Linia 1: Sama nazwa funkcji (większa, pogrubiona) */}
+          <span className="text-xl sm:text-2xl font-bold text-indigo-950 block tracking-tight leading-tight">
+            {cleanRoleTitle}
           </span>
-          <span className="text-[10.5px] text-slate-600 font-normal block">
-            {orgName} &bull; w&nbsp;okresie kadencji: {termDates}
+          {/* Linia 2: Pełna nazwa koła w dopełniaczu (nieco mniejsza, pod spodem) */}
+          <span className="text-xs sm:text-[13px] font-semibold text-indigo-900/90 block leading-snug">
+            {orgGenitive}
+          </span>
+          {/* Okres kadencji */}
+          <span className="text-[10px] text-slate-500 font-normal block pt-0.5">
+            w&nbsp;okresie kadencji: {termDates}
           </span>
         </div>
 
@@ -850,13 +921,13 @@ export function BoardCertificateTemplate({
           {isEditing ? (
             <textarea
               rows={4}
-              value={customDuties || `• Kierowanie bieżącą działalnością naukową i organizacyjną ${orgName}.\n• Koordynacja ogólnopolskich spotkań naukowych, warsztatów merytorycznych i sesji dyskusyjnych.\n• Nadzór nad realizacją projektów badawczych i przygotowaniem publikacji naukowych.\n• Reprezentowanie Koła przed Władzami Uczelni, Dziekanatem oraz jednostkami zewnętrznymi.`}
+              value={customDuties || `• Kierowanie bieżącą działalnością naukową i organizacyjną ${orgGenitive}.\n• Koordynacja ogólnopolskich spotkań naukowych, warsztatów merytorycznych i sesji dyskusyjnych.\n• Nadzór nad realizacją projektów badawczych i przygotowaniem publikacji naukowych.\n• Reprezentowanie Koła przed Władzami Uczelni, Dziekanatem oraz jednostkami zewnętrznymi.`}
               onChange={(e) => onUpdateDuties(e.target.value)}
               className="w-full p-2 bg-white border border-indigo-300 rounded-lg text-[10.5px] font-sans text-slate-800 focus:outline-none"
             />
           ) : (
             <ul className="list-disc list-inside text-slate-700 space-y-1 sm:space-y-1.5 pl-1 leading-snug">
-              {(customDuties || `Kierowanie bieżącą działalnością naukową i organizacyjną ${orgName}.\nKoordynacja ogólnopolskich spotkań naukowych, warsztatów merytorycznych i sesji dyskusyjnych.\nNadzór nad realizacją projektów badawczych i przygotowaniem publikacji naukowych.\nReprezentowanie Koła przed Władzami Uczelni, Dziekanatem oraz jednostkami zewnętrznymi.`)
+              {(customDuties || `Kierowanie bieżącą działalnością naukową i organizacyjną ${orgGenitive}.\nKoordynacja ogólnopolskich spotkań naukowych, warsztatów merytorycznych i sesji dyskusyjnych.\nNadzór nad realizacją projektów badawczych i przygotowaniem publikacji naukowych.\nReprezentowanie Koła przed Władzami Uczelni, Dziekanatem oraz jednostkami zewnętrznymi.`)
                 .split('\n')
                 .filter(Boolean)
                 .map((line, idx) => (
