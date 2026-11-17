@@ -1584,18 +1584,18 @@ export default function AttendanceModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 print:hidden">
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 w-[95vw] max-w-[1472px] h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150 relative">
+      <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 w-[95vw] lg:w-[85vw] max-w-[1680px] lg:min-w-[80vw] h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150 relative">
         
         {/* ── Modal Header ─────────────────────────────────────────────────── */}
         <div className="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 via-indigo-50/20 to-white flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
-          <div className="flex items-center gap-3.5 min-w-0">
+          <div className="flex items-center gap-3.5 min-w-0 flex-1">
             {/* Stable sized Badge */}
             <div className="h-12 px-3.5 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-md shrink-0 font-mono tracking-tight text-center">
               {String(meeting?.code || 'SPOTKANIE')}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-base font-bold text-slate-900 leading-snug truncate">
+                <h2 className="text-base font-bold text-slate-900 leading-snug" title={String(meeting?.title || '')}>
                   {String(meeting?.title || '')}
                 </h2>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200 shrink-0">
@@ -2048,8 +2048,8 @@ export default function AttendanceModal({
                     <th className="p-3 text-center w-24">Czas</th>
                     <th className="p-3 text-center w-24">Status</th>
                     <th className="p-3 w-48 text-center">Dodatkowe Aktywności</th>
-                    <th className="p-3 text-center w-20">Punkty</th>
-                    <th className="p-3 text-right w-36">Akcja</th>
+                    <th className="p-3 text-center w-20 whitespace-nowrap">Punkty</th>
+                    <th className="p-3 text-right w-40 whitespace-nowrap">Akcja</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -2387,8 +2387,8 @@ export default function AttendanceModal({
                         </td>
 
                         {/* 10. Action Toggle & Delete */}
-                        <td className="p-3 text-right">
-                          <div className="flex items-center justify-end gap-1">
+                        <td className="p-3 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
                             {isSupervisorRole || isSpeakerRole ? (
                               <span className="text-[11px] text-slate-400 font-medium mr-1">Protokół</span>
                             ) : (
