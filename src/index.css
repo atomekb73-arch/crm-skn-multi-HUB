@@ -157,6 +157,68 @@ select option:checked {
     display: none !important;
   }
 
+  /* Jeśli aktywny jest wydruk protokołu ze spotkania (MeetingsTab), ukryj cały #root aplikacji */
+  body.printing-meeting-protocol > #root,
+  body.printing-meeting-protocol > *:not(#protocol-print-container) {
+    display: none !important;
+  }
+
+  body.printing-meeting-protocol #protocol-print-container {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 210mm !important;
+    min-height: auto !important;
+    height: auto !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+    z-index: auto !important;
+  }
+
+  body.printing-meeting-protocol #skn-a4-print-area {
+    display: block !important;
+    position: static !important;
+    width: 210mm !important;
+    max-width: 210mm !important;
+    min-height: auto !important;
+    height: auto !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+  }
+
+  body.printing-meeting-protocol #skn-a4-print-area > div:first-child {
+    display: block !important;
+  }
+
+  body.printing-meeting-protocol .print-document,
+  body.printing-meeting-protocol .protocol-main-page {
+    display: block !important;
+    width: 100% !important;
+    overflow: visible !important;
+  }
+
+  body.printing-meeting-protocol .protocol-metadata-table,
+  body.printing-meeting-protocol .protocol-section-block,
+  body.printing-meeting-protocol .signatures-block,
+  body.printing-meeting-protocol .document-standard-header {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  body.printing-meeting-protocol .protocol-appendix-page {
+    display: block !important;
+    width: 100% !important;
+    break-before: page !important;
+    page-break-before: always !important;
+    overflow: visible !important;
+  }
+
   #skn-a4-top-bar {
     display: none !important;
   }

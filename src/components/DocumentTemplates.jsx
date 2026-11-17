@@ -2300,6 +2300,32 @@ export function OfficialCorrespondenceProtocolTemplate({
 }
 
 /**
+ * Zwraca poprawną polską odmianę liczebnika dla liczby osób/uczestników:
+ * - nominative: '1 osoba zweryfikowana', '2/3/4/52 osoby zweryfikowane', '0/5/12/50 osób zweryfikowanych'
+ * - genitive: '1 osoby', '52 osób' (np. "z udziałem 52 osób")
+ * - simple: '1 osoba', '2/3/4/52 osoby', '0/5/12/50 osób'
+ */
+export function formatPolishAttendeeCount(count, variant = 'nominative') {
+  const n = Math.abs(parseInt(count, 10)) || 0;
+  if (variant === 'genitive') {
+    return n === 1 ? '1 osoby' : `${n} osób`;
+  }
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  const isFew = mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14);
+
+  if (variant === 'simple') {
+    if (n === 1) return '1 osoba';
+    if (isFew) return `${n} osoby`;
+    return `${n} osób`;
+  }
+
+  if (n === 1) return '1 osoba zweryfikowana';
+  if (isFew) return `${n} osoby zweryfikowane`;
+  return `${n} osób zweryfikowanych`;
+}
+
+/**
  * Oficjalny Protokół / Notatka ze Spotkania Naukowego
  */
 export function OfficialMeetingMinutesTemplate({
@@ -2319,11 +2345,17 @@ export function OfficialMeetingMinutesTemplate({
   const cleanYear = String(academicYear || getCurrentAcademicYear()).replace(/[\[\]]/g, '');
   const cleanCode = String(meeting?.code || meeting?.id || 'M01').replace(/[\[\]]/g, '').trim();
   const protocolNumber = protocolData.protocolNumber || `PROT/${orgTag}/${cleanCode}/${cleanYear.replace(/20/g, '')}`;
-  const cleanMeetingTitle = String(meeting?.title || protocolData?.title || 'Spotkanie Naukowe Koła').replace(/[\[\]]/g, '').trim();
+  // Zawsze priorytetyzuj aktualne dane wpisane w formularzu protokołu modala
+  const cleanMeetingTitle = String(protocolData?.title || meeting?.title || 'Spotkanie Naukowe Koła').replace(/[\[\]]/g, '').trim();
   const cleanSpeaker = String(protocolData?.speaker || meeting?.who || 'Zarząd Koła Naukowego').replace(/[\[\]]/g, '').trim();
   const rawAttendees = protocolData?.attendees || meeting?.attendanceList || meeting?.attendees || [];
   const attendanceList = Array.isArray(rawAttendees) ? rawAttendees : [];
-  const shouldShowAppendix = protocolData?.includeAttendeesList || (attendanceList.length > 0 && protocolData?.includeAttendeesList !== false);
+  const shouldShowAppendix = protocolData?.includeAttendeesList ?? (attendanceList.length > 0);
+
+  // Spójna liczba uczestników (z formularza lub fallback z listy obecności)
+  const effectiveAttendeesCount = (protocolData?.attendeesCount !== undefined && protocolData?.attendeesCount !== null && String(protocolData.attendeesCount).trim() !== '')
+    ? Number(protocolData.attendeesCount)
+    : (attendanceList.length || meeting?.attendeesCount || 0);
 
   return (
     <div id="printable-protocol-document" className="print-document w-full flex-1 flex flex-col justify-between bg-white text-slate-900 font-sans text-xs leading-relaxed select-text relative">
@@ -2356,7 +2388,10 @@ export function OfficialMeetingMinutesTemplate({
           </div>
 
           {/* Meeting Metadata Table */}
-          <div className="mb-6 border border-slate-300 rounded-xl overflow-hidden shadow-2xs print:border-none print:shadow-none print:rounded-none">
+          <div
+            className="protocol-metadata-table mb-6 border border-slate-300 rounded-xl overflow-hidden shadow-2xs print:border-none print:shadow-none print:rounded-none"
+            style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+          >
             <table className="w-full text-left text-xs border-collapse">
               <tbody>
                 <tr className="border-b border-slate-200 bg-slate-50/80">
@@ -2382,7 +2417,7 @@ export function OfficialMeetingMinutesTemplate({
                   </td>
                   <td className="py-2 px-3 font-bold text-slate-700 border-r border-slate-200">Liczba Uczestników:</td>
                   <td className="py-2 px-3 font-bold text-emerald-800">
-                    {protocolData.attendeesCount ?? meeting?.attendeesCount ?? attendanceList.length ?? 0} osób zweryfikowanych
+                    {formatPolishAttendeeCount(effectiveAttendeesCount, 'nominative')}
                   </td>
                 </tr>
                 <tr>
@@ -2396,8 +2431,14 @@ export function OfficialMeetingMinutesTemplate({
           </div>
 
           {/* Section 1: Porządek Obrad */}
-          <div className="mb-5 space-y-1.5">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
+          <div
+            className="protocol-section-block mb-5 space-y-1.5"
+            style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+          >
+            <h3
+              className="text-xs font-black uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1"
+              style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+            >
               1. Cel spotkania i porządek obrad
             </h3>
             <div className="p-3 bg-slate-50/60 rounded-lg border border-slate-200/80 whitespace-pre-line text-slate-800 leading-relaxed font-sans text-[11px]">
@@ -2406,22 +2447,34 @@ export function OfficialMeetingMinutesTemplate({
           </div>
 
           {/* Section 2: Przebieg Spotkania */}
-          <div className="mb-5 space-y-1.5">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
+          <div
+            className="protocol-section-block mb-5 space-y-1.5"
+            style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+          >
+            <h3
+              className="text-xs font-black uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1"
+              style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+            >
               2. Przebieg posiedzenia, streszczenie prelekcji i dyskusja
             </h3>
             <div className="p-3 bg-slate-50/60 rounded-lg border border-slate-200/80 whitespace-pre-line text-slate-800 leading-relaxed font-sans text-[11px]">
-              {protocolData.content || 'W trakcie posiedzenia prelegent przedstawił prezentację merytoryczną. Członkowie koła aktywnie uczestniczyli w dyskusji nad zaprezentowaną tematyką badawczą, poruszając kluczowe aspekty metodologiczne i practical.'}
+              {protocolData.content || 'W trakcie posiedzenia prelegent przedstawił prezentację merytoryczną. Członkowie koła aktywnie uczestniczyli w dyskusji nad zaprezentowaną tematyką badawczą, poruszając kluczowe aspekty metodologiczne i praktyczne.'}
             </div>
           </div>
 
           {/* Section 3: Ustalenia i Wnioski */}
-          <div className="mb-6 space-y-1.5">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
+          <div
+            className="protocol-section-block mb-6 space-y-1.5"
+            style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+          >
+            <h3
+              className="text-xs font-black uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1"
+              style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+            >
               3. Ustalenia końcowe, zadania i wnioski
             </h3>
             <div className="p-3 bg-slate-50/60 rounded-lg border border-slate-200/80 whitespace-pre-line text-slate-800 leading-relaxed font-sans text-[11px]">
-              {protocolData.conclusions || '1. Przyjęto sprawozdanie z przeprowadzonego referatu naukowego do ewidencji działalności koła.\n2. Ustalono termin kolejnego spotkania seminaryjnego.\n3. Zobowiązano członków do przygotowania materiałów na kolejną sesję roboczą.'}
+              {protocolData.conclusions || `1. Przyjęto sprawozdanie z przeprowadzonego referatu naukowego do ewidencji działalności koła.\n2. Zweryfikowano i zatwierdzono listę obecności z udziałem ${formatPolishAttendeeCount(effectiveAttendeesCount, 'genitive')}.\n3. Ustalono termin kolejnego spotkania seminaryjnego i zobowiązano członków do przygotowania materiałów.`}
             </div>
           </div>
         </div>
@@ -2434,7 +2487,7 @@ export function OfficialMeetingMinutesTemplate({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
             
             {/* 1. Podpis Protokolanta / Przewodniczącego */}
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
               <div className="h-10 border-b border-dashed border-slate-300 w-full mb-1"></div>
               <span className="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5">[Podpis elektroniczny]</span>
               <span className="text-xs font-semibold text-slate-800">{protocolData.recorder || 'Protokolant Zarządu Koła'}</span>
@@ -2443,7 +2496,7 @@ export function OfficialMeetingMinutesTemplate({
 
             {/* 2. Dynamiczne podpisy Opiekunów Naukowych */}
             {activeSupervisors.map((sup, idx) => (
-              <div key={idx} className="flex flex-col items-center">
+              <div key={idx} className="flex flex-col items-center" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
                 <div className="h-10 border-b border-dashed border-slate-300 w-full mb-1"></div>
                 <span className="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5">[Podpis elektroniczny]</span>
                 <span className="text-xs font-semibold text-slate-800">
@@ -2463,22 +2516,31 @@ export function OfficialMeetingMinutesTemplate({
 
       {/* SEKCJA 2: ZAŁĄCZNIK - LISTA OBECNOŚCI (Startuje na czystej stronie) */}
       {shouldShowAppendix && attendanceList.length > 0 && (
-        <section className="protocol-appendix-page min-h-[297mm] p-8 sm:p-12 break-before-page print:p-0 print:min-h-0">
+        <section
+          className="protocol-appendix-page min-h-[297mm] p-8 sm:p-12 break-before-page print:p-0 print:min-h-0"
+          style={{ breakBefore: 'page', pageBreakBefore: 'always' }}
+        >
           {/* Zwięzły nagłówek załącznika (jedno-linijkowy) */}
-          <div className="border-b-2 border-slate-800 pb-2 mb-4 flex justify-between items-end">
+          <div className="border-b-2 border-slate-800 pb-2 mb-4 flex justify-between items-end" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
             <div>
               <h3 className="text-sm font-bold tracking-wider text-slate-800 uppercase">
                 Załącznik nr 1 do Protokołu {cleanCode}
               </h3>
               <p className="text-xs text-slate-500">Imienna lista zweryfikowanych uczestników spotkania</p>
             </div>
-            <span className="text-xs font-bold text-slate-700">Liczba obecnych: {attendanceList.length}</span>
+            <span className="text-xs font-bold text-slate-700">
+              Liczba obecnych: {formatPolishAttendeeCount(attendanceList.length, 'nominative')}
+            </span>
           </div>
 
           {/* Tabela / Siatka obecności w naturalnym przepływie (2 kolumny) */}
           <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] leading-tight">
             {attendanceList.map((person, idx) => (
-              <div key={idx} className="flex justify-between border-b border-slate-100 py-0.5 leading-tight text-[11px]">
+              <div
+                key={idx}
+                className="flex justify-between border-b border-slate-100 py-0.5 leading-tight text-[11px]"
+                style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+              >
                 <span className="text-slate-800 font-medium truncate pr-2">
                   {idx + 1}. {person.name || person.rawName || person.memberName}
                 </span>

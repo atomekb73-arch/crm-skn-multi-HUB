@@ -58,7 +58,8 @@ import { ACADEMIC_YEARS, getAcademicYearKey, getAcademicYearOptions } from '../u
 import { getAcademicYearFromDate } from '../utils/helpers';
 import AttendanceModal from './AttendanceModal';
 import CalendarSelector, { DEFAULT_CALENDAR_SUB_ID } from './CalendarSelector';
-import { OfficialMeetingMinutesTemplate } from './DocumentTemplates';
+import { createPortal } from 'react-dom';
+import { OfficialMeetingMinutesTemplate, formatPolishAttendeeCount } from './DocumentTemplates';
 import { OfficialWskzDocumentSheet } from './OfficialWskzDocumentA4';
 import {
   getMeetingProtocol,
@@ -2009,7 +2010,7 @@ export default function MeetingsTab({
         recorder: savedProtocol.recorder || defaultRecorder,
         agenda: savedProtocol.agenda || `1. Otwarcie spotkania naukowego ${cleanCode} przez Przewodniczącego Koła.\n2. Wystąpienie prelegenta (${selectedMeeting.who || 'Zarząd'}) na temat: „${selectedMeeting.title}”.\n3. Dyskusja naukowa z udziałem członków koła i sesja pytań (Q&A).\n4. Podsumowanie, wolne wnioski i ustalenie terminu kolejnego zebrania.`,
         content: savedProtocol.content || defaultContent,
-        conclusions: savedProtocol.conclusions || `1. Przyjęto sprawozdanie z referatu ${cleanCode} do dorobku naukowego Koła.\n2. Zweryfikowano i zatwierdzono listę obecności (${confirmedCount} uczestników).\n3. Zaplanowano kolejne wystąpienie seminaryjne.`,
+        conclusions: savedProtocol.conclusions || `1. Przyjęto sprawozdanie z referatu ${cleanCode} do dorobku naukowego Koła.\n2. Zweryfikowano i zatwierdzono listę obecności (${formatPolishAttendeeCount(confirmedCount, 'nominative')}).\n3. Zaplanowano kolejne wystąpienie seminaryjne.`,
         includeAttendeesList: savedProtocol.includeAttendeesList ?? true,
         attendees: savedProtocol.attendees && savedProtocol.attendees.length > 0 ? savedProtocol.attendees : currentAttendees,
       });
@@ -2025,7 +2026,7 @@ export default function MeetingsTab({
         recorder: defaultRecorder,
         agenda: `1. Otwarcie spotkania naukowego ${cleanCode} przez Przewodniczącego Koła.\n2. Wystąpienie prelegenta (${selectedMeeting.who || 'Zarząd'}) na temat: „${selectedMeeting.title}”.\n3. Dyskusja naukowa z udziałem członków koła i sesja pytań (Q&A).\n4. Podsumowanie, wolne wnioski i ustalenie terminu kolejnego zebrania.`,
         content: defaultContent,
-        conclusions: `1. Przyjęto sprawozdanie z referatu ${cleanCode} do dorobku naukowego Koła.\n2. Zweryfikowano i zatwierdzono listę obecności (${confirmedCount} uczestników).\n3. Zaplanowano kolejne wystąpienie seminaryjne.`,
+        conclusions: `1. Przyjęto sprawozdanie z referatu ${cleanCode} do dorobku naukowego Koła.\n2. Zweryfikowano i zatwierdzono listę obecności (${formatPolishAttendeeCount(confirmedCount, 'nominative')}).\n3. Zaplanowano kolejne wystąpienie seminaryjne.`,
         includeAttendeesList: true,
         attendees: currentAttendees,
       });
@@ -2062,12 +2063,30 @@ export default function MeetingsTab({
 
   const handlePrintProtocol = () => {
     handleSaveProtocol();
+    document.body.classList.add('printing-meeting-protocol');
     setIsPrintingProtocol(true);
     setTimeout(() => {
       window.print();
-      setIsPrintingProtocol(false);
-    }, 300);
+      setTimeout(() => {
+        document.body.classList.remove('printing-meeting-protocol');
+        setIsPrintingProtocol(false);
+      }, 1500);
+    }, 400);
   };
+
+  useEffect(() => {
+    if (!isPrintingProtocol) return;
+    document.body.classList.add('printing-meeting-protocol');
+    const handleAfterPrint = () => {
+      document.body.classList.remove('printing-meeting-protocol');
+      setIsPrintingProtocol(false);
+    };
+    window.addEventListener('afterprint', handleAfterPrint);
+    return () => {
+      document.body.classList.remove('printing-meeting-protocol');
+      window.removeEventListener('afterprint', handleAfterPrint);
+    };
+  }, [isPrintingProtocol]);
 
   // Count completed vs upcoming using SSOT getMeetingStatusInfo
   const completedCount = useMemo(() => {
@@ -4070,8 +4089,74 @@ export default function MeetingsTab({
       )}
 
       {/* ── Printable Meeting Minutes Protocol (A4) ── */}
-      {isPrintingProtocol && currentSelectedMeeting && (
-        <div id="protocol-print-container" className="hidden print:block fixed inset-0 bg-white z-9999 p-0 m-0">
+      {isPrintingProtocol && currentSelectedMeeting && createPortal(
+        <div id="protocol-print-container" className="hidden print:block bg-white p-0 m-0">
+          <style>{`
+            @media print {
+              body.printing-meeting-protocol {
+                background: #ffffff !important;
+                color: #000000 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+                overflow: visible !important;
+              }
+              body.printing-meeting-protocol > #root,
+              body.printing-meeting-protocol > *:not(#protocol-print-container) {
+                display: none !important;
+              }
+              body.printing-meeting-protocol #protocol-print-container {
+                display: block !important;
+                position: static !important;
+                width: 100% !important;
+                max-width: 210mm !important;
+                min-height: auto !important;
+                height: auto !important;
+                margin: 0 auto !important;
+                padding: 0 !important;
+                background: #ffffff !important;
+                overflow: visible !important;
+                z-index: auto !important;
+              }
+              body.printing-meeting-protocol #skn-a4-print-area {
+                display: block !important;
+                position: static !important;
+                width: 210mm !important;
+                max-width: 210mm !important;
+                min-height: auto !important;
+                height: auto !important;
+                margin: 0 auto !important;
+                padding: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+                background: #ffffff !important;
+                overflow: visible !important;
+              }
+              body.printing-meeting-protocol #skn-a4-print-area > div:first-child {
+                display: block !important;
+              }
+              body.printing-meeting-protocol .print-document,
+              body.printing-meeting-protocol .protocol-main-page {
+                display: block !important;
+                width: 100% !important;
+                overflow: visible !important;
+              }
+              body.printing-meeting-protocol .protocol-metadata-table,
+              body.printing-meeting-protocol .protocol-section-block,
+              body.printing-meeting-protocol .signatures-block,
+              body.printing-meeting-protocol .document-standard-header {
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+              }
+              body.printing-meeting-protocol .protocol-appendix-page {
+                display: block !important;
+                width: 100% !important;
+                break-before: page !important;
+                page-break-before: always !important;
+                overflow: visible !important;
+              }
+            }
+          `}</style>
           <OfficialWskzDocumentSheet
             org={currentOrg}
             academicYear={academicYear || '2025/2026'}
@@ -4086,7 +4171,8 @@ export default function MeetingsTab({
               supervisors={currentOrg.supervisors}
             />
           </OfficialWskzDocumentSheet>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
