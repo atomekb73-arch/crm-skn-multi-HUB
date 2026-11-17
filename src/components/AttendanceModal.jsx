@@ -1584,7 +1584,7 @@ export default function AttendanceModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 print:hidden">
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 w-[96vw] max-w-7xl h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150 relative">
+      <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 w-[95vw] max-w-[1472px] h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150 relative">
         
         {/* ── Modal Header ─────────────────────────────────────────────────── */}
         <div className="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 via-indigo-50/20 to-white flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
@@ -1654,7 +1654,7 @@ export default function AttendanceModal({
             </button>
 
             {/* Threshold Selector: 10m, 15m, 20m, 30m, 45m, 60m */}
-            <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-xl border border-indigo-100 shadow-2xs">
+            <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-xl border border-indigo-100 shadow-2xs shrink-0">
               <Timer size={13} className="text-indigo-600 shrink-0" />
               <span className="text-xs font-semibold text-slate-600">Próg:</span>
               <div className="flex items-center gap-1">
@@ -1677,7 +1677,7 @@ export default function AttendanceModal({
 
             <button
               onClick={onClose}
-              className="w-9 h-9 rounded-xl border border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition cursor-pointer"
+              className="w-9 h-9 rounded-xl border border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition cursor-pointer shrink-0"
             >
               <X size={18} />
             </button>
