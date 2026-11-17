@@ -1467,8 +1467,8 @@ export function MembersRegistryTemplate({
     if (showField) activeCols.push('field');
     if (showYear) activeCols.push('year');
     if (showPresent) activeCols.push('present');
-    if (showFreq) activeCols.push('freq');
     if (showPoints) activeCols.push('points');
+    if (showFreq) activeCols.push('freq');
     if (showStatus) activeCols.push('status');
 
     if (activeCols.length === 0) return {};
@@ -1716,26 +1716,26 @@ export function MembersRegistryTemplate({
                 )}
                 {showPresent && (
                   <th
-                    className="py-1.5 px-2 text-center text-[9.5px] print:text-[8pt] print:tracking-tight whitespace-nowrap font-semibold text-slate-700"
-                    style={{ width: colWidths.present, whiteSpace: 'nowrap', padding: '6px 8px' }}
+                    className="py-1.5 px-2 text-center text-[9.5px] print:text-[8pt] print:tracking-tight whitespace-nowrap font-semibold text-slate-700 font-sans"
+                    style={{ width: colWidths.present, whiteSpace: 'nowrap', padding: '6px 8px', fontFamily: 'Arial, Helvetica, sans-serif' }}
                   >
                     Obecności
                   </th>
                 )}
-                {showFreq && (
-                  <th
-                    className="py-1.5 px-2 text-center text-[9.5px] print:text-[8pt] print:tracking-tight whitespace-nowrap font-semibold text-slate-700"
-                    style={{ width: colWidths.freq, whiteSpace: 'nowrap', padding: '6px 8px' }}
-                  >
-                    Udział
-                  </th>
-                )}
                 {showPoints && (
                   <th
-                    className="py-1.5 px-2 text-center text-[9.5px] print:text-[8pt] print:tracking-tight whitespace-nowrap font-semibold text-slate-700"
-                    style={{ width: colWidths.points, whiteSpace: 'nowrap', padding: '6px 8px' }}
+                    className="py-1.5 px-2 text-center text-[9.5px] print:text-[8pt] print:tracking-tight whitespace-nowrap font-semibold text-slate-700 font-sans"
+                    style={{ width: colWidths.points, whiteSpace: 'nowrap', padding: '6px 8px', fontFamily: 'Arial, Helvetica, sans-serif' }}
                   >
                     PKT
+                  </th>
+                )}
+                {showFreq && (
+                  <th
+                    className="py-1.5 px-2 text-center text-[9.5px] print:text-[8pt] print:tracking-tight whitespace-nowrap font-semibold text-slate-700 font-sans"
+                    style={{ width: colWidths.freq, whiteSpace: 'nowrap', padding: '6px 8px', fontFamily: 'Arial, Helvetica, sans-serif' }}
+                  >
+                    Udział
                   </th>
                 )}
                 {showStatus && (
@@ -1786,8 +1786,8 @@ export function MembersRegistryTemplate({
                     )}
                     {showIndex && (
                       <td
-                        className="py-1.5 px-2 text-center font-mono text-[9px] print:text-[8pt] text-slate-700 whitespace-nowrap align-top"
-                        style={{ width: colWidths.index, whiteSpace: 'nowrap', padding: '6px 8px' }}
+                        className="py-1.5 px-2 text-center font-sans text-[9px] print:text-[8pt] text-slate-700 whitespace-nowrap align-top"
+                        style={{ width: colWidths.index, whiteSpace: 'nowrap', padding: '6px 8px', fontFamily: 'Arial, Helvetica, sans-serif' }}
                       >
                         {row.cleanIndex}
                       </td>
@@ -1816,29 +1816,29 @@ export function MembersRegistryTemplate({
                     )}
                     {showPresent && (
                       <td
-                        className="py-1.5 px-2 text-center font-mono text-[9px] print:text-[8pt] whitespace-nowrap align-top"
-                        style={{ width: colWidths.present, whiteSpace: 'nowrap', padding: '6px 8px' }}
+                        className="py-1.5 px-2 text-center font-sans text-[9px] print:text-[8pt] text-slate-700 whitespace-nowrap align-top"
+                        style={{ width: colWidths.present, whiteSpace: 'nowrap', padding: '6px 8px', fontFamily: 'Arial, Helvetica, sans-serif' }}
                       >
                         {row.isZeroActivity && isPastYear ? '—' : `${row.present} / ${row.memberTotalMeetings}`}
                       </td>
                     )}
-                    {showFreq && (
-                      <td
-                        className="py-1.5 px-2 text-center font-mono font-medium text-[9px] print:text-[8pt] whitespace-nowrap align-top"
-                        style={{ width: colWidths.freq, whiteSpace: 'nowrap', padding: '6px 8px' }}
-                      >
-                        <span className={row.freq >= 50 ? 'text-emerald-700' : (row.isZeroActivity && isPastYear ? 'text-slate-400' : 'text-slate-600')}>
-                          {row.isZeroActivity && isPastYear ? '—' : `${row.freq}%`}
-                        </span>
-                      </td>
-                    )}
                     {showPoints && (
                       <td
-                        className="py-1.5 px-2 text-center font-mono font-semibold text-[9px] print:text-[8pt] whitespace-nowrap align-top"
-                        style={{ width: colWidths.points, whiteSpace: 'nowrap', padding: '6px 8px' }}
+                        className="py-1.5 px-2 text-center font-sans font-semibold text-[9px] print:text-[8pt] whitespace-nowrap align-top"
+                        style={{ width: colWidths.points, whiteSpace: 'nowrap', padding: '6px 8px', fontFamily: 'Arial, Helvetica, sans-serif' }}
                       >
                         <span className={row.points > 0 ? 'text-purple-700' : 'text-slate-400'}>
                           {row.isZeroActivity && isPastYear ? '—' : `${row.points} pkt`}
+                        </span>
+                      </td>
+                    )}
+                    {showFreq && (
+                      <td
+                        className="py-1.5 px-2 text-center font-sans font-medium text-[9px] print:text-[8pt] whitespace-nowrap align-top"
+                        style={{ width: colWidths.freq, whiteSpace: 'nowrap', padding: '6px 8px', fontFamily: 'Arial, Helvetica, sans-serif' }}
+                      >
+                        <span className={row.freq >= 50 ? 'text-emerald-700' : (row.isZeroActivity && isPastYear ? 'text-slate-400' : 'text-slate-600')}>
+                          {row.isZeroActivity && isPastYear ? '—' : `${row.freq}%`}
                         </span>
                       </td>
                     )}

@@ -12,8 +12,8 @@ export const DEFAULT_TABLE_COLUMNS = {
     { key: 'field', label: 'Kierunek Studiów', default: true },
     { key: 'year', label: 'Rok', default: true },
     { key: 'present', label: 'Obecności', default: true },
-    { key: 'freq', label: 'Udział (%)', default: true },
     { key: 'points', label: 'PKT', default: true },
+    { key: 'freq', label: 'Udział (%)', default: true },
     { key: 'status', label: 'Zaliczenie / Status', default: false },
   ],
   meetings_summary: [
