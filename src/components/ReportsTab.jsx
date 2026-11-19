@@ -1110,17 +1110,16 @@ export default function ReportsTab({
             width: 100% !important;
           }
           #reports-print-container #skn-a4-print-area .inter-club-report-print .inter-club-last-page {
-            page-break-before: always !important;
-            break-before: page !important;
-            display: flex !important;
-            flex-direction: column !important;
-            min-height: 265mm !important;
+            page-break-before: auto !important;
+            break-before: auto !important;
+            display: block !important;
+            min-height: auto !important;
             height: auto !important;
             width: 100% !important;
           }
           #reports-print-container #skn-a4-print-area .inter-club-report-print .multipage-closing-block,
           #reports-print-container #skn-a4-print-area .inter-club-closing-block {
-            margin-top: auto !important;
+            margin-top: 24px !important;
             break-inside: avoid !important;
             page-break-inside: avoid !important;
             width: 100% !important;

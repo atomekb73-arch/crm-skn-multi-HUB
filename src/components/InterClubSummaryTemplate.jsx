@@ -280,11 +280,10 @@ export default function InterClubSummaryTemplate({
             gap: 8px !important;
           }
           .inter-club-report-print .inter-club-last-page {
-            page-break-before: always !important;
-            break-before: page !important;
-            display: flex !important;
-            flex-direction: column !important;
-            min-height: 265mm !important;
+            page-break-before: auto !important;
+            break-before: auto !important;
+            display: block !important;
+            min-height: auto !important;
             height: auto !important;
             width: 100% !important;
           }
@@ -292,7 +291,7 @@ export default function InterClubSummaryTemplate({
           .inter-club-report-print .multipage-closing-block,
           #skn-a4-print-area .inter-club-closing-block,
           #skn-a4-print-area .inter-club-report-print .multipage-closing-block {
-            margin-top: auto !important;
+            margin-top: 24px !important;
             break-inside: avoid !important;
             page-break-inside: avoid !important;
             width: 100% !important;
@@ -922,7 +921,7 @@ export default function InterClubSummaryTemplate({
       {/* ── OSTATNIA STRONA: Sekcja C + Podpisy (poziomo 3 kolumny) + Stopka WSKZ zakotwiczona na dole ── */}
       <div className="inter-club-last-page flex flex-col w-full">
         {/* ── SEKCJA 3: Zbiorcze Zestawienie Aktywności wg Kół Naukowych ── */}
-        <div className="space-y-2.5 pt-5 print:pt-0">
+        <div className="space-y-2.5 mt-5 pt-4 border-t border-slate-200/80 print:mt-5 print:pt-4">
           <div className="inter-club-section-header flex items-center justify-between">
             <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-indigo-600 shrink-0"></span>
