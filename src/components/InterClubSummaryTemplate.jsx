@@ -258,16 +258,34 @@ export default function InterClubSummaryTemplate({
             margin: 0 auto !important;
             box-sizing: border-box !important;
             padding: 0 !important;
-            display: flex !important;
-            flex-direction: column !important;
-            min-height: 100vh !important;
+            display: block !important;
+            min-height: auto !important;
             height: auto !important;
             overflow: visible !important;
           }
           .inter-club-main-section {
-            flex: 1 0 auto !important;
+            display: block !important;
+            width: 100% !important;
+          }
+          .inter-club-report-print .overflow-x-auto {
+            overflow: visible !important;
+          }
+          .inter-club-report-print .inter-club-section-header {
+            break-after: avoid !important;
+            page-break-after: avoid !important;
+          }
+          .inter-club-report-print .inter-club-kpi-grid {
+            display: grid !important;
+            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+            gap: 8px !important;
+          }
+          .inter-club-report-print .inter-club-last-page {
+            page-break-before: always !important;
+            break-before: page !important;
             display: flex !important;
             flex-direction: column !important;
+            min-height: 265mm !important;
+            height: auto !important;
             width: 100% !important;
           }
           .inter-club-closing-block,
@@ -312,9 +330,15 @@ export default function InterClubSummaryTemplate({
             border-collapse: collapse !important;
             font-size: 9.5px !important;
           }
-          .inter-club-report-print th,
+          .inter-club-report-print th {
+            padding: 5px 4px !important;
+            word-break: normal !important;
+            overflow-wrap: normal !important;
+            font-size: 9px !important;
+            line-height: 1.2 !important;
+          }
           .inter-club-report-print td {
-            padding: 5px 6px !important;
+            padding: 5px 5px !important;
             word-break: normal !important;
             overflow-wrap: break-word !important;
             font-size: 9.5px !important;
@@ -341,7 +365,10 @@ export default function InterClubSummaryTemplate({
             break-inside: avoid !important;
             padding: 6px 8px !important;
           }
-          .inter-club-signatures {
+          .inter-club-report-print .inter-club-signatures {
+            display: grid !important;
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            gap: 16px !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
           }
@@ -470,7 +497,7 @@ export default function InterClubSummaryTemplate({
         </div>
 
         {/* ── Kafelki Syntetyczne (KPI Podsumowanie) ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 my-3 print:my-2.5">
+        <div className="inter-club-kpi-grid grid grid-cols-2 sm:grid-cols-4 gap-2.5 my-3 print:my-2.5">
           {/* KAFELEK 1: Spotkania Merytoryczne */}
           <div className="inter-club-kpi-card bg-emerald-50/70 rounded-xl px-2.5 py-2 border border-emerald-200/80 print:border-slate-300">
             <EditableText
@@ -590,7 +617,7 @@ export default function InterClubSummaryTemplate({
 
         {/* ── SEKCJA 1: Spotkania Merytoryczne i Warsztaty ── */}
         <div className="space-y-2.5 pt-1">
-          <div className="flex items-center justify-between">
+          <div className="inter-club-section-header flex items-center justify-between">
             <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0"></span>
               <EditableText
@@ -612,16 +639,16 @@ export default function InterClubSummaryTemplate({
             </span>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-slate-200 print:border-none print:rounded-none">
+          <div className="overflow-x-auto print:overflow-visible rounded-xl border border-slate-200 print:border-none print:rounded-none">
             <table className="w-full text-left text-xs border-collapse table-fixed">
               <colgroup>
                 <col style={{ width: '4%' }} />
-                <col style={{ width: '9%' }} />
+                <col style={{ width: '10%' }} />
                 <col style={{ width: '13%' }} />
-                <col style={{ width: '14%' }} />
-                <col style={{ width: '20%' }} />
-                <col style={{ width: '32%' }} />
-                <col style={{ width: '8%' }} />
+                <col style={{ width: '15%' }} />
+                <col style={{ width: '18%' }} />
+                <col style={{ width: '30%' }} />
+                <col style={{ width: '10%' }} />
               </colgroup>
               <thead>
                 <tr className="bg-slate-100/90 text-slate-700 font-bold border-b border-slate-200 text-[10px]">
@@ -730,7 +757,7 @@ export default function InterClubSummaryTemplate({
 
         {/* ── SEKCJA 2: Spotkania Zespołów Projektowych i Technicznych ── */}
         <div className="space-y-2.5 pt-5 print:pt-3.5">
-          <div className="flex items-center justify-between">
+          <div className="inter-club-section-header flex items-center justify-between">
             <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-cyan-600 shrink-0"></span>
               <EditableText
@@ -752,16 +779,16 @@ export default function InterClubSummaryTemplate({
             </span>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-slate-200 print:border-none print:rounded-none">
+          <div className="overflow-x-auto print:overflow-visible rounded-xl border border-slate-200 print:border-none print:rounded-none">
             <table className="w-full text-left text-xs border-collapse table-fixed">
               <colgroup>
                 <col style={{ width: '4%' }} />
-                <col style={{ width: '9%' }} />
+                <col style={{ width: '10%' }} />
                 <col style={{ width: '13%' }} />
-                <col style={{ width: '14%' }} />
-                <col style={{ width: '20%' }} />
-                <col style={{ width: '32%' }} />
-                <col style={{ width: '8%' }} />
+                <col style={{ width: '15%' }} />
+                <col style={{ width: '18%' }} />
+                <col style={{ width: '30%' }} />
+                <col style={{ width: '10%' }} />
               </colgroup>
               <thead>
                 <tr className="bg-slate-100/90 text-slate-700 font-bold border-b border-slate-200 text-[10px]">
@@ -890,9 +917,13 @@ export default function InterClubSummaryTemplate({
           </div>
         </div>
 
+      </div>
+
+      {/* ── OSTATNIA STRONA: Sekcja C + Podpisy (poziomo 3 kolumny) + Stopka WSKZ zakotwiczona na dole ── */}
+      <div className="inter-club-last-page flex flex-col w-full">
         {/* ── SEKCJA 3: Zbiorcze Zestawienie Aktywności wg Kół Naukowych ── */}
-        <div className="space-y-2.5 pt-5 print:pt-3.5 print:break-before-page">
-          <div className="flex items-center justify-between">
+        <div className="space-y-2.5 pt-5 print:pt-0">
+          <div className="inter-club-section-header flex items-center justify-between">
             <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-indigo-600 shrink-0"></span>
               <EditableText
@@ -913,7 +944,7 @@ export default function InterClubSummaryTemplate({
             />
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-slate-200 print:border-none print:rounded-none">
+          <div className="overflow-x-auto print:overflow-visible rounded-xl border border-slate-200 print:border-none print:rounded-none">
             <table className="w-full text-left text-xs border-collapse table-fixed">
               <colgroup>
                 <col style={{ width: '5%' }} />
@@ -1061,18 +1092,17 @@ export default function InterClubSummaryTemplate({
             </table>
           </div>
         </div>
-      </div>
 
-      {/* ── Stopka z Podpisami Władz Uczelni, Notą i Stopką Graficzną WSKZ (Nierozdzielny blok końcowy na dole ostatniej strony) ── */}
-      <div
-        className="w-full multipage-closing-block inter-club-closing-block break-inside-avoid page-break-inside-avoid select-text mt-auto"
-        style={{
-          breakInside: 'avoid',
-          pageBreakInside: 'avoid',
-          marginTop: 'auto',
-        }}
-      >
-        <div className="inter-club-signatures pt-6 border-t border-slate-300 grid grid-cols-1 sm:grid-cols-3 gap-6 text-center text-xs print:pt-5">
+        {/* ── Stopka z Podpisami Władz Uczelni, Notą i Stopką Graficzną WSKZ (Nierozdzielny blok końcowy na dole ostatniej strony) ── */}
+        <div
+          className="w-full multipage-closing-block inter-club-closing-block break-inside-avoid page-break-inside-avoid select-text mt-auto"
+          style={{
+            breakInside: 'avoid',
+            pageBreakInside: 'avoid',
+            marginTop: 'auto',
+          }}
+        >
+          <div className="inter-club-signatures pt-6 border-t border-slate-300 grid grid-cols-3 gap-4 text-center text-xs print:pt-5">
           <div className="space-y-1">
             <div className="border-b border-dashed border-slate-400 h-8 w-40 mx-auto mb-1.5"></div>
             <div className="font-bold text-slate-900 text-[11px]">
@@ -1199,6 +1229,7 @@ export default function InterClubSummaryTemplate({
             className="w-full h-auto block object-cover print:object-cover"
             loading="eager"
           />
+        </div>
         </div>
       </div>
     </div>

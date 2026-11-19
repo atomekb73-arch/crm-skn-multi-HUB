@@ -1082,44 +1082,40 @@ export default function ReportsTab({
             padding: 0 !important;
             object-fit: cover !important;
           }
-          /* Sprawozdanie Zbiorcze Aktywności: pełna wysokość elastyczna i zakotwiczenie stopki na dole ostatniej strony */
+          /* Sprawozdanie Zbiorcze Aktywności: brak pustej 1. strony oraz zakotwiczenie stopki na samym dole ostatniej strony */
           #reports-print-container #skn-a4-print-area:has(.inter-club-report-print) {
-            display: flex !important;
-            flex-direction: column !important;
-            min-height: 100vh !important;
+            display: block !important;
+            min-height: auto !important;
             height: auto !important;
             overflow: visible !important;
           }
           #reports-print-container #skn-a4-print-area:has(.inter-club-report-print) > div:first-child {
-            display: flex !important;
-            flex-direction: column !important;
-            flex: 1 0 auto !important;
-            min-height: 100vh !important;
+            display: block !important;
+            min-height: auto !important;
             height: auto !important;
             padding: 0 15mm !important;
             box-sizing: border-box !important;
             width: 100% !important;
           }
           #reports-print-container #skn-a4-print-area:has(.inter-club-report-print) > div:first-child > div:last-child {
-            display: flex !important;
-            flex-direction: column !important;
-            flex: 1 0 auto !important;
-            min-height: 100% !important;
+            display: block !important;
+            min-height: auto !important;
             width: 100% !important;
           }
           #reports-print-container #skn-a4-print-area .inter-club-report-print {
-            display: flex !important;
-            flex-direction: column !important;
-            flex: 1 0 auto !important;
-            min-height: 100vh !important;
+            display: block !important;
+            min-height: auto !important;
             height: auto !important;
             overflow: visible !important;
             width: 100% !important;
           }
-          #reports-print-container #skn-a4-print-area .inter-club-report-print .inter-club-main-section {
-            flex: 1 0 auto !important;
+          #reports-print-container #skn-a4-print-area .inter-club-report-print .inter-club-last-page {
+            page-break-before: always !important;
+            break-before: page !important;
             display: flex !important;
             flex-direction: column !important;
+            min-height: 265mm !important;
+            height: auto !important;
             width: 100% !important;
           }
           #reports-print-container #skn-a4-print-area .inter-club-report-print .multipage-closing-block,
