@@ -65,7 +65,7 @@ export function OfficialWskzDocumentSheet({
           width: '100%',
           boxSizing: 'border-box',
         }}
-        className={`w-full select-text ${isMultiPage ? 'print:!p-0 print:!w-full print:!block' : 'flex-1'}`}
+        className={`w-full select-text ${isMultiPage ? 'print:!py-0 print:!px-[15mm] print:!w-full print:!block' : 'flex-1'}`}
       >
         {/* 1:1 Oficjalny Nagłówek Graficzny WSKZ (Logo + Cytat Marka Twaina) */}
         <div className="pb-3 select-none w-full">
@@ -162,7 +162,7 @@ export default function OfficialWskzDocumentA4({
         @media print {
           @page {
             size: A4 portrait;
-            margin: ${isMultiPage ? '14mm 15mm 16mm 15mm' : '0'};
+            margin: ${isMultiPage ? '14mm 0 16mm 0' : '0'};
           }
           * {
             -webkit-print-color-adjust: exact !important;
@@ -218,11 +218,12 @@ export default function OfficialWskzDocumentA4({
             background: #ffffff !important;
           }
 
-          /* Dla wielostronicowych tabel: usunięcie wewnętrznego bocznego paddingu 20mm w druku */
+          /* Dla wielostronicowych tabel: boczne marginesy 15mm na kontenerze treści (pozwala na full-bleed stopki 210mm) */
           ${isMultiPage ? `
           #skn-a4-print-area > div:first-child {
-            padding: 0 !important;
+            padding: 0 15mm !important;
             width: 100% !important;
+            box-sizing: border-box !important;
             display: block !important;
           }
           ` : ''}
@@ -288,6 +289,28 @@ export default function OfficialWskzDocumentA4({
             margin-top: 24px !important;
             width: 100% !important;
           }
+          /* Pełnoszerokościowa (edge-to-edge 210mm) grafika stopki /wskz-footer.png na ostatniej stronie */
+          #skn-a4-print-area .wskz-footer-fullbleed,
+          .multipage-closing-block .wskz-footer-fullbleed {
+            width: 210mm !important;
+            max-width: 210mm !important;
+            margin-left: -15mm !important;
+            margin-right: -15mm !important;
+            margin-bottom: -16mm !important;
+            padding: 0 !important;
+            display: block !important;
+            overflow: hidden !important;
+          }
+          #skn-a4-print-area .wskz-footer-fullbleed img,
+          .multipage-closing-block .wskz-footer-fullbleed img {
+            width: 210mm !important;
+            max-width: 210mm !important;
+            height: auto !important;
+            display: block !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            object-fit: cover !important;
+          }
           /* Sprawozdanie Zbiorcze Aktywności: pełna wysokość elastyczna i zakotwiczenie stopki na dole ostatniej strony */
           #skn-a4-print-area:has(.inter-club-report-print) {
             display: flex !important;
@@ -302,7 +325,8 @@ export default function OfficialWskzDocumentA4({
             flex: 1 0 auto !important;
             min-height: 100vh !important;
             height: auto !important;
-            padding: 0 !important;
+            padding: 0 15mm !important;
+            box-sizing: border-box !important;
             width: 100% !important;
           }
           #skn-a4-print-area:has(.inter-club-report-print) > div:first-child > div:last-child {

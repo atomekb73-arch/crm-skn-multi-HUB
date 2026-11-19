@@ -909,7 +909,7 @@ export default function ReportsTab({
         @media print {
           @page {
             size: A4 portrait;
-            margin: ${isMultiPageDoc ? '14mm 15mm 16mm 15mm' : '0'};
+            margin: ${isMultiPageDoc ? '14mm 0 16mm 0' : '0'};
           }
           * {
             -webkit-print-color-adjust: exact !important;
@@ -978,8 +978,9 @@ export default function ReportsTab({
             padding: 0 !important;
           }
           #reports-print-container #skn-a4-print-area > div:first-child {
-            padding: 0 !important;
+            padding: 0 15mm !important;
             width: 100% !important;
+            box-sizing: border-box !important;
             display: block !important;
           }
           ` : `
@@ -1053,6 +1054,30 @@ export default function ReportsTab({
             margin-top: 24px !important;
             width: 100% !important;
           }
+          /* Pełnoszerokościowa (edge-to-edge 210mm) grafika stopki /wskz-footer.png na ostatniej stronie */
+          #reports-print-container #skn-a4-print-area .wskz-footer-fullbleed,
+          #skn-a4-print-area .wskz-footer-fullbleed,
+          .multipage-closing-block .wskz-footer-fullbleed {
+            width: 210mm !important;
+            max-width: 210mm !important;
+            margin-left: -15mm !important;
+            margin-right: -15mm !important;
+            margin-bottom: -16mm !important;
+            padding: 0 !important;
+            display: block !important;
+            overflow: hidden !important;
+          }
+          #reports-print-container #skn-a4-print-area .wskz-footer-fullbleed img,
+          #skn-a4-print-area .wskz-footer-fullbleed img,
+          .multipage-closing-block .wskz-footer-fullbleed img {
+            width: 210mm !important;
+            max-width: 210mm !important;
+            height: auto !important;
+            display: block !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            object-fit: cover !important;
+          }
           /* Sprawozdanie Zbiorcze Aktywności: pełna wysokość elastyczna i zakotwiczenie stopki na dole ostatniej strony */
           #reports-print-container #skn-a4-print-area:has(.inter-club-report-print) {
             display: flex !important;
@@ -1067,7 +1092,8 @@ export default function ReportsTab({
             flex: 1 0 auto !important;
             min-height: 100vh !important;
             height: auto !important;
-            padding: 0 !important;
+            padding: 0 15mm !important;
+            box-sizing: border-box !important;
             width: 100% !important;
           }
           #reports-print-container #skn-a4-print-area:has(.inter-club-report-print) > div:first-child > div:last-child {

@@ -374,13 +374,25 @@ export function MultipageClosingBlock({
         </div>
       </div>
 
-      {/* 3. 1:1 Oficjalna Stopka Graficzna WSKZ */}
-      <div className="w-full overflow-hidden mt-1 select-none">
+      {/* 3. 1:1 Oficjalna Stopka Graficzna WSKZ (Full-Bleed 210mm) */}
+      <div
+        className="wskz-footer-fullbleed mt-1 select-none"
+        style={{
+          width: 'calc(100% + 40mm)',
+          maxWidth: '210mm',
+          marginLeft: '-20mm',
+          marginRight: '-20mm',
+          marginBottom: 0,
+          padding: 0,
+          overflow: 'hidden',
+        }}
+      >
         <img
           src="/wskz-footer.png"
           alt="Wyższa Szkoła Kształcenia Zawodowego — Stopka oficjalna"
           style={{
             width: '100%',
+            maxWidth: '210mm',
             height: 'auto',
             display: 'block',
             margin: 0,
