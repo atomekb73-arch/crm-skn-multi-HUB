@@ -182,6 +182,10 @@ export default function ReportsTab({
 
   // Inline Editor State
   const [isEditing, setIsEditing] = useState(false);
+  const [interClubEdits, setInterClubEdits] = useState({});
+  const handleInterClubEditCell = useCallback((key, value) => {
+    setInterClubEdits(prev => ({ ...prev, [key]: value }));
+  }, []);
   const [saveToast, setSaveToast] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
@@ -2040,6 +2044,9 @@ export default function ReportsTab({
                         summaryStats={interClubData?.summaryStats || {}}
                         byOrgStats={interClubData?.byOrgStats || []}
                         docDate={docDate}
+                        isEditing={isEditing}
+                        editedCells={interClubEdits}
+                        onEditCell={handleInterClubEditCell}
                         onExportExcel={handleExportInterClubToExcel}
                         onPrint={handlePrint}
                       />
@@ -2230,6 +2237,9 @@ export default function ReportsTab({
                 summaryStats={interClubData?.summaryStats || {}}
                 byOrgStats={interClubData?.byOrgStats || []}
                 docDate={docDate}
+                isEditing={isEditing}
+                editedCells={interClubEdits}
+                onEditCell={handleInterClubEditCell}
                 onExportExcel={handleExportInterClubToExcel}
                 onPrint={handlePrint}
               />
