@@ -338,20 +338,24 @@ export default function OfficialWskzDocumentA4({
             overflow: visible !important;
             width: 100% !important;
           }
-          #skn-a4-print-area .inter-club-report-print .inter-club-last-page {
-            page-break-before: auto !important;
-            break-before: auto !important;
-            display: block !important;
-            min-height: auto !important;
+          #skn-a4-print-area .inter-club-report-print .inter-club-tail-page {
+            page-break-before: always !important;
+            break-before: page !important;
+            display: flex !important;
+            flex-direction: column !important;
+            min-height: 282mm !important;
             height: auto !important;
             width: 100% !important;
           }
           #skn-a4-print-area .inter-club-report-print .multipage-closing-block,
           #skn-a4-print-area .inter-club-report-print .inter-club-closing-block {
-            margin-top: 24px !important;
+            margin-top: auto !important;
             break-inside: avoid !important;
             page-break-inside: avoid !important;
             width: 100% !important;
+          }
+          #skn-a4-print-area .inter-club-report-print .wskz-footer-fullbleed {
+            margin-bottom: 0 !important;
           }
           /* Usunięcie obramowań kontenerów wewnątrz kartki */
           #skn-a4-print-area .border,

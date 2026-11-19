@@ -249,7 +249,7 @@ export default function InterClubSummaryTemplate({
       <style>{`
         @page {
           size: A4 portrait;
-          margin: 14mm 0 16mm 0;
+          margin: 14mm 0 0 0;
         }
         @media print {
           .inter-club-report-print {
@@ -279,11 +279,12 @@ export default function InterClubSummaryTemplate({
             grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
             gap: 8px !important;
           }
-          .inter-club-report-print .inter-club-last-page {
-            page-break-before: auto !important;
-            break-before: auto !important;
-            display: block !important;
-            min-height: auto !important;
+          .inter-club-report-print .inter-club-tail-page {
+            page-break-before: always !important;
+            break-before: page !important;
+            display: flex !important;
+            flex-direction: column !important;
+            min-height: 282mm !important;
             height: auto !important;
             width: 100% !important;
           }
@@ -291,7 +292,7 @@ export default function InterClubSummaryTemplate({
           .inter-club-report-print .multipage-closing-block,
           #skn-a4-print-area .inter-club-closing-block,
           #skn-a4-print-area .inter-club-report-print .multipage-closing-block {
-            margin-top: 24px !important;
+            margin-top: auto !important;
             break-inside: avoid !important;
             page-break-inside: avoid !important;
             width: 100% !important;
@@ -301,7 +302,7 @@ export default function InterClubSummaryTemplate({
             max-width: 210mm !important;
             margin-left: -15mm !important;
             margin-right: -15mm !important;
-            margin-bottom: -16mm !important;
+            margin-bottom: 0 !important;
             padding: 0 !important;
             display: block !important;
             overflow: hidden !important;
@@ -753,9 +754,12 @@ export default function InterClubSummaryTemplate({
             </table>
           </div>
         </div>
+      </div>
 
+      {/* ── KOŃCOWA STRONA: Sekcja B + Sekcja C + Podpisy + Stopka WSKZ zakotwiczona przy dolnej krawędzi ── */}
+      <div className="inter-club-tail-page flex flex-col w-full">
         {/* ── SEKCJA 2: Spotkania Zespołów Projektowych i Technicznych ── */}
-        <div className="space-y-2.5 pt-5 print:pt-3.5">
+        <div className="space-y-2.5 pt-5 print:pt-0">
           <div className="inter-club-section-header flex items-center justify-between">
             <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-cyan-600 shrink-0"></span>
@@ -916,10 +920,6 @@ export default function InterClubSummaryTemplate({
           </div>
         </div>
 
-      </div>
-
-      {/* ── OSTATNIA STRONA: Sekcja C + Podpisy (poziomo 3 kolumny) + Stopka WSKZ zakotwiczona na dole ── */}
-      <div className="inter-club-last-page flex flex-col w-full">
         {/* ── SEKCJA 3: Zbiorcze Zestawienie Aktywności wg Kół Naukowych ── */}
         <div className="space-y-2.5 mt-5 pt-4 border-t border-slate-200/80 print:mt-5 print:pt-4">
           <div className="inter-club-section-header flex items-center justify-between">
