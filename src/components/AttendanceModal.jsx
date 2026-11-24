@@ -1625,11 +1625,14 @@ export default function AttendanceModal({
   if (!isOpen || !meeting) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 print:hidden">
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 w-[95vw] lg:w-[85vw] max-w-[1680px] lg:min-w-[80vw] h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150 relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 print:hidden">
+      <div
+        className="bg-white rounded-none md:rounded-3xl shadow-2xl border-0 md:border md:border-slate-100 w-full md:w-[95vw] lg:w-[85vw] max-w-[1680px] lg:min-w-[80vw] h-[100dvh] max-h-[100dvh] md:h-[92vh] md:max-h-[92vh] flex flex-col overflow-y-auto md:overflow-hidden overscroll-contain animate-in zoom-in-95 duration-150 relative"
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
         
         {/* ── Modal Header ─────────────────────────────────────────────────── */}
-        <div className="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 via-indigo-50/20 to-white flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
+        <div className="px-3 py-2.5 md:px-6 md:py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 via-indigo-50/20 to-white flex flex-col md:flex-row md:items-center justify-between gap-2.5 md:gap-4 shrink-0">
           <div className="flex items-center gap-3.5 min-w-0 flex-1">
             {/* Stable sized Badge */}
             <div className="h-12 px-3.5 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-md shrink-0 font-mono tracking-tight text-center">
@@ -1883,90 +1886,90 @@ export default function AttendanceModal({
         )}
 
         {/* ── KPI Summary Cards Bar ────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3 p-3 sm:p-4 bg-slate-50/60 border-b border-slate-100 shrink-0">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-2.5 p-2.5 sm:p-3 md:p-4 bg-slate-50/60 border-b border-slate-100 shrink-0">
           {/* 1. Approved Attendance (All with status Zaliczono) */}
           <div
             onClick={() => setActiveFilter('approved')}
-            className={`p-3 rounded-2xl border shadow-2xs flex items-center gap-3 cursor-pointer transition ${
+            className={`p-2 md:p-3 rounded-xl md:rounded-2xl border shadow-2xs flex items-center gap-2 md:gap-3 cursor-pointer transition ${
               activeFilter === 'approved' ? 'bg-emerald-50/80 border-emerald-300 ring-2 ring-emerald-200' : 'bg-white border-emerald-100 hover:bg-emerald-50/30'
             }`}
           >
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-              <CheckCircle2 size={20} />
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <CheckCircle2 size={18} />
             </div>
-            <div>
-              <p className="text-lg font-bold text-slate-800 leading-none">{countApprovedTotal}</p>
-              <p className="text-[11px] font-semibold text-emerald-700 mt-0.5">Zaliczonych obecności</p>
+            <div className="min-w-0">
+              <p className="text-base md:text-lg font-bold text-slate-800 leading-none">{countApprovedTotal}</p>
+              <p className="text-[10px] md:text-[11px] font-semibold text-emerald-700 mt-0.5 leading-tight">Zaliczonych obecności</p>
             </div>
           </div>
 
           {/* 2. Supervisors */}
           <div
             onClick={() => setActiveFilter('supervisor')}
-            className={`p-3 rounded-2xl border shadow-2xs flex items-center gap-3 cursor-pointer transition ${
+            className={`p-2 md:p-3 rounded-xl md:rounded-2xl border shadow-2xs flex items-center gap-2 md:gap-3 cursor-pointer transition ${
               activeFilter === 'supervisor' ? 'bg-indigo-50/80 border-indigo-300 ring-2 ring-indigo-200' : 'bg-white border-indigo-100 hover:bg-indigo-50/30'
             }`}
           >
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-              <GraduationCap size={20} />
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+              <GraduationCap size={18} />
             </div>
-            <div>
-              <p className="text-lg font-bold text-slate-800 leading-none">{countSupervisors}</p>
-              <p className="text-[11px] font-semibold text-indigo-700 mt-0.5">Opiekunów koła</p>
+            <div className="min-w-0">
+              <p className="text-base md:text-lg font-bold text-slate-800 leading-none">{countSupervisors}</p>
+              <p className="text-[10px] md:text-[11px] font-semibold text-indigo-700 mt-0.5 leading-tight">Opiekunów koła</p>
             </div>
           </div>
 
           {/* 3. Student Members */}
           <div
             onClick={() => setActiveFilter('member')}
-            className={`p-3 rounded-2xl border shadow-2xs flex items-center gap-3 cursor-pointer transition ${
+            className={`p-2 md:p-3 rounded-xl md:rounded-2xl border shadow-2xs flex items-center gap-2 md:gap-3 cursor-pointer transition ${
               activeFilter === 'member' ? 'bg-indigo-50/80 border-indigo-300 ring-2 ring-indigo-200' : 'bg-white border-indigo-100 hover:bg-indigo-50/30'
             }`}
           >
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-              <UserCheck size={20} />
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+              <UserCheck size={18} />
             </div>
-            <div>
-              <p className="text-lg font-bold text-slate-800 leading-none">{countMembers}</p>
-              <p className="text-[11px] font-semibold text-indigo-700 mt-0.5">Członków koła</p>
+            <div className="min-w-0">
+              <p className="text-base md:text-lg font-bold text-slate-800 leading-none">{countMembers}</p>
+              <p className="text-[10px] md:text-[11px] font-semibold text-indigo-700 mt-0.5 leading-tight">Członków koła</p>
             </div>
           </div>
 
           {/* 4. Short Time */}
           <div
             onClick={() => setActiveFilter('short_time')}
-            className={`p-3 rounded-2xl border shadow-2xs flex items-center gap-3 cursor-pointer transition ${
+            className={`p-2 md:p-3 rounded-xl md:rounded-2xl border shadow-2xs flex items-center gap-2 md:gap-3 cursor-pointer transition ${
               activeFilter === 'short_time' ? 'bg-rose-50/80 border-rose-300 ring-2 ring-rose-200' : 'bg-white border-rose-100 hover:bg-rose-50/30'
             }`}
           >
-            <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-              <AlertTriangle size={20} />
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+              <AlertTriangle size={18} />
             </div>
-            <div>
-              <p className="text-lg font-bold text-slate-800 leading-none">{countShortTime}</p>
-              <p className="text-[11px] font-semibold text-rose-700 mt-0.5">Czas &lt; {localThreshold}m</p>
+            <div className="min-w-0">
+              <p className="text-base md:text-lg font-bold text-slate-800 leading-none">{countShortTime}</p>
+              <p className="text-[10px] md:text-[11px] font-semibold text-rose-700 mt-0.5 leading-tight">Czas &lt; {localThreshold}m</p>
             </div>
           </div>
 
           {/* 5. Total Logged */}
           <div
             onClick={() => setActiveFilter('all')}
-            className={`col-span-2 sm:col-span-1 p-3 rounded-2xl border shadow-2xs flex items-center gap-3 cursor-pointer transition ${
+            className={`col-span-2 sm:col-span-1 p-2 md:p-3 rounded-xl md:rounded-2xl border shadow-2xs flex items-center gap-2 md:gap-3 cursor-pointer transition ${
               activeFilter === 'all' ? 'bg-purple-50/80 border-purple-300 ring-2 ring-purple-200' : 'bg-white border-purple-100 hover:bg-purple-50/30'
             }`}
           >
-            <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
-              <Users size={20} />
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+              <Users size={18} />
             </div>
-            <div>
-              <p className="text-lg font-bold text-slate-800 leading-none">{totalCount}</p>
-              <p className="text-[11px] font-semibold text-purple-700 mt-0.5">Wszystkich w logach</p>
+            <div className="min-w-0">
+              <p className="text-base md:text-lg font-bold text-slate-800 leading-none">{totalCount}</p>
+              <p className="text-[10px] md:text-[11px] font-semibold text-purple-700 mt-0.5 leading-tight">Wszystkich w logach</p>
             </div>
           </div>
         </div>
 
         {/* ── Search & Filter Tabs Bar ─────────────────────────────────────── */}
-        <div className="px-6 py-3 border-b border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
+        <div className="px-3 py-2 md:px-6 md:py-3 border-b border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 md:gap-3 shrink-0">
           {/* Search Box */}
           <div className="relative flex-1 max-w-md">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -2065,7 +2068,7 @@ export default function AttendanceModal({
         </div>
 
         {/* ── Scrollable Participants Table Area ───────────────────────────── */}
-        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-200 p-3 sm:p-4 md:p-6 pb-24 sm:pb-32">
+        <div className="md:flex-1 md:min-h-0 md:overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-200 p-2.5 sm:p-4 md:p-6 pb-6 md:pb-32">
           {sortedAndFilteredParticipants.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center text-slate-400 py-12">
               <Users size={40} className="text-slate-300 mb-2" />
@@ -2073,11 +2076,190 @@ export default function AttendanceModal({
               <p className="text-xs text-slate-400 mt-1">Zmień filtr lub wpisaną frazę w wyszukiwarce</p>
             </div>
           ) : (
+            <>
+            {/* ── Mobile & Tablet Portrait (< lg): dwuliniowe karty uczestników bez poziomego scrolla ── */}
+            <div className="lg:hidden space-y-2.5">
+              {sortedAndFilteredParticipants.map((p, idx) => {
+                const isSupervisorRole = isSupervisorPerson(p);
+                const isSpeakerRole = isSpeakerPerson(p);
+                const isGuestRole = isGuestPerson(p);
+                const isMemberRole = isStudentMemberPerson(p);
+                const isApproved = p.manualApproved !== undefined ? p.manualApproved : (p.isEligible || p.status === 'approved' || p.status === 'Zaliczona');
+                const isUnmatched = isMemberRole && !p.member && !isMonikaLyniewska(p.rawName);
+
+                const startDate = meeting.startDate || meeting.date;
+                const endDate = meeting.endDate;
+                const totalEventDays = calculateEventDays(startDate, endDate);
+                const extraActs = Array.isArray(p.activities) ? p.activities : [];
+                const attendeeDays = typeof p.daysAttended === 'number' && p.daysAttended > 0 ? Math.min(totalEventDays, p.daysAttended) : totalEventDays;
+                const breakdown = calculateEventPointsBreakdown(meeting, weights, {
+                  ...p,
+                  daysAttended: attendeeDays,
+                  activities: extraActs,
+                });
+                const pointsForMeeting = (isMemberRole && isApproved) ? breakdown.totalPoints : 0;
+
+                return (
+                  <div
+                    key={p.id || `card-${idx}`}
+                    className={`rounded-2xl border p-3 shadow-2xs space-y-2.5 transition-colors ${
+                      isSupervisorRole
+                        ? 'bg-indigo-50/50 border-indigo-200'
+                        : isSpeakerRole
+                        ? 'bg-amber-50/40 border-amber-200'
+                        : isGuestRole
+                        ? 'bg-purple-50/40 border-purple-200'
+                        : isUnmatched
+                        ? 'bg-amber-50/60 border-amber-200'
+                        : isApproved
+                        ? 'bg-white border-slate-200'
+                        : 'bg-rose-50/40 border-rose-200'
+                    }`}
+                  >
+                    {/* Górna linia: LP + Nazwisko / Dopasowany profil + Czas + Status */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-2 min-w-0 flex-1">
+                        <span className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 rounded-lg bg-slate-100 text-slate-500 font-mono text-[11px] font-bold shrink-0">
+                          {idx + 1}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-slate-900 text-xs leading-snug break-words">
+                            {String(p.rawName || p.name || '')}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                            {p.member ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-md">
+                                <UserCheck size={10} className="shrink-0" />
+                                <span className="truncate max-w-[180px]">{p.member.fullName || p.member.name}</span>
+                                {p.member.index && <span className="font-mono text-emerald-700">({p.member.index})</span>}
+                              </span>
+                            ) : isSupervisorRole ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-800 bg-indigo-100/80 px-1.5 py-0.5 rounded-md">
+                                <GraduationCap size={10} /> Opiekun Koła
+                              </span>
+                            ) : isSpeakerRole ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100/80 px-1.5 py-0.5 rounded-md">
+                                <Mic size={10} /> Prelegent
+                              </span>
+                            ) : isGuestRole ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-purple-800 bg-purple-100/80 px-1.5 py-0.5 rounded-md">
+                                <User size={10} /> Gość
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md">
+                                <HelpCircle size={10} /> Niepowiązany
+                              </span>
+                            )}
+                            <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-md whitespace-nowrap">
+                              {p.durationStr || `${p.durationMinutes || 0} min`}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="shrink-0">
+                        {isSupervisorRole ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                            <GraduationCap size={10} /> Opiekun
+                          </span>
+                        ) : isSpeakerRole ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                            <Mic size={10} /> Prelegent
+                          </span>
+                        ) : isApproved ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            <Check size={10} /> Zaliczona
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                            <AlertTriangle size={10} /> Odrzucono
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Dolna linia: Dodatkowe aktywności + Punkty + Przyciski Zalicz / Odrzuć / Usuń */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {!isSupervisorRole && !isGuestRole && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={(e) => handleTogglePopover(e, p.id)}
+                              className={`py-1 px-2 rounded-xl text-[11px] font-semibold border inline-flex items-center gap-1 transition cursor-pointer ${
+                                extraActs.length > 0
+                                  ? 'bg-indigo-50 text-indigo-800 border-indigo-300 font-bold'
+                                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                              }`}
+                            >
+                              <Tag size={11} className="text-indigo-600 shrink-0" />
+                              <span>{extraActs.length > 0 ? `Aktyw. (${extraActs.length})` : 'Aktywność'}</span>
+                              <ChevronDown size={11} className="text-slate-400 shrink-0" />
+                            </button>
+                            <span
+                              className="inline-flex items-center px-2 py-1 rounded-xl text-[11px] font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-200"
+                              title={breakdown.displayText}
+                            >
+                              +{Number(pointsForMeeting) || 0} pkt
+                            </span>
+                          </>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5 ml-auto">
+                        {isSupervisorRole || isSpeakerRole ? (
+                          <span className="text-[11px] text-slate-400 font-medium mr-1">Protokół</span>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleSetApproval(p.id, true)}
+                              className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition cursor-pointer inline-flex items-center gap-1 ${
+                                isApproved
+                                  ? 'bg-emerald-600 text-white shadow-2xs'
+                                  : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                              }`}
+                            >
+                              <Check size={12} />
+                              <span>Zalicz</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleSetApproval(p.id, false)}
+                              className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition cursor-pointer inline-flex items-center gap-1 ${
+                                !isApproved
+                                  ? 'bg-rose-600 text-white shadow-2xs'
+                                  : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100'
+                              }`}
+                            >
+                              <X size={12} />
+                              <span>Odrzuć</span>
+                            </button>
+                          </>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveParticipant(p.id)}
+                          className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-200/70 transition cursor-pointer"
+                          title="Usuń ze spotkania"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* ── Desktop (>= lg): pełna jednowierszowa tabela uczestników ── */}
             <div
               tabIndex={0}
               role="region"
               aria-label="Tabela obecności i logów spotkania"
-              className="table-wrapper border border-slate-200 rounded-2xl overflow-x-auto block w-full max-w-full shadow-2xs bg-white touch-auto focus:outline-none focus:ring-1 focus:ring-indigo-400/50"
+              className="hidden lg:block table-wrapper border border-slate-200 rounded-2xl overflow-x-auto w-full max-w-full shadow-2xs bg-white touch-auto focus:outline-none focus:ring-1 focus:ring-indigo-400/50"
             >
               <table className="w-full text-xs text-left border-collapse">
                 <thead className="sticky top-0 bg-slate-100/95 backdrop-blur-xs text-slate-600 font-semibold border-b border-slate-200 z-20">
@@ -2481,17 +2663,18 @@ export default function AttendanceModal({
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </div>
 
         {/* ── Modal Footer Bar ─────────────────────────────────────────────── */}
         {saveError && (
-          <div className="px-6 py-2.5 bg-rose-50 border-t border-rose-200 flex items-center gap-2 text-rose-800 text-xs font-semibold shrink-0">
+          <div className="px-4 md:px-6 py-2.5 bg-rose-50 border-t border-rose-200 flex items-center gap-2 text-rose-800 text-xs font-semibold shrink-0">
             <AlertTriangle size={15} className="text-rose-600 shrink-0" />
             <span className="truncate">{saveError}</span>
           </div>
         )}
-        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+        <div className="sticky bottom-0 z-30 md:static px-3 py-2.5 md:px-6 md:py-4 border-t border-slate-200 md:border-slate-100 bg-slate-50/95 backdrop-blur-xs flex flex-col sm:flex-row items-center justify-between gap-2 md:gap-3 shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] md:shadow-none">
           <div className="text-xs text-slate-500">
             Podsumowanie do zapisu: <strong className="text-emerald-700 font-bold">{countApprovedTotal}</strong> zaliczonych obecności (w tym {countApprovedMembers} członków koła, {countSupervisors} opiekunów{countGuests > 0 ? `, ${countGuests} gości` : ''}).
           </div>
