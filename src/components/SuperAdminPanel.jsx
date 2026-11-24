@@ -209,7 +209,7 @@ export default function SuperAdminPanel({ isOpen, onClose, onPermissionsChanged 
 
   return (
     <div className="fixed inset-0 z-[120] bg-[#f8fafc] overflow-y-auto">
-      <div className="max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-8">
+      <div className="w-full max-w-[1680px] mx-auto px-4 sm:px-6 py-4 sm:py-6 lg:py-8">
         {activeTab === 'rbac' ? (
           <AdminPanelPage
             onPermissionsChanged={() => {

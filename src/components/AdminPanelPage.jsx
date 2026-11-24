@@ -295,7 +295,7 @@ export default function AdminPanelPage({ onPermissionsChanged, onClose, onOpenAu
   }
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full max-w-[1680px] mx-auto space-y-6">
       {/* ── Top Header Card (wzorowany 1:1 na Generatorze Formularzy) ── */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
@@ -365,10 +365,10 @@ export default function AdminPanelPage({ onPermissionsChanged, onClose, onOpenAu
         </div>
       )}
 
-      {/* ── Główny układ 3-kolumnowy (Generator Formularzy) ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      {/* ── Główny układ 3-kolumnowy (asymetryczny na desktopie, 1-kolumnowy na mobile/tablet) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(340px,1.3fr)_340px_minmax(480px,1.85fr)] xl:grid-cols-[minmax(380px,1.35fr)_340px_minmax(560px,1.9fr)] gap-6 items-start">
         {/* LEWA KOLUMNA: Przypisane Koła */}
-        <div className="lg:col-span-3 bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 sm:p-5 flex flex-col">
+        <div className="w-full min-w-0 bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 sm:p-5 flex flex-col">
           <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
             <Building2 size={16} className="text-indigo-600" />
             <span>Przypisane Koła ({selectedClubs.length})</span>
@@ -414,7 +414,7 @@ export default function AdminPanelPage({ onPermissionsChanged, onClose, onOpenAu
                     >
                       <IconComp size={14} />
                     </div>
-                    <span className="text-xs font-medium text-slate-700 truncate" title={org.name}>
+                    <span className="text-xs font-medium text-slate-700 leading-snug" title={org.name}>
                       {org.displayName || org.name}
                     </span>
                   </div>
@@ -428,7 +428,7 @@ export default function AdminPanelPage({ onPermissionsChanged, onClose, onOpenAu
         </div>
 
         {/* ŚRODKOWA KOLUMNA: Dodaj Nowego Użytkownika / Edycja */}
-        <div className="lg:col-span-3 bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 sm:p-5 flex flex-col">
+        <div className="w-full min-w-0 bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 sm:p-5 flex flex-col">
           <div className="flex items-center gap-2 text-slate-900 font-bold text-sm pb-3 border-b border-slate-100">
             <UserPlus size={16} className="text-indigo-600" />
             <span>{editingEmail ? 'Edytuj Użytkownika' : 'Dodaj Nowego Użytkownika'}</span>
@@ -519,7 +519,7 @@ export default function AdminPanelPage({ onPermissionsChanged, onClose, onOpenAu
         </div>
 
         {/* PRAWA KOLUMNA: Zarejestrowani Użytkownicy */}
-        <div className="lg:col-span-6 bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 sm:p-5 flex flex-col">
+        <div className="w-full min-w-0 bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 sm:p-5 flex flex-col">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <Users size={16} className="text-indigo-600" />
@@ -583,10 +583,10 @@ export default function AdminPanelPage({ onPermissionsChanged, onClose, onOpenAu
                               {getInitials(u.name, u.email)}
                             </div>
                             <div className="min-w-0">
-                              <div className="font-bold text-slate-900 truncate max-w-[130px] leading-tight" title={u.name || u.email}>
+                              <div className="font-bold text-slate-900 leading-tight" title={u.name || u.email}>
                                 {u.name || u.email}
                               </div>
-                              <div className="text-[11px] font-mono text-slate-400 truncate max-w-[130px] leading-tight mt-0.5">
+                              <div className="text-[11px] font-mono text-slate-400 leading-tight mt-0.5 break-all">
                                 {u.email}
                               </div>
                             </div>
@@ -639,7 +639,7 @@ export default function AdminPanelPage({ onPermissionsChanged, onClose, onOpenAu
                           ) : (u.clubs || []).length === 0 ? (
                             <span className="text-[11px] text-slate-400">Brak</span>
                           ) : (
-                            <div className="flex flex-col gap-1 max-h-[120px] overflow-y-auto pr-1">
+                            <div className="flex flex-wrap gap-1 max-h-[120px] overflow-y-auto pr-1">
                               {u.clubs.map((cid) => {
                                 const org = clubMap.get(cid);
                                 if (!org) return null;
