@@ -113,7 +113,7 @@ const PHONE_COUNTRY_RULES = [
 ];
 
 // Kanoniczne identyfikatory aktywnych kół naukowych w bazie Supabase
-const VALID_ACTIVE_ORG_IDS = ['skn_seksuologii', 'uzaleznienia', 'psychoonkologia'];
+const VALID_ACTIVE_ORG_IDS = ['skn_seksuologii', 'uzaleznienia', 'psychoonkologia', 'skn_dzieci_i_mlodziezy'];
 
 /**
  * Mapuje parametr URL / stary slug / alias na kanoniczne organization_id w Supabase.
@@ -129,6 +129,21 @@ function resolveCanonicalOrgId(rawParam) {
 
   if (!clean || clean === 'test' || clean === 'null' || clean === 'undefined') {
     return null;
+  }
+
+  // SKN Psychologii Dzieci i Młodzieży (SKN PDiM)
+  if (
+    clean === 'skn_dzieci_i_mlodziezy' ||
+    clean === 'skn-dzieci-i-mlodziezy' ||
+    clean === 'skn-psychologii-dzieci-i-mlodziezy' ||
+    clean === 'skn_psychologii_dzieci_i_mlodziezy' ||
+    clean === 'dzieci_i_mlodziezy' ||
+    clean === 'skn_pdim' ||
+    clean === 'skn-pdim' ||
+    clean === 'pdim' ||
+    clean.includes('dzieci')
+  ) {
+    return 'skn_dzieci_i_mlodziezy';
   }
 
   // SKN Psychoonkologii
@@ -321,28 +336,35 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
       DEFAULT_ORGS[0];
   }, [targetOrgId, availableOrgs]);
 
+  const isDzieciIMlodziez = targetOrgId === 'skn_dzieci_i_mlodziezy' || targetOrgId === 'skn_pdim';
   const isUzaleznienia = targetOrgId === 'uzaleznienia' || targetOrgId === 'sknu';
-  const isPsychoonkologia = targetOrgId === 'psychoonkologia' || targetOrgId?.includes('psycho');
-  const isSeksuologia = !isUzaleznienia && !isPsychoonkologia;
+  const isPsychoonkologia = !isDzieciIMlodziez && (targetOrgId === 'psychoonkologia' || targetOrgId?.includes('psychoonko'));
+  const isSeksuologia = !isUzaleznienia && !isPsychoonkologia && !isDzieciIMlodziez;
 
   // Nazwy i etykiety formalne organizacji
   const orgLine1 = 'Studenckie Koło Naukowe';
-  const orgLine2 = isUzaleznienia
-    ? 'Zachowań Ryzykowych i Uzależnień'
-    : isPsychoonkologia
-      ? 'Psychoonkologii WSKZ'
-      : 'Seksuologii WSKZ';
+  const orgLine2 = isDzieciIMlodziez
+    ? 'Psychologii Dzieci i Młodzieży'
+    : isUzaleznienia
+      ? 'Zachowań Ryzykowych i Uzależnień'
+      : isPsychoonkologia
+        ? 'Psychoonkologii WSKZ'
+        : 'Seksuologii WSKZ';
   const orgFullName = currentOrgMeta?.name || `${orgLine1} ${orgLine2}`;
-  const orgGenitive = isUzaleznienia
-    ? 'Studenckiego Koła Naukowego Zachowań Ryzykowych i Uzależnień'
-    : isPsychoonkologia
-      ? 'Studenckiego Koła Naukowego Psychoonkologii WSKZ'
-      : 'Studenckiego Koła Naukowego Seksuologii WSKZ';
-  const orgBoardName = isUzaleznienia
-    ? 'Zarząd Koła Naukowego Zachowań Ryzykowych i Uzależnień'
-    : isPsychoonkologia
-      ? 'Zarząd Koła Naukowego Psychoonkologii WSKZ'
-      : 'Zarząd SKN Seksuologii';
+  const orgGenitive = isDzieciIMlodziez
+    ? 'Studenckiego Koła Naukowego Psychologii Dzieci i Młodzieży'
+    : isUzaleznienia
+      ? 'Studenckiego Koła Naukowego Zachowań Ryzykowych i Uzależnień'
+      : isPsychoonkologia
+        ? 'Studenckiego Koła Naukowego Psychoonkologii WSKZ'
+        : 'Studenckiego Koła Naukowego Seksuologii WSKZ';
+  const orgBoardName = isDzieciIMlodziez
+    ? 'Zarząd SKN Psychologii Dzieci i Młodzieży'
+    : isUzaleznienia
+      ? 'Zarząd Koła Naukowego Zachowań Ryzykowych i Uzależnień'
+      : isPsychoonkologia
+        ? 'Zarząd Koła Naukowego Psychoonkologii WSKZ'
+        : 'Zarząd SKN Seksuologii';
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -990,6 +1012,19 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
         successBadge: 'bg-purple-100 text-purple-800 border-purple-300',
       };
     }
+    if (isDzieciIMlodziez) {
+      return {
+        bg: 'bg-[#f0f9ff] bg-gradient-to-b from-[#f8fcff] via-[#f0f9ff] to-[#e0f2fe] selection:bg-sky-600 selection:text-white',
+        card: 'shadow-sky-950/10 border border-sky-200/90 ring-1 ring-sky-900/5',
+        badge: 'bg-sky-50 text-sky-800 border border-sky-200/90',
+        title: 'text-sky-950',
+        accentBtn: 'bg-sky-600 hover:bg-sky-700 shadow-sky-200',
+        submitBtn: 'bg-gradient-to-r from-sky-600 via-blue-600 to-cyan-700 hover:from-sky-700 hover:to-cyan-800 shadow-xl shadow-sky-600/25 hover:shadow-sky-600/35',
+        successBox: 'bg-gradient-to-br from-sky-50/80 via-white to-blue-50/50 border-sky-200 text-sky-950 shadow-sky-500/10',
+        successIcon: 'bg-gradient-to-tr from-sky-500 to-blue-600 shadow-sky-500/30',
+        successBadge: 'bg-sky-100 text-sky-800 border-sky-300',
+      };
+    }
     // Domyślny: SKN Seksuologii
     return {
       bg: 'bg-[#eef4f8] bg-gradient-to-b from-[#f1f6fa] via-[#eef4f8] to-[#e4eef6] selection:bg-indigo-600 selection:text-white',
@@ -1002,7 +1037,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
       successIcon: 'bg-gradient-to-tr from-emerald-500 to-teal-500 shadow-emerald-500/30',
       successBadge: 'bg-emerald-100 text-emerald-800 border-emerald-300',
     };
-  }, [isUzaleznienia, isPsychoonkologia]);
+  }, [isUzaleznienia, isPsychoonkologia, isDzieciIMlodziez]);
 
   // Blokada formularza na wejściu, gdy link zawiera nieistniejący/archiwalny identyfikator koła
   if (isInvalidLink && !manualFallbackMode) {

@@ -9,6 +9,7 @@ export function normalizeDorobekOrgId(orgId = 'skn_seksuologii') {
     return 'skn_seksuologii';
   }
   if (str === 'skn_psychoonkologii' || str === 'skn-psychoonkologia') return 'psychoonkologia';
+  if (str === 'skn_pdim' || str === 'skn-pdim' || str === 'pdim' || str === 'skn-dzieci-i-mlodziezy') return 'skn_dzieci_i_mlodziezy';
   if (str === 'skn_uzaleznien' || str === 'sknu') return 'uzaleznienia';
   return str;
 }

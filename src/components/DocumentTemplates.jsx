@@ -119,6 +119,9 @@ export function formatOrgGenitive(orgName = '', orgId = null) {
   if (cleanId === 'psychoonkologia' || lower.includes('psychoonkolog')) {
     return 'Studenckiego Koła Naukowego Psychoonkologii WSKZ';
   }
+  if (cleanId === 'skn_dzieci_i_mlodziezy' || cleanId === 'skn_pdim' || lower.includes('dzieci i młodzieży') || lower.includes('dzieci i mlodziezy')) {
+    return 'Studenckiego Koła Naukowego Psychologii Dzieci i Młodzieży WSKZ';
+  }
 
   if (!str) return 'Studenckiego Koła Naukowego';
   if (str.startsWith('Studenckie Koło Naukowe')) {

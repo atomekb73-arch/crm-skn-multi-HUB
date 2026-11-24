@@ -175,6 +175,18 @@ export const WSKZ_ORGANIZATIONS = [
     bgLight: "#D1FAE5",
     icon: "Rocket",
     hasActiveCrm: false
+  },
+  {
+    orgId: "skn_dzieci_i_mlodziezy",
+    number: "15",
+    name: "Studenckie Koło Naukowe Psychologii Dzieci i Młodzieży",
+    shortName: "SKN Psychologii Dzieci i Młodzieży",
+    code: "PDiM",
+    subcalendarId: null,
+    color: "#0284C7",
+    bgLight: "#E0F2FE",
+    icon: "Sparkles",
+    hasActiveCrm: true
   }
 ];
 

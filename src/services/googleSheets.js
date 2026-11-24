@@ -18,6 +18,7 @@ function normalizeOrg(orgId) {
   const str = String(orgId || fallbackOrg || 'skn_seksuologii').trim();
   if (str === 'skn-template' || str === 'default' || !str) return 'skn_seksuologii';
   if (str === 'skn_psychoonkologii' || str === 'skn-psychoonkologia') return 'psychoonkologia';
+  if (str === 'skn_pdim' || str === 'skn-pdim' || str === 'pdim' || str === 'skn-dzieci-i-mlodziezy') return 'skn_dzieci_i_mlodziezy';
   if (str === 'skn_uzaleznien' || str === 'sknu') return 'uzaleznienia';
   return str;
 }
@@ -339,7 +340,7 @@ export async function saveMeetingAttendanceToSupabase({
   const hasYearPrefix = /^\[.*?\]/.test(rawCode);
   const dateStr = String(dataSpotkania || new Date().toISOString().slice(0, 10)).split('T')[0].trim();
   const effectiveSourceMeetingId = String(sourceMeetingId || rawCode).trim();
-  const ACTIVE_CRM_ORGS = ['skn_seksuologii', 'uzaleznienia', 'psychoonkologia'];
+  const ACTIVE_CRM_ORGS = ['skn_seksuologii', 'uzaleznienia', 'psychoonkologia', 'skn_dzieci_i_mlodziezy'];
   const activeCoOrgsInCrm = (Array.isArray(coOrganizers) ? coOrganizers : [])
     .map(normalizeOrg)
     .filter(cid => cid !== cleanOrg && ACTIVE_CRM_ORGS.includes(cid));

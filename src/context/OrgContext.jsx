@@ -93,6 +93,28 @@ export const DEFAULT_ORGS = [
     isDefault: false,
     supervisors: [],
   },
+  {
+    id: 'skn_dzieci_i_mlodziezy',
+    name: 'Studenckie Koło Naukowe Psychologii Dzieci i Młodzieży',
+    shortName: 'SKN Psychologii Dzieci i Młodzieży',
+    tag: 'SKN PDiM',
+    badgeText: 'PDiM',
+    faculty: 'Wydział Psychologii WSKZ',
+    unit: 'Wydział Psychologii WSKZ',
+    academicYear: '2026/2027',
+    sheetId: '',
+    calendarKey: '',
+    calendarId: '',
+    teamupApiKey: '',
+    teamupToken: '',
+    subcalendarId: '',
+    subcalendarName: '',
+    description: 'Studenckie Koło Naukowe Psychologii Dzieci i Młodzieży WSKZ - Oficjalna ewidencja i harmonogram',
+    color: 'sky',
+    hasActiveCrm: true,
+    isDefault: false,
+    supervisors: [],
+  },
 ];
 
 const OrgContext = createContext(null);
@@ -176,6 +198,18 @@ export function OrgProvider({ children }) {
               subcalendarName: '07 🎗️ SKN Psychoonkologii',
             };
           }
+          if (o.id === 'skn_dzieci_i_mlodziezy' || o.id === 'skn_pdim' || o.name?.includes('Dzieci i Młodzieży')) {
+            return {
+              ...DEFAULT_ORGS[3],
+              ...o,
+              id: 'skn_dzieci_i_mlodziezy',
+              name: 'Studenckie Koło Naukowe Psychologii Dzieci i Młodzieży',
+              shortName: 'SKN Psychologii Dzieci i Młodzieży',
+              tag: 'SKN PDiM',
+              badgeText: 'PDiM',
+              color: 'sky',
+            };
+          }
           return null;
         }).filter(Boolean);
 
@@ -187,8 +221,12 @@ export function OrgProvider({ children }) {
         if (!mapped.some(o => o.id === 'psychoonkologia')) {
           mapped.push(DEFAULT_ORGS[2]);
         }
+        // Ensure skn_dzieci_i_mlodziezy exists in the list
+        if (!mapped.some(o => o.id === 'skn_dzieci_i_mlodziezy')) {
+          mapped.push(DEFAULT_ORGS[3]);
+        }
         // Ścisła izolacja: W przełączniku instancji renderuj WYŁĄCZNIE koła z hasActiveCrm === true
-        return mapped.filter(o => o.hasActiveCrm !== false && ['skn_seksuologii', 'uzaleznienia', 'psychoonkologia'].includes(o.id));
+        return mapped.filter(o => o.hasActiveCrm !== false && ['skn_seksuologii', 'uzaleznienia', 'psychoonkologia', 'skn_dzieci_i_mlodziezy'].includes(o.id));
       }
     } catch (err) {
       console.error('Błąd odczytu crm_skn_organizations z localStorage:', err);
@@ -298,6 +336,8 @@ export function OrgProvider({ children }) {
         ? 'psychoonkologia'
         : raw === 'skn_uzaleznienia' || raw === 'skn-uzaleznienia'
         ? 'uzaleznienia'
+        : raw === 'skn_pdim' || raw === 'skn-pdim' || raw === 'pdim' || raw === 'skn-dzieci-i-mlodziezy' || raw === 'skn-psychologii-dzieci-i-mlodziezy'
+        ? 'skn_dzieci_i_mlodziezy'
         : raw;
 
     if (isAuthenticated && typeof canAccessOrg === 'function' && !canAccessOrg(cleanId)) {
@@ -381,7 +421,7 @@ export function OrgProvider({ children }) {
 
   // Delete organization (cannot delete default orgs)
   const deleteOrganization = useCallback((id) => {
-    if (id === 'skn-template' || id === 'skn_seksuologii' || id === 'uzaleznienia' || id === 'psychoonkologia') {
+    if (id === 'skn-template' || id === 'skn_seksuologii' || id === 'uzaleznienia' || id === 'psychoonkologia' || id === 'skn_dzieci_i_mlodziezy') {
       showToast('Nie można usunąć oficjalnego Koła Naukowego WSKZ.');
       return false;
     }

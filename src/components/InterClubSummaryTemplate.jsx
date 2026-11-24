@@ -52,6 +52,9 @@ const EXTRA_ORG_ALIASES = {
   myślenia: 'SKN Warsztat Krytycznego Myślenia',
   reklamy: 'SKN Reklamy, PR i Marketingu',
   startup: 'SKN Nowoczesnego Zarządzania i Start-upów',
+  pdim: 'SKN Psychologii Dzieci i Młodzieży',
+  skn_pdim: 'SKN Psychologii Dzieci i Młodzieży',
+  skn_dzieci_i_mlodziezy: 'SKN Psychologii Dzieci i Młodzieży',
 };
 
 /**

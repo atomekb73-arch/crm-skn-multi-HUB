@@ -554,22 +554,27 @@ export default function App() {
     try {
       const { startDate, endDate, yearPrefix } = getRangeForYear(yr, cStart, cEnd);
       const wskzOrg = getWskzOrgById(targetOrgId);
-      const canonicalSubId = wskzOrg?.subcalendarId ? String(wskzOrg.subcalendarId) : String(currentOrg?.subcalendarId || DEFAULT_SUBCALENDAR_ID || '14518766');
+      const rawSubId = wskzOrg?.subcalendarId
+        ? String(wskzOrg.subcalendarId)
+        : (currentOrg?.subcalendarId ? String(currentOrg.subcalendarId) : (targetOrgId === 'skn_seksuologii' ? String(DEFAULT_SUBCALENDAR_ID || '14518766') : ''));
+      const canonicalSubId = rawSubId.trim();
       const effectiveSubId = canonicalSubId;
       const effectiveCalId = currentOrg?.calendarKey || currentOrg?.calendarId || 'ks9aiux4jiza1ronpd';
       const effectiveToken = currentOrg?.teamupApiKey || currentOrg?.teamupToken || '20dc4242d0d74be314e5ee108dc618cf3f6fbcb7647865568775fe4d9a89c112';
 
-      const fetchedMeetings = preFetchedMeetings !== undefined
-        ? preFetchedMeetings
-        : await fetchTeamupEvents({
-            startDate,
-            endDate,
-            subcalendarId: effectiveSubId,
-            calendarId: effectiveCalId,
-            token: effectiveToken,
-            yearPrefix,
-            bypassCache,
-          });
+      const fetchedMeetings = !effectiveSubId
+        ? []
+        : (preFetchedMeetings !== undefined
+            ? preFetchedMeetings
+            : await fetchTeamupEvents({
+                startDate,
+                endDate,
+                subcalendarId: effectiveSubId,
+                calendarId: effectiveCalId,
+                token: effectiveToken,
+                yearPrefix,
+                bypassCache,
+              }));
 
       // Race condition guard: jeśli w trakcie pobierania przełączono organizację, odrzuć wynik
       if (activeOrgIdRef.current !== targetOrgId) {
@@ -630,7 +635,7 @@ export default function App() {
       });
 
       // ── Wyszukaj wydarzenia współdzielone z innych aktywnych kół w CRM ──
-      const ACTIVE_CRM_CLUB_IDS = ['skn_seksuologii', 'uzaleznienia', 'psychoonkologia'];
+      const ACTIVE_CRM_CLUB_IDS = ['skn_seksuologii', 'uzaleznienia', 'psychoonkologia', 'skn_dzieci_i_mlodziezy'];
       const otherActiveClubIds = ACTIVE_CRM_CLUB_IDS.filter(cid => cid !== targetOrgId && cid !== currentOrg.id);
 
       otherActiveClubIds.forEach(otherOrgId => {
@@ -1080,7 +1085,10 @@ export default function App() {
       const orgId = (currentOrg?.id === 'skn-template' ? 'skn_seksuologii' : currentOrg?.id) || 'skn_seksuologii';
       const { startDate, endDate, yearPrefix } = getRangeForYear(academicYear, customStartDate, customEndDate);
       const wskzOrg = getWskzOrgById(orgId);
-      const canonicalSubId = wskzOrg?.subcalendarId ? String(wskzOrg.subcalendarId) : String(currentOrg?.subcalendarId || DEFAULT_SUBCALENDAR_ID || '14518766');
+      const rawSubId = wskzOrg?.subcalendarId
+        ? String(wskzOrg.subcalendarId)
+        : (currentOrg?.subcalendarId ? String(currentOrg.subcalendarId) : (orgId === 'skn_seksuologii' ? String(DEFAULT_SUBCALENDAR_ID || '14518766') : ''));
+      const canonicalSubId = rawSubId.trim();
       const effectiveSubId = canonicalSubId;
       const effectiveCalId = currentOrg?.calendarKey || currentOrg?.calendarId || 'ks9aiux4jiza1ronpd';
       const effectiveToken = currentOrg?.teamupApiKey || currentOrg?.teamupToken || '20dc4242d0d74be314e5ee108dc618cf3f6fbcb7647865568775fe4d9a89c112';
@@ -1103,15 +1111,17 @@ export default function App() {
         qData = cacheEntry.qData;
         attData = cacheEntry.attData;
         subcals = cacheEntry.subcals || [];
-        preFetchedEvents = await fetchTeamupEvents({
-          startDate,
-          endDate,
-          subcalendarId: effectiveSubId,
-          calendarId: effectiveCalId,
-          token: effectiveToken,
-          yearPrefix,
-          bypassCache: false,
-        }).catch(() => undefined);
+        preFetchedEvents = !effectiveSubId
+          ? []
+          : await fetchTeamupEvents({
+              startDate,
+              endDate,
+              subcalendarId: effectiveSubId,
+              calendarId: effectiveCalId,
+              token: effectiveToken,
+              yearPrefix,
+              bypassCache: false,
+            }).catch(() => undefined);
       } else {
         // ── Supabase Single Source of Truth: pobranie members, quarantine_submissions, attendance oraz meeting_metadata ──
         [
@@ -1126,16 +1136,18 @@ export default function App() {
           fetchAllTenantRows('quarantine_submissions', orgId, { orderBy: 'created_at', ascending: false }),
           fetchAllTenantRows('attendance', orgId, { orderBy: 'id', ascending: true }),
           fetchMeetingMetadata(orgId).catch(() => ({})),
-          fetchTeamupSubcalendars(effectiveCalId, effectiveToken, effectiveSubId).catch(() => []),
-          fetchTeamupEvents({
-            startDate,
-            endDate,
-            subcalendarId: effectiveSubId,
-            calendarId: effectiveCalId,
-            token: effectiveToken,
-            yearPrefix,
-            bypassCache,
-          }).catch(() => undefined),
+          !effectiveSubId ? Promise.resolve([]) : fetchTeamupSubcalendars(effectiveCalId, effectiveToken, effectiveSubId).catch(() => []),
+          !effectiveSubId
+            ? Promise.resolve([])
+            : fetchTeamupEvents({
+                startDate,
+                endDate,
+                subcalendarId: effectiveSubId,
+                calendarId: effectiveCalId,
+                token: effectiveToken,
+                yearPrefix,
+                bypassCache,
+              }).catch(() => undefined),
         ]);
 
         if (metaResult && typeof metaResult === 'object' && !Array.isArray(metaResult) && typeof window !== 'undefined' && window.localStorage) {
@@ -3370,7 +3382,7 @@ export default function App() {
                 theme?.headerBadgeGradient || 'bg-gradient-to-br from-purple-700 via-violet-700 to-indigo-800 shadow-purple-500/25'
               }`}>
                 <span className="inline-block text-center leading-none">
-                  {theme?.badgeText || (currentOrg.id === 'uzaleznienia' ? 'UZAL' : currentOrg.id === 'psychoonkologia' ? 'ONKO' : 'SEKS')}
+                  {theme?.badgeText || (currentOrg.id === 'uzaleznienia' ? 'UZAL' : currentOrg.id === 'psychoonkologia' ? 'ONKO' : currentOrg.id === 'skn_dzieci_i_mlodziezy' ? 'PDiM' : 'SEKS')}
                 </span>
               </div>
               
@@ -3437,7 +3449,7 @@ export default function App() {
                                 <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-[11.5px] leading-none select-none tracking-tight text-white shrink-0 shadow-2xs ${
                                   orgTheme.headerBadgeGradient || 'bg-gradient-to-br from-indigo-600 to-violet-700'
                                 }`}>
-                                  {orgTheme.badgeText || (org.id === 'uzaleznienia' ? 'UZAL' : org.id === 'psychoonkologia' ? 'ONKO' : 'SEKS')}
+                                  {orgTheme.badgeText || (org.id === 'uzaleznienia' ? 'UZAL' : org.id === 'psychoonkologia' ? 'ONKO' : org.id === 'skn_dzieci_i_mlodziezy' ? 'PDiM' : 'SEKS')}
                                 </div>
                                 <div className="min-w-0">
                                   <p className="truncate font-bold leading-snug">{org.name}</p>

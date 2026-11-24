@@ -166,6 +166,57 @@ export const TENANT_THEMES = {
       '--tenant-backdrop-to': '#ede9fe',
     },
   },
+
+  skn_dzieci_i_mlodziezy: {
+    id: 'skn_dzieci_i_mlodziezy',
+    name: 'Jasny Błękit Akademicki (Psychologia Dzieci i Młodzieży)',
+    orgShortName: 'SKN Psychologii Dzieci i Młodzieży',
+    badgeText: 'PDiM',
+    colorKey: 'sky',
+
+    backdropGradientClass: 'from-slate-50 via-sky-50/40 to-blue-50/50',
+    backdropStyle: {
+      background: 'linear-gradient(135deg, #f8fcff 0%, #f0f9ff 45%, #e0f2fe 100%)',
+    },
+
+    headerBadgeGradient: 'bg-gradient-to-br from-sky-600 via-blue-600 to-cyan-700 shadow-sky-500/25',
+    headerTagBadge: 'bg-sky-50 text-sky-900 border-sky-200/90 font-bold',
+    headerHoverTitle: 'group-hover:text-sky-700',
+    headerHoverIcon: 'group-hover:text-sky-700',
+
+    primaryBtn: 'bg-sky-600 hover:bg-sky-700 active:bg-sky-800 text-white shadow-xs shadow-sky-600/20 focus:ring-sky-500',
+    primaryBtnOutline: 'border-sky-300 text-sky-900 hover:bg-sky-50',
+
+    navActiveTabBorder: 'border-sky-300 ring-1 ring-sky-200/50',
+    navActiveTabIcon: 'text-sky-600',
+    navActiveSubtabText: 'text-sky-950 font-bold',
+    navActiveIndicator: 'bg-sky-600',
+    navBadge: 'bg-sky-600 text-white',
+
+    widgetCardBg: 'bg-white/95 border-sky-200',
+    statDotColor: 'bg-sky-500',
+    statIconColor: 'text-sky-600',
+    filterBarBg: 'bg-sky-50/40 border-sky-200/70',
+
+    dropdownSelectedClass: 'bg-sky-50/90 text-sky-950 font-bold border-sky-200 shadow-xs',
+    dropdownSelectedIcon: 'text-sky-600',
+
+    accentRing: 'focus:ring-sky-500',
+    accentBorder: 'border-sky-200',
+    accentSoftBg: 'bg-sky-50/70',
+    accentText: 'text-sky-900',
+
+    cssVars: {
+      '--tenant-primary': '#0284c7',
+      '--tenant-primary-hover': '#0369a1',
+      '--tenant-primary-light': '#f0f9ff',
+      '--tenant-primary-border': '#bae6fd',
+      '--tenant-accent': '#0ea5e9',
+      '--tenant-backdrop-from': '#f8fcff',
+      '--tenant-backdrop-via': '#f0f9ff',
+      '--tenant-backdrop-to': '#e0f2fe',
+    },
+  },
 };
 
 /**
@@ -178,11 +229,15 @@ export function getTenantTheme(orgOrId) {
 
   const cleanId = String(orgId || '').trim().toLowerCase();
 
+  if (cleanId === 'skn_dzieci_i_mlodziezy' || cleanId === 'skn_pdim' || cleanId === 'pdim' || cleanId.includes('dzieci')) {
+    return TENANT_THEMES.skn_dzieci_i_mlodziezy;
+  }
+
   if (cleanId === 'uzaleznienia' || cleanId === 'sknu' || cleanId.includes('uzalez')) {
     return TENANT_THEMES.uzaleznienia;
   }
 
-  if (cleanId === 'psychoonkologia' || cleanId === 'skn_psychoonkologii' || cleanId === 'skn-psychoonkologia' || cleanId.includes('psycho') || cleanId.includes('onko')) {
+  if (cleanId === 'psychoonkologia' || cleanId === 'skn_psychoonkologii' || cleanId === 'skn-psychoonkologia' || cleanId.includes('psychoonko') || cleanId.includes('onko')) {
     return TENANT_THEMES.psychoonkologia;
   }
 

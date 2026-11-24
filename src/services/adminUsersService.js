@@ -160,6 +160,15 @@ export const ALL_WSKZ_RBAC_ORGANIZATIONS = [
     color: '#0D9488',
     bgLight: '#CCFBF1',
   },
+  {
+    id: 'skn_dzieci_i_mlodziezy',
+    code: 'PDiM',
+    name: 'Studenckie Koło Naukowe Psychologii Dzieci i Młodzieży',
+    displayName: 'SKN Psychologii Dzieci i Młodzieży',
+    icon: 'Sparkles',
+    color: '#0284C7',
+    bgLight: '#E0F2FE',
+  },
 ];
 
 export const ALL_WSKZ_ORGANIZATION_IDS = ALL_WSKZ_RBAC_ORGANIZATIONS.map((o) => o.id);
@@ -168,7 +177,7 @@ export const PRODUCTION_CRM_ORGANIZATIONS = ALL_WSKZ_RBAC_ORGANIZATIONS;
 
 export const PRODUCTION_CLUB_IDS = ALL_WSKZ_ORGANIZATION_IDS;
 
-const ACTIVE_CRM_ORG_IDS = ['skn_seksuologii', 'uzaleznienia', 'psychoonkologia'];
+const ACTIVE_CRM_ORG_IDS = ['skn_seksuologii', 'uzaleznienia', 'psychoonkologia', 'skn_dzieci_i_mlodziezy'];
 const REGISTRY_HOST_ORG_ID = 'skn_seksuologii';
 
 function normalizeRbacRole(rawRole, email = '') {

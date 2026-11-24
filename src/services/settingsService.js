@@ -16,6 +16,7 @@ export function normalizeOrgId(orgId) {
   const str = String(orgId || 'skn_seksuologii').trim().toLowerCase();
   if (str === 'skn-template' || str === 'skn_template' || str === 'default' || str === 'seksuologia' || str === 'skn-seksuologia' || !str) return 'skn_seksuologii';
   if (str === 'skn_psychoonkologii' || str === 'skn-psychoonkologia') return 'psychoonkologia';
+  if (str === 'skn_pdim' || str === 'skn-pdim' || str === 'pdim' || str === 'skn-dzieci-i-mlodziezy') return 'skn_dzieci_i_mlodziezy';
   if (str === 'skn_uzaleznienia' || str === 'skn-uzaleznienia') return 'uzaleznienia';
   return str;
 }
@@ -63,6 +64,7 @@ export const DEFAULT_BOARD_TENURES_BY_ORG = {
   skn_seksuologii: DEFAULT_BOARD_TENURES_SEKSUOLOGIA,
   uzaleznienia: [],
   psychoonkologia: [],
+  skn_dzieci_i_mlodziezy: [],
   test: [],
 };
 
