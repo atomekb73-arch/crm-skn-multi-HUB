@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, getSupabaseForOrg } from '../supabaseClient';
 import { useOrg, DEFAULT_ORGS } from '../context/OrgContext';
 import {
   Send,
@@ -112,62 +112,199 @@ const PHONE_COUNTRY_RULES = [
   { dial: '+358', name: 'Finlandia', prefixDigits: '358', minNational: 7, maxNational: 10, format: d => `+358 ${d.slice(0, 3)} ${d.slice(3)}` },
 ];
 
+// Kanoniczne identyfikatory aktywnych kół naukowych w bazie Supabase
+const VALID_ACTIVE_ORG_IDS = ['skn_seksuologii', 'uzaleznienia', 'psychoonkologia'];
+
+/**
+ * Mapuje parametr URL / stary slug / alias na kanoniczne organization_id w Supabase.
+ * Zwraca null, jeśli parametr jest nieznany, uszkodzony lub archiwalny/testowy.
+ */
+function resolveCanonicalOrgId(rawParam) {
+  if (!rawParam || typeof rawParam !== 'string') return null;
+  const clean = rawParam
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+  if (!clean || clean === 'test' || clean === 'null' || clean === 'undefined') {
+    return null;
+  }
+
+  // SKN Psychoonkologii
+  if (
+    clean === 'psychoonkologia' ||
+    clean === 'psychoonkologii' ||
+    clean === 'skn_psychoonkologii' ||
+    clean === 'skn-psychoonkologii' ||
+    clean === 'skn-psychoonkologia' ||
+    clean === 'sknp' ||
+    clean === 'onko' ||
+    clean.includes('psychoonko')
+  ) {
+    return 'psychoonkologia';
+  }
+
+  // SKN Zachowań Ryzykownych i Uzależnień
+  if (
+    clean === 'uzaleznienia' ||
+    clean === 'uzaleznien' ||
+    clean === 'sknu' ||
+    clean === 'uzal' ||
+    clean === 'skn_uzaleznien' ||
+    clean === 'skn_uzaleznienia' ||
+    clean === 'skn-uzaleznien' ||
+    clean === 'skn-uzaleznienia' ||
+    clean.includes('uzalez') ||
+    clean.includes('ryzykown') ||
+    clean.includes('zachowan')
+  ) {
+    return 'uzaleznienia';
+  }
+
+  // SKN Seksuologii
+  if (
+    clean === 'skn_seksuologii' ||
+    clean === 'skn-seksuologii' ||
+    clean === 'skn-seksuologia' ||
+    clean === 'seksuologia' ||
+    clean === 'seksuologii' ||
+    clean === 'skns' ||
+    clean === 'seks' ||
+    clean === 'skn-template' ||
+    clean.includes('seksuolog')
+  ) {
+    return 'skn_seksuologii';
+  }
+
+  return null;
+}
+
 export default function SknApplicationForm({ orgId: propOrgId = null }) {
   const orgCtx = typeof useOrg === 'function' ? useOrg() : null;
+  const [manualFallbackMode, setManualFallbackMode] = useState(false);
 
-  // Rozpoznawanie organizacji oraz stanu blokady (czy formularz otwarto z dedykowanego linku koła)
-  const { initialOrgId, isOrgLocked } = useMemo(() => {
+  // Rozpoznawanie organizacji, walidacja parametru URL oraz obsługa starych/nieaktualnych linków
+  const { initialOrgId, isOrgLocked, isInvalidLink, rawInvalidParam, wasLegacyAlias } = useMemo(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      const urlOrg = params.get('org') || params.get('organization_id') || params.get('kolo') || params.get('tenant');
-      if (urlOrg) {
-        const clean = urlOrg.toLowerCase().trim();
-        if (clean.includes('psycho')) return { initialOrgId: 'psychoonkologia', isOrgLocked: true };
-        if (clean.includes('uzalez') || clean === 'sknu') return { initialOrgId: 'uzaleznienia', isOrgLocked: true };
-        if (clean.includes('seks')) return { initialOrgId: 'skn_seksuologii', isOrgLocked: true };
-        return { initialOrgId: clean, isOrgLocked: true };
+      const urlOrg =
+        params.get('org') ||
+        params.get('club') ||
+        params.get('club_id') ||
+        params.get('organization_id') ||
+        params.get('kolo') ||
+        params.get('tenant') ||
+        params.get('slug');
+
+      if (urlOrg !== null && urlOrg !== undefined) {
+        const canonical = resolveCanonicalOrgId(urlOrg);
+        if (canonical) {
+          return {
+            initialOrgId: canonical,
+            isOrgLocked: true,
+            isInvalidLink: false,
+            rawInvalidParam: null,
+            wasLegacyAlias: urlOrg.trim().toLowerCase() !== canonical || !params.get('org'),
+          };
+        }
+        return {
+          initialOrgId: null,
+          isOrgLocked: true,
+          isInvalidLink: true,
+          rawInvalidParam: urlOrg,
+          wasLegacyAlias: false,
+        };
       }
+
       if (window.location.hash) {
-        const hash = window.location.hash.toLowerCase();
-        if (hash.includes('org=') || hash.includes('kolo=') || hash.includes('tenant=')) {
-          if (hash.includes('psycho')) return { initialOrgId: 'psychoonkologia', isOrgLocked: true };
-          if (hash.includes('uzalez') || hash.includes('sknu')) return { initialOrgId: 'uzaleznienia', isOrgLocked: true };
-          if (hash.includes('seks')) return { initialOrgId: 'skn_seksuologii', isOrgLocked: true };
-          return { initialOrgId: 'skn_seksuologii', isOrgLocked: true };
+        const hashStr = window.location.hash.replace(/^#/, '');
+        const hashMatch = hashStr.match(/(?:^|[?&/])(org|club|club_id|organization_id|kolo|tenant|slug)=([^&]+)/i);
+        if (hashMatch && hashMatch[2]) {
+          const decodedHashVal = decodeURIComponent(hashMatch[2]);
+          const canonical = resolveCanonicalOrgId(decodedHashVal);
+          if (canonical) {
+            return {
+              initialOrgId: canonical,
+              isOrgLocked: true,
+              isInvalidLink: false,
+              rawInvalidParam: null,
+              wasLegacyAlias: true,
+            };
+          }
+          return {
+            initialOrgId: null,
+            isOrgLocked: true,
+            isInvalidLink: true,
+            rawInvalidParam: decodedHashVal,
+            wasLegacyAlias: false,
+          };
         }
       }
     }
+
     if (propOrgId) {
-      const clean = String(propOrgId).toLowerCase().trim();
-      if (clean.includes('psycho')) return { initialOrgId: 'psychoonkologia', isOrgLocked: true };
-      if (clean.includes('uzalez') || clean === 'sknu') return { initialOrgId: 'uzaleznienia', isOrgLocked: true };
-      if (clean.includes('seks')) return { initialOrgId: 'skn_seksuologii', isOrgLocked: true };
-      return { initialOrgId: clean, isOrgLocked: true };
+      const canonical = resolveCanonicalOrgId(String(propOrgId));
+      if (canonical) {
+        return {
+          initialOrgId: canonical,
+          isOrgLocked: true,
+          isInvalidLink: false,
+          rawInvalidParam: null,
+          wasLegacyAlias: false,
+        };
+      }
+      return {
+        initialOrgId: null,
+        isOrgLocked: true,
+        isInvalidLink: true,
+        rawInvalidParam: String(propOrgId),
+        wasLegacyAlias: false,
+      };
     }
 
     // Tryb ogólny (?form=rekrutacja bez podanego parametru &org=) -> formularz otwarty, użytkownik wybiera koło
     const fallbackOrg = orgCtx?.currentOrg?.id || (typeof window !== 'undefined' ? localStorage.getItem('crm_active_org_id') : null) || 'skn_seksuologii';
-    const cleanFallback = fallbackOrg === 'test' ? 'skn_seksuologii' : fallbackOrg;
-    return { initialOrgId: cleanFallback, isOrgLocked: false };
+    const canonicalFallback = resolveCanonicalOrgId(fallbackOrg) || 'skn_seksuologii';
+    return {
+      initialOrgId: canonicalFallback,
+      isOrgLocked: false,
+      isInvalidLink: false,
+      rawInvalidParam: null,
+      wasLegacyAlias: false,
+    };
   }, [propOrgId, orgCtx?.currentOrg?.id]);
 
-  const [selectedOrgId, setSelectedOrgId] = useState(initialOrgId);
+  const [selectedOrgId, setSelectedOrgId] = useState(initialOrgId || 'skn_seksuologii');
 
   useEffect(() => {
     if (initialOrgId) {
       setSelectedOrgId(initialOrgId);
+      // Automatyczna normalizacja starego/aliasowego linku na kanoniczny ?form=rekrutacja&org=<id>
+      if (wasLegacyAlias && typeof window !== 'undefined' && window.history?.replaceState) {
+        try {
+          const url = new URL(window.location.href);
+          ['club', 'club_id', 'organization_id', 'kolo', 'tenant', 'slug'].forEach(k => url.searchParams.delete(k));
+          url.searchParams.set('form', 'rekrutacja');
+          url.searchParams.set('org', initialOrgId);
+          window.history.replaceState({}, '', url.toString());
+        } catch {}
+      }
     }
-  }, [initialOrgId]);
+  }, [initialOrgId, wasLegacyAlias]);
 
-  const targetOrgId = selectedOrgId || initialOrgId;
+  const effectiveIsOrgLocked = isOrgLocked && !manualFallbackMode;
+  const targetOrgId = selectedOrgId || initialOrgId || 'skn_seksuologii';
 
   const handleSelectOrg = (newOrgId) => {
-    if (isOrgLocked) return; // Jeśli formularz ma narzucone koło z linku, zablokuj zmianę
-    setSelectedOrgId(newOrgId);
+    if (effectiveIsOrgLocked) return; // Jeśli formularz ma narzucone koło z linku, zablokuj zmianę
+    const canonical = resolveCanonicalOrgId(newOrgId);
+    if (!canonical) return;
+    setSelectedOrgId(canonical);
     if (typeof window !== 'undefined' && window.history?.replaceState) {
       const url = new URL(window.location.href);
       url.searchParams.set('form', 'rekrutacja');
-      url.searchParams.set('org', newOrgId);
+      url.searchParams.set('org', canonical);
       window.history.replaceState({}, '', url.toString());
     }
   };
@@ -476,6 +613,15 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
 
   // Właściwa funkcja zapisu zgłoszenia do tabeli kwarantanny w Supabase
   const executeSubmission = async ({ isReactivation = false, previousStatus = null } = {}) => {
+    if (!VALID_ACTIVE_ORG_IDS.includes(targetOrgId)) {
+      setStatus({
+        loading: false,
+        success: false,
+        error: 'Ten link do deklaracji jest nieaktualny — poproś zarząd koła o nowy link.',
+      });
+      return;
+    }
+
     setStatus({ loading: true, success: false, error: null });
 
     try {
@@ -511,17 +657,19 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
 
       console.log('[SknApplicationForm] Wysyłanie rekordu do Supabase quarantine_submissions:', payload);
 
-      const { data, error, status: resStatus, statusText } = await supabase
+      // Używamy klienta przypiętego do docelowego tenanta (x-organization-id = targetOrgId)
+      // ORAZ nie wywołujemy .select() po .insert() (dla anon nie jest wymagane uprawnienie SELECT / RETURNING)
+      const tenantSupabase = getSupabaseForOrg(targetOrgId);
+      const { error, status: resStatus, statusText } = await tenantSupabase
         .from('quarantine_submissions')
-        .insert([payload])
-        .select();
+        .insert([payload]);
 
       if (error) {
         console.error('Błąd Supabase:', error);
         throw error;
       }
 
-      console.log('[SknApplicationForm] Rekord pomyślnie zapisany w bazie Supabase:', { resStatus, statusText, data });
+      console.log('[SknApplicationForm] Rekord pomyślnie zapisany w bazie Supabase:', { resStatus, statusText, orgId: targetOrgId });
 
       setSubmittedSummary({
         fullName: formData.full_name.trim(),
@@ -651,10 +799,11 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
     const cleanEmail = formData.email.trim().toLowerCase();
 
     try {
+      const tenantSupabase = getSupabaseForOrg(targetOrgId);
       // 1. Sprawdzanie duplikatów: najpierw dedykowana, bezpieczna funkcja RPC check_recruitment_candidate
       let rpcHandled = false;
       try {
-        const { data: rpcData, error: rpcError } = await supabase.rpc('check_recruitment_candidate', {
+        const { data: rpcData, error: rpcError } = await tenantSupabase.rpc('check_recruitment_candidate', {
           p_org_id: targetOrgId,
           p_index: cleanIndex,
           p_email: cleanEmail,
@@ -696,12 +845,12 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
       let allMatches = [];
       if (!rpcHandled) {
         const [quarantineRes, membersRes] = await Promise.all([
-          supabase
+          tenantSupabase
             .from('quarantine_submissions')
             .select('id, index_number, email, decision_status, submission_date, full_name, organization_id')
             .eq('organization_id', targetOrgId)
             .or(`index_number.eq.${cleanIndex},email.ilike.${cleanEmail}`),
-          supabase
+          tenantSupabase
             .from('members')
             .select('id, index_number, email, activity_status, full_name, organization_id')
             .eq('organization_id', targetOrgId)
@@ -855,6 +1004,58 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
     };
   }, [isUzaleznienia, isPsychoonkologia]);
 
+  // Blokada formularza na wejściu, gdy link zawiera nieistniejący/archiwalny identyfikator koła
+  if (isInvalidLink && !manualFallbackMode) {
+    const handleOpenManualSelector = () => {
+      if (typeof window !== 'undefined' && window.history?.replaceState) {
+        try {
+          const url = new URL(window.location.href);
+          ['org', 'club', 'club_id', 'organization_id', 'kolo', 'tenant', 'slug'].forEach(k => url.searchParams.delete(k));
+          url.searchParams.set('form', 'rekrutacja');
+          url.hash = '';
+          window.history.replaceState({}, '', url.toString());
+        } catch {}
+      }
+      setSelectedOrgId('skn_seksuologii');
+      setManualFallbackMode(true);
+    };
+
+    return (
+      <div className="min-h-screen w-full max-w-full overflow-x-hidden py-10 px-4 flex items-center justify-center font-sans bg-[#eef4f8] bg-gradient-to-b from-[#f1f6fa] via-[#eef4f8] to-[#e4eef6]">
+        <div className="max-w-xl w-full bg-white rounded-[28px] shadow-2xl border border-amber-200/80 p-8 sm:p-10 text-center space-y-6">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shadow-xs">
+            <AlertCircle className="w-9 h-9" />
+          </div>
+          <div className="space-y-2.5">
+            <span className="inline-block px-3.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-200">
+              Nieaktualny link rekrutacyjny
+            </span>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+              Ten link do deklaracji jest nieaktualny
+            </h1>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              Otwarty adres zawiera nieaktualny lub nieprawidłowy identyfikator koła naukowego
+              {rawInvalidParam ? (
+                <> (<code className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 text-xs font-mono">{rawInvalidParam}</code>)</>
+              ) : null}
+              . Poproś zarząd wybranego koła o nowy link albo wybierz aktywne koło naukowe ręcznie poniżej.
+            </p>
+          </div>
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={handleOpenManualSelector}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-lg shadow-indigo-500/20 transition cursor-pointer"
+            >
+              <span>Wybierz koło naukowe ręcznie</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`min-h-screen w-full max-w-full overflow-x-hidden py-6 sm:py-12 md:py-16 px-3 sm:px-6 lg:px-8 flex items-center justify-center font-sans relative ${themeClasses.bg}`}>
       <div className={`max-w-3xl w-full bg-white rounded-[24px] sm:rounded-[32px] shadow-2xl overflow-hidden p-4 sm:p-8 md:p-12 transition-all relative ${themeClasses.card}`}>
@@ -884,7 +1085,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
           </p>
 
           {/* Dedykowany selektor kół: widoczny WYŁĄCZNIE w trybie ogólnym (?form=rekrutacja bez parametru &org=) */}
-          {!isOrgLocked && (
+          {!effectiveIsOrgLocked && (
             <div className="mt-5 inline-flex items-center gap-1.5 p-1 rounded-2xl bg-slate-100/90 border border-slate-200/90 shadow-inner max-w-full flex-wrap justify-center">
               <span className="text-[10px] font-bold text-slate-500 uppercase px-2 tracking-wider">
                 Aplikujesz do:
@@ -971,7 +1172,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
             </p>
 
             {/* Sekcja szybkiej korekty koła - widoczna WYŁĄCZNIE gdy formularz nie ma narzuconego koła w linku */}
-            {!isOrgLocked && (
+            {!effectiveIsOrgLocked && (
               <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/90 border border-slate-200/90 max-w-lg mx-auto text-left space-y-3">
                 <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
                   <AlertCircle size={15} className="text-amber-500 shrink-0" />
@@ -1027,7 +1228,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
             )}
 
             {/* 1. Wybór Koła Naukowego - widoczny WYŁĄCZNIE w trybie ogólnym (?form=rekrutacja bez &org=) */}
-            {!isOrgLocked && (
+            {!effectiveIsOrgLocked && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
                   <h2 className="text-xs font-semibold uppercase tracking-wider text-black flex items-center gap-2">
@@ -1105,7 +1306,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
               <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-black flex items-center gap-2">
                   <GraduationCap size={16} className={isPsychoonkologia ? 'text-purple-600' : isUzaleznienia ? 'text-teal-600' : 'text-indigo-600'} />
-                  <span>{isOrgLocked ? '1. Dane kandydata / studenta' : '2. Dane kandydata / studenta'}</span>
+                  <span>{effectiveIsOrgLocked ? '1. Dane kandydata / studenta' : '2. Dane kandydata / studenta'}</span>
                 </h2>
                 <span className="text-[11px] text-slate-500 font-medium">* Pola wymagane</span>
               </div>
@@ -1364,7 +1565,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
               <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-black flex items-center gap-2">
                   <ShieldCheck size={16} className={isPsychoonkologia ? 'text-purple-600' : isUzaleznienia ? 'text-teal-600' : 'text-indigo-600'} />
-                  <span>{isOrgLocked ? '2. Oświadczenia formalne i regulaminowe (Wszystkie wymagane)' : '3. Oświadczenia formalne i regulaminowe (Wszystkie wymagane)'}</span>
+                  <span>{effectiveIsOrgLocked ? '2. Oświadczenia formalne i regulaminowe (Wszystkie wymagane)' : '3. Oświadczenia formalne i regulaminowe (Wszystkie wymagane)'}</span>
                 </h2>
                 <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${
                   isUzaleznienia
