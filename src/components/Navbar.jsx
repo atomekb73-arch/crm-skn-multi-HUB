@@ -108,7 +108,7 @@ export default function Navbar({
 
       {/* Sub-bar for Członkowie with inline compact metrics */}
       {currentTab === 'members' && (
-        <div className="flex items-center justify-between gap-1.5 sm:gap-3 w-full max-w-full flex-wrap sm:flex-nowrap min-h-[40px] animate-in fade-in duration-150">
+        <div className="flex flex-wrap xl:flex-nowrap items-center justify-between gap-2 w-full max-w-full min-h-[40px] animate-in fade-in duration-150">
           <div className="relative max-w-full flex items-center justify-between sm:justify-start w-full sm:w-auto">
             <div className="flex items-center gap-1 bg-slate-200/90 p-1 rounded-xl w-auto overflow-x-auto whitespace-nowrap border border-slate-300 shrink-0 shadow-2xs h-9 min-h-[36px] scrollbar-none scroll-smooth touch-auto">
               <button
@@ -182,10 +182,10 @@ export default function Navbar({
             </div>
           </div>
 
-          {/* Compact Metric Badges in single row */}
+          {/* Compact Metric Badges (wrap cleanly on tablet portrait / mobile, single row on desktop) */}
           {membersMetrics && (
-            <div className="relative max-w-full sm:ml-auto">
-              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto whitespace-nowrap max-w-full py-0.5 scrollbar-none scroll-smooth touch-auto sm:ml-auto h-9 min-h-[36px]">
+            <div className="relative max-w-full xl:ml-auto">
+              <div className="flex flex-wrap xl:flex-nowrap items-center gap-1.5 sm:gap-2 max-w-full py-0.5 xl:ml-auto min-h-[36px]">
                 {/* 1) Aktywni */}
                 <div className={`${theme?.widgetCardBg || 'bg-white/95 border-purple-200'} border border-purple-200 rounded-xl px-2.5 py-1 flex items-center gap-1.5 h-9 min-h-[36px] shadow-sm shrink-0 transition-all hover:border-purple-300`}>
                   <span className={`w-2 h-2 rounded-full ${theme?.statDotColor || 'bg-purple-500'} shrink-0`} />
@@ -244,7 +244,6 @@ export default function Navbar({
                   </span>
                 </div>
               </div>
-              <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-white/90 to-transparent rounded-r-xl sm:hidden" />
             </div>
           )}
         </div>

@@ -1009,9 +1009,9 @@ export default function ManagementTab({
       />
 
       {/* ── Search & Filter Controls Toolbar (Hidden during Print) ───────────── */}
-      <div className="w-full max-w-full flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 print:hidden no-print">
+      <div className="w-full max-w-full flex flex-wrap xl:flex-nowrap items-center justify-between gap-2.5 print:hidden no-print">
         {/* Search Input inside distinct soft purple base container with inner shadow */}
-        <div className={`${theme?.filterBarBg || 'bg-purple-50/40 border-purple-200/70'} border rounded-xl p-1 shadow-inner relative flex-1 max-w-md`}>
+        <div className={`${theme?.filterBarBg || 'bg-purple-50/40 border-purple-200/70'} border rounded-xl p-1 shadow-inner relative w-full sm:w-auto sm:min-w-[220px] flex-1 xl:max-w-md`}>
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-400 pointer-events-none" />
             <input
@@ -1032,8 +1032,8 @@ export default function ManagementTab({
           </div>
         </div>
 
-        {/* Action Controls: Academic Year + Filters + XLSX Export + Print Button */}
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap shrink-0 w-full sm:w-auto">
+        {/* Action Controls: Academic Year + Filters + RODO + XLSX Export + Print Button */}
+        <div className="flex flex-wrap xl:flex-nowrap items-center gap-2 w-full xl:w-auto justify-between xl:justify-end">
           {/* Academic Year Selector in Management Tab (Clean select without redundant label) */}
           <div className={`inline-flex items-center ${theme?.filterBarBg || 'bg-purple-50/40 border-purple-200/70'} p-1 rounded-xl border text-xs font-semibold shrink-0 gap-1.5 shadow-2xs`}>
             <select
@@ -1141,56 +1141,59 @@ export default function ManagementTab({
             )}
           </div>
 
-          {/* Główny przełącznik Ochrony RODO (Privacy by Default) */}
-          <button
-            type="button"
-            onClick={() => {
-              setRodoProtected(!rodoProtected);
-              setUnmaskedContactIds(new Set()); // reset indywidualnych odkryć
-            }}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer shrink-0 ${
-              rodoProtected
-                ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs hover:bg-emerald-100'
-                : 'bg-amber-50 text-amber-800 border-amber-300 shadow-2xs hover:bg-amber-100'
-            }`}
-            title={rodoProtected ? "Kliknij, aby tymczasowo odkryć pełne dane kontaktowe" : "Kliknij, aby ponownie zamaskować dane"}
-          >
-            {rodoProtected ? (
-              <>
-                <ShieldCheck size={14} className="text-emerald-600 shrink-0" />
-                <span className="hidden sm:inline">🔒 Ochrona RODO: Aktywna</span>
-                <span className="sm:hidden">🔒 RODO</span>
-              </>
-            ) : (
-              <>
-                <Eye size={14} className="text-amber-600 shrink-0" />
-                <span className="hidden sm:inline">👁 Odkryj dane (RODO wyłączone)</span>
-                <span className="sm:hidden">👁 Odkryte</span>
-              </>
-            )}
-          </button>
+          {/* Grupa przycisków akcji: RODO + Eksport XLSX + Drukuj */}
+          <div className="flex flex-wrap items-center gap-2 ml-auto">
+            {/* Główny przełącznik Ochrony RODO (Privacy by Default) */}
+            <button
+              type="button"
+              onClick={() => {
+                setRodoProtected(!rodoProtected);
+                setUnmaskedContactIds(new Set()); // reset indywidualnych odkryć
+              }}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer shrink-0 ${
+                rodoProtected
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs hover:bg-emerald-100'
+                  : 'bg-amber-50 text-amber-800 border-amber-300 shadow-2xs hover:bg-amber-100'
+              }`}
+              title={rodoProtected ? "Kliknij, aby tymczasowo odkryć pełne dane kontaktowe" : "Kliknij, aby ponownie zamaskować dane"}
+            >
+              {rodoProtected ? (
+                <>
+                  <ShieldCheck size={14} className="text-emerald-600 shrink-0" />
+                  <span className="hidden sm:inline">🔒 Ochrona RODO: Aktywna</span>
+                  <span className="sm:hidden">🔒 RODO</span>
+                </>
+              ) : (
+                <>
+                  <Eye size={14} className="text-amber-600 shrink-0" />
+                  <span className="hidden sm:inline">👁 Odkryj dane (RODO wyłączone)</span>
+                  <span className="sm:hidden">👁 Odkryte</span>
+                </>
+              )}
+            </button>
 
-          {/* Export XLSX Button (Hidden on Mobile < md, Full on Desktop >= md) */}
-          <button
-            type="button"
-            onClick={handleExportMainListXlsx}
-            className="hidden md:inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer shrink-0"
-            title="Pobierz zestawienie do pliku Excel (.xlsx)"
-          >
-            <FileSpreadsheet size={16} />
-            <span>Eksportuj XLSX</span>
-          </button>
+            {/* Export XLSX Button (Hidden on Mobile < md, Full on Tablet/Desktop >= md) */}
+            <button
+              type="button"
+              onClick={handleExportMainListXlsx}
+              className="hidden md:inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer shrink-0"
+              title="Pobierz zestawienie do pliku Excel (.xlsx)"
+            >
+              <FileSpreadsheet size={16} />
+              <span>Eksportuj XLSX</span>
+            </button>
 
-          {/* Print List Button (Hidden on Mobile < md, Full on Desktop >= md) */}
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="hidden md:inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-black text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer shrink-0"
-            title="Wydrukuj wykaz członków na potrzeby Dziekanatu"
-          >
-            <Printer size={16} />
-            <span>Drukuj</span>
-          </button>
+            {/* Print List Button (Hidden on Mobile < md, Full on Tablet/Desktop >= md) */}
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="hidden md:inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-black text-white text-xs font-semibold rounded-lg shadow-sm transition-colors cursor-pointer shrink-0"
+              title="Wydrukuj wykaz członków na potrzeby Dziekanatu"
+            >
+              <Printer size={16} />
+              <span>Drukuj</span>
+            </button>
+          </div>
         </div>
       </div>
 
