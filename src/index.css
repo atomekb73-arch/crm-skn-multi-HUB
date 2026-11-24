@@ -44,14 +44,14 @@
 [data-tenant="skn_dzieci_i_mlodziezy"],
 [data-tenant="skn_pdim"],
 [data-tenant="skn-dzieci-i-mlodziezy"] {
-  --tenant-primary: #0284c7;
-  --tenant-primary-hover: #0369a1;
-  --tenant-primary-light: #f0f9ff;
-  --tenant-primary-border: #bae6fd;
-  --tenant-accent: #0ea5e9;
-  --tenant-backdrop-from: #f8fcff;
-  --tenant-backdrop-via: #f0f9ff;
-  --tenant-backdrop-to: #e0f2fe;
+  --tenant-primary: #d97706;
+  --tenant-primary-hover: #b45309;
+  --tenant-primary-light: #fffbeb;
+  --tenant-primary-border: #fde68a;
+  --tenant-accent: #f59e0b;
+  --tenant-backdrop-from: #fffdf7;
+  --tenant-backdrop-via: #fffbeb;
+  --tenant-backdrop-to: #fef3c7;
 }
 
 /* Płynne przejście motywów tenantów na elementach zewnętrznych */

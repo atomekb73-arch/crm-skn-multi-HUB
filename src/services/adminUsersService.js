@@ -166,8 +166,8 @@ export const ALL_WSKZ_RBAC_ORGANIZATIONS = [
     name: 'Studenckie Koło Naukowe Psychologii Dzieci i Młodzieży',
     displayName: 'SKN Psychologii Dzieci i Młodzieży',
     icon: 'Sparkles',
-    color: '#0284C7',
-    bgLight: '#E0F2FE',
+    color: '#D97706',
+    bgLight: '#FEF3C7',
   },
 ];
 

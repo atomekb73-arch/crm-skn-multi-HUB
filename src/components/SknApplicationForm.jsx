@@ -1014,15 +1014,15 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
     }
     if (isDzieciIMlodziez) {
       return {
-        bg: 'bg-[#f0f9ff] bg-gradient-to-b from-[#f8fcff] via-[#f0f9ff] to-[#e0f2fe] selection:bg-sky-600 selection:text-white',
-        card: 'shadow-sky-950/10 border border-sky-200/90 ring-1 ring-sky-900/5',
-        badge: 'bg-sky-50 text-sky-800 border border-sky-200/90',
-        title: 'text-sky-950',
-        accentBtn: 'bg-sky-600 hover:bg-sky-700 shadow-sky-200',
-        submitBtn: 'bg-gradient-to-r from-sky-600 via-blue-600 to-cyan-700 hover:from-sky-700 hover:to-cyan-800 shadow-xl shadow-sky-600/25 hover:shadow-sky-600/35',
-        successBox: 'bg-gradient-to-br from-sky-50/80 via-white to-blue-50/50 border-sky-200 text-sky-950 shadow-sky-500/10',
-        successIcon: 'bg-gradient-to-tr from-sky-500 to-blue-600 shadow-sky-500/30',
-        successBadge: 'bg-sky-100 text-sky-800 border-sky-300',
+        bg: 'bg-[#fffbeb] bg-gradient-to-b from-[#fffdf7] via-[#fffbeb] to-[#fef3c7] selection:bg-amber-600 selection:text-white',
+        card: 'shadow-amber-950/10 border border-amber-200/90 ring-1 ring-amber-900/5',
+        badge: 'bg-amber-50 text-amber-800 border border-amber-200/90',
+        title: 'text-amber-950',
+        accentBtn: 'bg-amber-600 hover:bg-amber-700 shadow-amber-200',
+        submitBtn: 'bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 hover:from-amber-700 hover:to-orange-700 shadow-xl shadow-amber-600/25 hover:shadow-amber-600/35',
+        successBox: 'bg-gradient-to-br from-amber-50/80 via-white to-orange-50/50 border-amber-200 text-amber-950 shadow-amber-500/10',
+        successIcon: 'bg-gradient-to-tr from-amber-500 to-orange-600 shadow-amber-500/30',
+        successBadge: 'bg-amber-100 text-amber-800 border-amber-300',
       };
     }
     // Domyślny: SKN Seksuologii

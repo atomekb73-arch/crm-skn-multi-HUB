@@ -183,8 +183,8 @@ export const WSKZ_ORGANIZATIONS = [
     shortName: "SKN Psychologii Dzieci i Młodzieży",
     code: "PDiM",
     subcalendarId: null,
-    color: "#0284C7",
-    bgLight: "#E0F2FE",
+    color: "#D97706",
+    bgLight: "#FEF3C7",
     icon: "Sparkles",
     hasActiveCrm: true
   }

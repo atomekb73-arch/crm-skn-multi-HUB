@@ -110,7 +110,7 @@ export const DEFAULT_ORGS = [
     subcalendarId: '',
     subcalendarName: '',
     description: 'Studenckie Koło Naukowe Psychologii Dzieci i Młodzieży WSKZ - Oficjalna ewidencja i harmonogram',
-    color: 'sky',
+    color: 'amber',
     hasActiveCrm: true,
     isDefault: false,
     supervisors: [],
@@ -207,7 +207,7 @@ export function OrgProvider({ children }) {
               shortName: 'SKN Psychologii Dzieci i Młodzieży',
               tag: 'SKN PDiM',
               badgeText: 'PDiM',
-              color: 'sky',
+              color: 'amber',
             };
           }
           return null;
