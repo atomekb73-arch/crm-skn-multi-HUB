@@ -1631,8 +1631,101 @@ export default function AttendanceModal({
         style={{ WebkitOverflowScrolling: 'touch' }}
       >
         
-        {/* ── Modal Header ─────────────────────────────────────────────────── */}
-        <div className="px-3 py-2.5 md:px-6 md:py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 via-indigo-50/20 to-white flex flex-col md:flex-row md:items-center justify-between gap-2.5 md:gap-4 shrink-0">
+        {/* ── Modal Header (Mobile < md: kompaktowy 4-wierszowy z X w prawym górnym rogu) ── */}
+        <div className="md:hidden px-3 py-2.5 border-b border-slate-100 bg-gradient-to-r from-slate-50 via-indigo-50/20 to-white space-y-2 shrink-0">
+          {/* Wiersz 1: Badge + pigułka po lewej, przycisk X zawsze w prawym górnym rogu */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+              <span className="px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-bold text-[11px] font-mono tracking-tight shrink-0 shadow-2xs">
+                {String(meeting?.code || 'SPOTKANIE')}
+              </span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200 shrink-0">
+                Weryfikacja obecności
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Zamknij okno"
+              className="w-8 h-8 rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100 flex items-center justify-center transition cursor-pointer shrink-0"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          {/* Wiersz 2: Tytuł na pełną szerokość + zwarta linia daty i opiekuna */}
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold text-slate-900 leading-snug" title={String(meeting?.title || '')}>
+              {String(meeting?.title || '')}
+            </h2>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 text-[11px] text-slate-500">
+              <span className="inline-flex items-center gap-1 font-mono">
+                <Calendar size={11} className="text-slate-400 shrink-0" />
+                <span>{String(meeting?.formattedDate || meeting?.date || '')}</span>
+              </span>
+              {supervisorsPresent.length > 0 && (
+                <span className="inline-flex items-center gap-1 text-indigo-800 font-semibold">
+                  <GraduationCap size={12} className="text-indigo-600 shrink-0" />
+                  <span>{supervisorsPresent.map(s => String(s?.rawName || s?.name || '')).filter(Boolean).join(', ')}</span>
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Wiersz 3: Dwa równe przyciski akcji na pełną szerokość */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setIsPasteDrawerOpen(prev => !prev);
+                if (isAddFormOpen) setIsAddFormOpen(false);
+              }}
+              className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-xs cursor-pointer"
+            >
+              <ClipboardList size={14} strokeWidth={2.2} />
+              <span>Wklej z Meet</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsAddFormOpen(prev => !prev);
+                if (isPasteDrawerOpen) setIsPasteDrawerOpen(false);
+              }}
+              className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition shadow-xs cursor-pointer"
+            >
+              <UserPlus size={14} strokeWidth={2.2} />
+              <span>Dodaj osobę</span>
+            </button>
+          </div>
+
+          {/* Wiersz 4: Pasek progu w jednej zwartej linii */}
+          <div className="flex items-center justify-between gap-1 bg-white px-2.5 py-1.5 rounded-xl border border-indigo-100 shadow-2xs text-xs">
+            <div className="flex items-center gap-1 shrink-0">
+              <Timer size={13} className="text-indigo-600 shrink-0" />
+              <span className="text-[11px] font-semibold text-slate-600">Próg:</span>
+            </div>
+            <div className="flex items-center gap-1 flex-wrap justify-end">
+              {[10, 15, 20, 30, 45, 60].map(m => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => handleLocalThresholdChange(m)}
+                  className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold transition cursor-pointer ${
+                    localThreshold === m
+                      ? 'bg-indigo-600 text-white shadow-2xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {m}m
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Modal Header (Tablet & Desktop >= md: bez zmian) ─────────────── */}
+        <div className="hidden md:flex px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 via-indigo-50/20 to-white flex-row items-center justify-between gap-4 shrink-0">
           <div className="flex items-center gap-3.5 min-w-0 flex-1">
             {/* Stable sized Badge */}
             <div className="h-12 px-3.5 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-md shrink-0 font-mono tracking-tight text-center">
@@ -1885,8 +1978,52 @@ export default function AttendanceModal({
           </div>
         )}
 
-        {/* ── KPI Summary Cards Bar ────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-2.5 p-2.5 sm:p-3 md:p-4 bg-slate-50/60 border-b border-slate-100 shrink-0">
+        {/* ── KPI Summary Bar (Mobile < md: kompaktowe liczby bez kafelków i ikon) ── */}
+        <div className="md:hidden grid grid-cols-5 divide-x divide-slate-200 bg-slate-50/90 border-b border-slate-100 py-1.5 px-1 shrink-0 text-center">
+          <button
+            type="button"
+            onClick={() => setActiveFilter('approved')}
+            className={`px-1 py-0.5 rounded transition cursor-pointer ${activeFilter === 'approved' ? 'bg-emerald-50/90' : ''}`}
+          >
+            <p className="text-sm font-extrabold text-emerald-700 leading-none">{countApprovedTotal}</p>
+            <p className="text-[10px] text-slate-500 mt-0.5 leading-tight truncate">Zalicz.</p>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveFilter('member')}
+            className={`px-1 py-0.5 rounded transition cursor-pointer ${activeFilter === 'member' ? 'bg-indigo-50/90' : ''}`}
+          >
+            <p className="text-sm font-extrabold text-indigo-700 leading-none">{countMembers}</p>
+            <p className="text-[10px] text-slate-500 mt-0.5 leading-tight truncate">Członk.</p>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveFilter('supervisor')}
+            className={`px-1 py-0.5 rounded transition cursor-pointer ${activeFilter === 'supervisor' ? 'bg-indigo-50/90' : ''}`}
+          >
+            <p className="text-sm font-extrabold text-indigo-700 leading-none">{countSupervisors}</p>
+            <p className="text-[10px] text-slate-500 mt-0.5 leading-tight truncate">Opiekun</p>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveFilter('short_time')}
+            className={`px-1 py-0.5 rounded transition cursor-pointer ${activeFilter === 'short_time' ? 'bg-rose-50/90' : ''}`}
+          >
+            <p className="text-sm font-extrabold text-rose-600 leading-none">{countShortTime}</p>
+            <p className="text-[10px] text-slate-500 mt-0.5 leading-tight truncate">&lt; {localThreshold}m</p>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveFilter('all')}
+            className={`px-1 py-0.5 rounded transition cursor-pointer ${activeFilter === 'all' ? 'bg-purple-50/90' : ''}`}
+          >
+            <p className="text-sm font-extrabold text-purple-700 leading-none">{totalCount}</p>
+            <p className="text-[10px] text-slate-500 mt-0.5 leading-tight truncate">W logach</p>
+          </button>
+        </div>
+
+        {/* ── KPI Summary Cards Bar (Tablet & Desktop >= md: 5 kart bez zmian) ── */}
+        <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-5 gap-3 p-4 bg-slate-50/60 border-b border-slate-100 shrink-0">
           {/* 1. Approved Attendance (All with status Zaliczono) */}
           <div
             onClick={() => setActiveFilter('approved')}
@@ -1986,8 +2123,8 @@ export default function AttendanceModal({
             />
           </div>
 
-          {/* Filter Pills */}
-          <div className="inline-flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold overflow-x-auto">
+          {/* Filter Pills (zawijanie na mobile, bez ucinania przy prawej krawędzi) */}
+          <div className="flex flex-wrap md:inline-flex md:flex-nowrap items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold md:overflow-x-auto">
             <button
               onClick={() => setActiveFilter('all')}
               className={`px-3 py-1 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
