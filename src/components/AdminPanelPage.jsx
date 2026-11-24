@@ -295,7 +295,7 @@ export default function AdminPanelPage({ onPermissionsChanged, onClose, onOpenAu
   }
 
   return (
-    <div className="w-full max-w-[1680px] mx-auto space-y-6">
+    <div className="w-full mx-auto space-y-6">
       {/* ── Top Header Card (wzorowany 1:1 na Generatorze Formularzy) ── */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
@@ -366,7 +366,7 @@ export default function AdminPanelPage({ onPermissionsChanged, onClose, onOpenAu
       )}
 
       {/* ── Główny układ 3-kolumnowy (asymetryczny na desktopie, 1-kolumnowy na mobile/tablet) ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(340px,1.3fr)_340px_minmax(480px,1.85fr)] xl:grid-cols-[minmax(380px,1.35fr)_340px_minmax(560px,1.9fr)] gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(360px,1.35fr)_340px_minmax(520px,1.95fr)] xl:grid-cols-[minmax(400px,1.35fr)_340px_minmax(620px,2.05fr)] gap-6 items-start">
         {/* LEWA KOLUMNA: Przypisane Koła */}
         <div className="w-full min-w-0 bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 sm:p-5 flex flex-col">
           <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
@@ -414,7 +414,7 @@ export default function AdminPanelPage({ onPermissionsChanged, onClose, onOpenAu
                     >
                       <IconComp size={14} />
                     </div>
-                    <span className="text-xs font-medium text-slate-700 leading-snug" title={org.name}>
+                    <span className="text-xs font-medium text-slate-700 leading-snug xl:whitespace-nowrap" title={org.name}>
                       {org.displayName || org.name}
                     </span>
                   </div>
