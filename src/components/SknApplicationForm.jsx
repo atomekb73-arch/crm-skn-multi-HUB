@@ -34,6 +34,25 @@ const RECRUITMENT_STUDY_FIELDS = [
   'Psychologia w biznesie',
 ];
 
+// Preferowane kanały komunikacji (spotkania online + bieżący kontakt organizacyjny)
+const CONTACT_CHANNELS_OPTIONS = [
+  {
+    id: 'E-mail',
+    label: 'E-mail',
+    desc: 'Korespondencja organizacyjna, komunikaty i materiały',
+  },
+  {
+    id: 'WhatsApp',
+    label: 'WhatsApp',
+    desc: 'Bieżący kontakt i grupa komunikacyjna Koła',
+  },
+  {
+    id: 'Komunikatory wideo (Teams / Zoom / Google Meet)',
+    label: 'Komunikatory wideo (Teams / Zoom / Google Meet)',
+    desc: 'Spotkania online, seminaria naukowe i warsztaty Koła',
+  },
+];
+
 // Słownik najczęstszych literówek w domenach pocztowych
 const DOMAIN_TYPOS = {
   'gail.com': 'gmail.com',
@@ -342,6 +361,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
   const isUzaleznienia = targetOrgId === 'uzaleznienia' || targetOrgId === 'sknu';
   const isPsychoonkologia = !isDzieciIMlodziez && (targetOrgId === 'psychoonkologia' || targetOrgId?.includes('psychoonko'));
   const isSeksuologia = !isUzaleznienia && !isPsychoonkologia && !isDzieciIMlodziez;
+  const requiresPhone = isUzaleznienia || isDzieciIMlodziez;
 
   // Opcjonalne statyczne tło graficzne formularza (z public/backgrounds/) z bezpiecznym fallbackiem na gradient CSS
   const configuredBgUrl = useMemo(() => {
@@ -409,6 +429,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
     index_number: '',
     field_of_study: 'Psychologia',
     study_year: 'Rok 1, Semestr 1',
+    contact_channels: [],
     consent_secret: false,
     consent_discussion: false,
     consent_no_recording: false,
@@ -439,6 +460,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
         index_number: submittedSummary.indexNumber,
         field_of_study: submittedSummary.fieldOfStudy || 'Psychologia',
         study_year: submittedSummary.studyYear || 'Rok 1, Semestr 1',
+        contact_channels: submittedSummary.contactChannels || [],
         consent_secret: true,
         consent_discussion: true,
         consent_no_recording: true,
@@ -483,14 +505,21 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
     return null;
   }, [formData.email]);
 
-  // 2b. Walidacja numeru telefonu - wyłącznie dla SKN Uzależnienia (Polska, Europa, USA, Kanada i międzynarodowe)
+  // 2b. Walidacja numeru telefonu - dla SKN Uzależnienia oraz SKN Psychologii Dzieci i Młodzieży (Polska, Europa, USA, Kanada i międzynarodowe)
   const phoneValidation = useMemo(() => {
-    if (!isUzaleznienia) {
+    if (!requiresPhone) {
       return { isValid: true, error: null, formatted: '', country: null };
     }
     const raw = String(formData.phone || '').trim();
     if (!raw) {
-      return { isValid: false, error: 'Numer telefonu jest wymagany dla Koła Naukowego Uzależnień.', formatted: '', country: null };
+      return {
+        isValid: false,
+        error: isDzieciIMlodziez
+          ? 'Numer telefonu jest wymagany dla SKN Psychologii Dzieci i Młodzieży.'
+          : 'Numer telefonu jest wymagany dla Koła Naukowego Uzależnień.',
+        formatted: '',
+        country: null,
+      };
     }
 
     // Zamiana 00 na + jeśli występuje na początku (np. 0048, 001)
@@ -606,7 +635,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
       formatted: '',
       country: null
     };
-  }, [formData.phone, isUzaleznienia]);
+  }, [formData.phone, requiresPhone, isDzieciIMlodziez]);
 
   const phoneError = phoneValidation.error;
 
@@ -649,6 +678,19 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
     }));
   };
 
+  const handleToggleContactChannel = (channelId) => {
+    setFormData(prev => {
+      const current = Array.isArray(prev.contact_channels) ? prev.contact_channels : [];
+      const exists = current.includes(channelId);
+      return {
+        ...prev,
+        contact_channels: exists
+          ? current.filter(c => c !== channelId)
+          : [...current, channelId],
+      };
+    });
+  };
+
   const applyEmailSuggestion = (suggested) => {
     setFormData(prev => ({ ...prev, email: suggested }));
   };
@@ -683,7 +725,8 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
     setStatus({ loading: true, success: false, error: null });
 
     try {
-      const cleanPhone = isUzaleznienia ? (phoneValidation.formatted || formData.phone.trim()) : null;
+      const cleanPhone = requiresPhone ? (phoneValidation.formatted || formData.phone.trim()) : null;
+      const selectedChannels = Array.isArray(formData.contact_channels) ? formData.contact_channels : [];
 
       const baseCustomFields = isReactivation
         ? {
@@ -694,9 +737,14 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
           }
         : {};
 
-      if (isUzaleznienia && cleanPhone) {
+      if (requiresPhone && cleanPhone) {
         baseCustomFields.phone = cleanPhone;
         baseCustomFields.telefon = cleanPhone;
+      }
+
+      if (selectedChannels.length > 0) {
+        baseCustomFields.contact_channels = selectedChannels;
+        baseCustomFields.contact_channels_raw = selectedChannels.join(', ');
       }
 
       const payload = {
@@ -733,6 +781,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
         fullName: formData.full_name.trim(),
         email: formData.email.trim().toLowerCase(),
         phone: cleanPhone,
+        contactChannels: selectedChannels,
         indexNumber: formData.index_number.trim(),
         fieldOfStudy: formData.field_of_study || 'Psychologia',
         studyYear: formData.study_year || 'Rok 1, Semestr 1',
@@ -751,6 +800,7 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
         index_number: '',
         field_of_study: 'Psychologia',
         study_year: 'Rok 1, Semestr 1',
+        contact_channels: [],
         consent_secret: false,
         consent_discussion: false,
         consent_no_recording: false,
@@ -801,8 +851,8 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
       index_number: true,
     });
 
-    // Weryfikacja poprawności numeru telefonu (jeśli dotyczy Koła Uzależnień)
-    if (isUzaleznienia && phoneError) {
+    // Weryfikacja poprawności numeru telefonu (dla SKN Uzależnienia oraz SKN PDiM)
+    if (requiresPhone && phoneError) {
       setStatus({
         loading: false,
         success: false,
@@ -837,6 +887,16 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
         loading: false,
         success: false,
         error: fullNameError
+      });
+      return;
+    }
+
+    // Walidacja wyboru co najmniej jednego kanału komunikacji
+    if (!Array.isArray(formData.contact_channels) || formData.contact_channels.length === 0) {
+      setStatus({
+        loading: false,
+        success: false,
+        error: 'Wybierz co najmniej jeden preferowany kanał komunikacji (np. E-mail, WhatsApp lub komunikator wideo).'
       });
       return;
     }
@@ -1526,18 +1586,24 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
                   )}
                 </div>
 
-                {/* Numer Telefonu - WIDOCZNY WYŁĄCZNIE DLA KOŁA NAUKOWEGO UZALEŻNIEŃ */}
-                {isUzaleznienia && (
+                {/* Numer Telefonu - WIDOCZNY DLA KOŁA NAUKOWEGO UZALEŻNIEŃ ORAZ SKN PDiM */}
+                {requiresPhone && (
                   <div className="animate-in fade-in duration-200">
                     <div className="flex items-center justify-between mb-2">
-                      <label className="block text-xs font-semibold text-teal-950 uppercase tracking-wider flex items-center gap-1.5">
-                        <Phone size={13} className="text-teal-600" />
+                      <label className={`block text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 ${
+                        isDzieciIMlodziez ? 'text-amber-950' : 'text-teal-950'
+                      }`}>
+                        <Phone size={13} className={isDzieciIMlodziez ? 'text-amber-600' : 'text-teal-600'} />
                         <span>Numer Telefonu *</span>
-                        <span className="text-[10px] font-bold text-teal-700 bg-teal-100/90 border border-teal-200 px-1.5 py-0.2 rounded-md">
-                          SKN Uzależnienia
+                        <span className={`text-[10px] font-bold border px-1.5 py-0.2 rounded-md ${
+                          isDzieciIMlodziez
+                            ? 'text-amber-800 bg-amber-100/90 border-amber-200'
+                            : 'text-teal-700 bg-teal-100/90 border-teal-200'
+                        }`}>
+                          {isDzieciIMlodziez ? 'SKN PDiM' : 'SKN Uzależnienia'}
                         </span>
                       </label>
-                      <span className="text-[11px] text-teal-700 font-mono">
+                      <span className={`text-[11px] font-mono ${isDzieciIMlodziez ? 'text-amber-700' : 'text-teal-700'}`}>
                         Polska, Europa, USA / Kanada
                       </span>
                     </div>
@@ -1646,12 +1712,72 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
               </div>
             </div>
 
+            {/* Preferowane kanały komunikacji (spotkania online + bieżący kontakt) */}
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 flex-wrap gap-2">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-black flex items-center gap-2">
+                  <MessageSquare size={16} className={isDzieciIMlodziez ? 'text-amber-600' : isPsychoonkologia ? 'text-purple-600' : isUzaleznienia ? 'text-teal-600' : 'text-indigo-600'} />
+                  <span>{effectiveIsOrgLocked ? '2. Preferowane kanały komunikacji *' : '3. Preferowane kanały komunikacji *'}</span>
+                </h2>
+                <span className="text-[11px] text-slate-500 font-medium">
+                  Wybierz min. 1 kanał (spotkania odbywają się online)
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {CONTACT_CHANNELS_OPTIONS.map((ch) => {
+                  const isChecked = Array.isArray(formData.contact_channels) && formData.contact_channels.includes(ch.id);
+                  const selectedRing = isDzieciIMlodziez
+                    ? 'bg-amber-50/80 border-amber-300 ring-2 ring-amber-200/70'
+                    : isUzaleznienia
+                      ? 'bg-teal-50/80 border-teal-300 ring-2 ring-teal-200/70'
+                      : isPsychoonkologia
+                        ? 'bg-purple-50/80 border-purple-300 ring-2 ring-purple-200/70'
+                        : 'bg-indigo-50/80 border-indigo-300 ring-2 ring-indigo-200/70';
+                  const checkBg = isDzieciIMlodziez
+                    ? 'bg-amber-600 text-white'
+                    : isUzaleznienia
+                      ? 'bg-teal-600 text-white'
+                      : isPsychoonkologia
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-indigo-600 text-white';
+
+                  return (
+                    <button
+                      key={ch.id}
+                      type="button"
+                      onClick={() => handleToggleContactChannel(ch.id)}
+                      className={`p-3.5 rounded-2xl border text-left transition-all duration-200 cursor-pointer flex items-start justify-between gap-2.5 select-none ${
+                        isChecked
+                          ? `${selectedRing} shadow-sm`
+                          : 'bg-white hover:bg-slate-50/80 border-slate-200/90 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <div className="font-bold text-slate-900 text-xs leading-snug">
+                          {ch.label}
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                          {ch.desc}
+                        </p>
+                      </div>
+                      <div className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 mt-0.5 transition-all ${
+                        isChecked ? checkBg : 'border-2 border-slate-300 bg-white'
+                      }`}>
+                        {isChecked && <Check size={12} strokeWidth={3} />}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Oświadczenia i Zgody Formalne */}
             <div className="space-y-4 pt-2">
               <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-black flex items-center gap-2">
-                  <ShieldCheck size={16} className={isPsychoonkologia ? 'text-purple-600' : isUzaleznienia ? 'text-teal-600' : 'text-indigo-600'} />
-                  <span>{effectiveIsOrgLocked ? '2. Oświadczenia formalne i regulaminowe (Wszystkie wymagane)' : '3. Oświadczenia formalne i regulaminowe (Wszystkie wymagane)'}</span>
+                  <ShieldCheck size={16} className={isDzieciIMlodziez ? 'text-amber-600' : isPsychoonkologia ? 'text-purple-600' : isUzaleznienia ? 'text-teal-600' : 'text-indigo-600'} />
+                  <span>{effectiveIsOrgLocked ? '3. Oświadczenia formalne i regulaminowe (Wszystkie wymagane)' : '4. Oświadczenia formalne i regulaminowe (Wszystkie wymagane)'}</span>
                 </h2>
                 <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${
                   isUzaleznienia

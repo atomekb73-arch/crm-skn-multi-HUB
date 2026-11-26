@@ -113,6 +113,7 @@ export async function fetchGasData(orgId = 'skn_seksuologii') {
       statusWeryfikacji: m.activity_status === 'Archiwum' ? 'Archiwum' : 'Zatwierdzony',
       dataWeryfikacji: m.verification_date || '',
       aliasy: m.custom_fields?.aliasy || '',
+      contactChannels: Array.isArray(m.custom_fields?.contact_channels) ? m.custom_fields.contact_channels : [],
       dataAktualizacji: m.custom_fields?.dataAktualizacji || ''
     }));
 
