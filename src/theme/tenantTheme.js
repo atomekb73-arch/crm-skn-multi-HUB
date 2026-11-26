@@ -12,10 +12,16 @@ export const TENANT_THEMES = {
     colorKey: 'indigo',
     formBackground: '/backgrounds/skn_seksuologii.webp',
 
-    // Tło zewnętrzne aplikacji (backdrop) - elegancki pastelowy błękit
+    // Tło zewnętrzne aplikacji (backdrop) - elegancki pastelowy błękit z grafiką akwarelową
     backdropGradientClass: 'from-slate-50 via-sky-50/40 to-indigo-50/50',
     backdropStyle: {
-      background: 'linear-gradient(135deg, #f8fafc 0%, #f0f9ff 45%, #eef2ff 100%)',
+      backgroundColor: '#f0f9ff',
+      backgroundImage:
+        'linear-gradient(135deg, rgba(248, 250, 252, 0.32) 0%, rgba(240, 249, 255, 0.24) 45%, rgba(238, 242, 255, 0.32) 100%), url("/backgrounds/skn_seksuologii.webp")',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center center',
+      backgroundAttachment: 'fixed',
+      backgroundRepeat: 'no-repeat',
     },
     
     // Header Avatar & Badge
