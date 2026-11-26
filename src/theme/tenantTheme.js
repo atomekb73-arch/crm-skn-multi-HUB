@@ -130,10 +130,16 @@ export const TENANT_THEMES = {
     colorKey: 'purple',
     formBackground: '/backgrounds/psychoonkologia.webp',
 
-    // Tło zewnętrzne aplikacji (backdrop) - delikatny, pastelowy odcień fioletu (lawendowy/wrzosowy)
+    // Tło zewnętrzne aplikacji (backdrop) - delikatny, pastelowy odcień fioletu (lawendowy/wrzosowy) z grafiką akwarelową
     backdropGradientClass: 'from-slate-50 via-purple-50/40 to-violet-50/50',
     backdropStyle: {
-      background: 'linear-gradient(135deg, #fbfaff 0%, #f6f3ff 45%, #ede9fe 100%)',
+      backgroundColor: '#fbfaff',
+      backgroundImage:
+        'linear-gradient(135deg, rgba(251, 250, 255, 0.32) 0%, rgba(246, 243, 255, 0.24) 45%, rgba(237, 233, 254, 0.32) 100%), url("/backgrounds/psychoonkologia.webp")',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center center',
+      backgroundAttachment: 'fixed',
+      backgroundRepeat: 'no-repeat',
     },
 
     // Header Avatar & Badge - nasycony, elegancki wrzos z wyraźnym białym napisem ONKO
