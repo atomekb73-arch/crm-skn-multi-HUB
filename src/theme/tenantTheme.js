@@ -71,10 +71,16 @@ export const TENANT_THEMES = {
     colorKey: 'teal',
     formBackground: '/backgrounds/uzaleznienia.webp',
 
-    // Tło zewnętrzne aplikacji (backdrop) - prestiżowy odcień szałwiowo-miętowy
+    // Tło zewnętrzne aplikacji (backdrop) - prestiżowy odcień szałwiowo-miętowy z grafiką akwarelową
     backdropGradientClass: 'from-slate-50 via-emerald-50/45 to-teal-50/55',
     backdropStyle: {
-      background: 'linear-gradient(135deg, #f8fafc 0%, #ecfdf5 45%, #f0fdfa 100%)',
+      backgroundColor: '#f0fdfa',
+      backgroundImage:
+        'linear-gradient(135deg, rgba(248, 250, 252, 0.32) 0%, rgba(236, 253, 245, 0.24) 45%, rgba(240, 253, 250, 0.32) 100%), url("/backgrounds/uzaleznienia.webp")',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center center',
+      backgroundAttachment: 'fixed',
+      backgroundRepeat: 'no-repeat',
     },
 
     // Header Avatar & Badge
