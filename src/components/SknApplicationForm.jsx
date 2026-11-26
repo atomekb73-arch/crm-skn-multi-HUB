@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { supabase, getSupabaseForOrg } from '../supabaseClient';
 import { useOrg, DEFAULT_ORGS } from '../context/OrgContext';
+import { getWskzOrgById } from '../config/wskzRegistry';
+import { getTenantTheme } from '../theme/tenantTheme';
 import {
   Send,
   CheckCircle2,
@@ -340,6 +342,40 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
   const isUzaleznienia = targetOrgId === 'uzaleznienia' || targetOrgId === 'sknu';
   const isPsychoonkologia = !isDzieciIMlodziez && (targetOrgId === 'psychoonkologia' || targetOrgId?.includes('psychoonko'));
   const isSeksuologia = !isUzaleznienia && !isPsychoonkologia && !isDzieciIMlodziez;
+
+  // Opcjonalne statyczne tło graficzne formularza (z public/backgrounds/) z bezpiecznym fallbackiem na gradient CSS
+  const configuredBgUrl = useMemo(() => {
+    const regOrg = getWskzOrgById(targetOrgId);
+    const tenantTheme = getTenantTheme(targetOrgId);
+    return regOrg?.formBackground || tenantTheme?.formBackground || null;
+  }, [targetOrgId]);
+
+  const [loadedBgUrl, setLoadedBgUrl] = useState(null);
+
+  useEffect(() => {
+    if (!configuredBgUrl || typeof window === 'undefined') {
+      setLoadedBgUrl(null);
+      return;
+    }
+    let cancelled = false;
+    const img = new window.Image();
+    img.onload = () => {
+      if (!cancelled && img.naturalWidth > 0) {
+        setLoadedBgUrl(configuredBgUrl);
+      }
+    };
+    img.onerror = () => {
+      if (!cancelled) {
+        setLoadedBgUrl(null);
+      }
+    };
+    img.src = configuredBgUrl;
+    return () => {
+      cancelled = true;
+    };
+  }, [configuredBgUrl]);
+
+  const hasActiveBgImage = Boolean(configuredBgUrl && loadedBgUrl === configuredBgUrl);
 
   // Nazwy i etykiety formalne organizacji
   const orgLine1 = 'Studenckie Koło Naukowe';
@@ -1092,8 +1128,23 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
   }
 
   return (
-    <div className={`min-h-screen w-full max-w-full overflow-x-hidden py-6 sm:py-12 md:py-16 px-3 sm:px-6 lg:px-8 flex items-center justify-center font-sans relative ${themeClasses.bg}`}>
-      <div className={`max-w-3xl w-full bg-white rounded-[24px] sm:rounded-[32px] shadow-2xl overflow-hidden p-4 sm:p-8 md:p-12 transition-all relative ${themeClasses.card}`}>
+    <div
+      className={`min-h-screen w-full max-w-full overflow-x-hidden py-6 sm:py-12 md:py-16 px-3 sm:px-6 lg:px-8 flex items-center justify-center font-sans relative ${
+        hasActiveBgImage ? 'bg-cover bg-center bg-fixed' : themeClasses.bg
+      }`}
+      style={hasActiveBgImage ? { backgroundImage: `url("${configuredBgUrl}")` } : undefined}
+    >
+      {hasActiveBgImage && (
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-white/35 backdrop-blur-[1px] pointer-events-none"
+        />
+      )}
+      <div
+        className={`max-w-3xl w-full rounded-[24px] sm:rounded-[32px] overflow-hidden p-4 sm:p-8 md:p-12 transition-all relative z-10 ${
+          hasActiveBgImage ? 'bg-white/95 backdrop-blur-md shadow-xl' : 'bg-white shadow-2xl'
+        } ${themeClasses.card}`}
+      >
 
         {/* Nagłówek */}
         <div className="text-center mb-10 sm:mb-12">

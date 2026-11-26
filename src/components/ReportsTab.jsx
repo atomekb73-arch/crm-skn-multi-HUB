@@ -53,6 +53,7 @@ import {
   getOrgMetadata,
 } from './DocumentTemplates';
 import OfficialWskzDocumentA4, { OfficialWskzDocumentSheet } from './OfficialWskzDocumentA4';
+import GoogleDriveExportButton from './GoogleDriveExportButton';
 import { exportMultipleSheetsToXlsx } from '../utils/exportToExcel';
 import { WSKZ_ORGANIZATIONS, getWskzOrgById } from '../config/wskzRegistry';
 import { fetchInterClubReportData } from '../services/interClubReportService';
@@ -1906,7 +1907,18 @@ export default function ReportsTab({
                 </button>
               )}
 
-              {/* 5. Drukuj dokument (PDF) */}
+              {/* 5. Wyślij na Dysk Google (PDF A4) */}
+              <GoogleDriveExportButton
+                getTargetElement={() => document.querySelector('#reports-print-container #skn-a4-print-area')}
+                title={isPrintingProtocol ? 'Protokol_Zbiorczy_Wydanych_Dokumentow' : (DOCUMENT_CATEGORIES.find(d => d.id === selectedDocType)?.title || 'Dokument_A4')}
+                docNumber={currentDocNumber}
+                docDate={docDate}
+                org={currentOrg}
+                isMultiPage={isMultiPageDoc}
+                disabled={!hasDataForYear && (selectedDocType === 'members_registry' || selectedDocType === 'meetings_summary' || selectedDocType === 'membership')}
+              />
+
+              {/* 6. Drukuj dokument (PDF) */}
               <button
                 type="button"
                 onClick={handlePrint}

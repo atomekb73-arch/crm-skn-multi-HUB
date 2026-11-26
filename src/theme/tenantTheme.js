@@ -10,6 +10,7 @@ export const TENANT_THEMES = {
     orgShortName: 'SKN Seksuologii',
     badgeText: 'SEKS',
     colorKey: 'indigo',
+    formBackground: '/backgrounds/skn_seksuologii.webp',
 
     // Tło zewnętrzne aplikacji (backdrop) - elegancki pastelowy błękit
     backdropGradientClass: 'from-slate-50 via-sky-50/40 to-indigo-50/50',
@@ -62,6 +63,7 @@ export const TENANT_THEMES = {
     orgShortName: 'SKN Uzależnień',
     badgeText: 'UZAL',
     colorKey: 'teal',
+    formBackground: '/backgrounds/uzaleznienia.webp',
 
     // Tło zewnętrzne aplikacji (backdrop) - prestiżowy odcień szałwiowo-miętowy
     backdropGradientClass: 'from-slate-50 via-emerald-50/45 to-teal-50/55',
@@ -114,6 +116,7 @@ export const TENANT_THEMES = {
     orgShortName: 'SKN Psychoonkologii',
     badgeText: 'ONKO',
     colorKey: 'purple',
+    formBackground: '/backgrounds/psychoonkologia.webp',
 
     // Tło zewnętrzne aplikacji (backdrop) - delikatny, pastelowy odcień fioletu (lawendowy/wrzosowy)
     backdropGradientClass: 'from-slate-50 via-purple-50/40 to-violet-50/50',
@@ -173,6 +176,7 @@ export const TENANT_THEMES = {
     orgShortName: 'SKN Psychologii Dzieci i Młodzieży',
     badgeText: 'PDiM',
     colorKey: 'amber',
+    formBackground: '/backgrounds/skn_dzieci_i_mlodziezy.webp',
 
     backdropGradientClass: 'from-slate-50 via-amber-50/40 to-orange-50/50',
     backdropStyle: {

@@ -66,7 +66,8 @@ export const WSKZ_ORGANIZATIONS = [
     color: "#C2410C",
     bgLight: "#FFEDD5",
     icon: "Flame",
-    hasActiveCrm: true
+    hasActiveCrm: true,
+    formBackground: "/backgrounds/uzaleznienia.webp"
   },
   {
     orgId: "skn_spolecznej_ewolucyjnej",
@@ -90,7 +91,8 @@ export const WSKZ_ORGANIZATIONS = [
     color: "#0284C7",
     bgLight: "#E0F2FE",
     icon: "Ribbon",
-    hasActiveCrm: true
+    hasActiveCrm: true,
+    formBackground: "/backgrounds/psychoonkologia.webp"
   },
   {
     orgId: "skn_psychofizjologii",
@@ -126,7 +128,8 @@ export const WSKZ_ORGANIZATIONS = [
     color: "#16A34A",
     bgLight: "#DCFCE7",
     icon: "Heart",
-    hasActiveCrm: true
+    hasActiveCrm: true,
+    formBackground: "/backgrounds/skn_seksuologii.webp"
   },
   {
     orgId: "skn_rozwoju_dzieci",
@@ -134,7 +137,7 @@ export const WSKZ_ORGANIZATIONS = [
     name: "SKN Psychologii Rozwoju Dzieci i Młodzieży",
     shortName: "11 SKN Rozwoju Dzieci",
     code: "ROZWOJU",
-    subcalendarId: 15520555,
+    subcalendarId: null,
     color: "#A21CAF",
     bgLight: "#FAE8FF",
     icon: "Sparkles",
@@ -182,11 +185,12 @@ export const WSKZ_ORGANIZATIONS = [
     name: "Studenckie Koło Naukowe Psychologii Dzieci i Młodzieży",
     shortName: "SKN Psychologii Dzieci i Młodzieży",
     code: "PDiM",
-    subcalendarId: null,
+    subcalendarId: 15520555,
     color: "#D97706",
     bgLight: "#FEF3C7",
     icon: "Sparkles",
-    hasActiveCrm: true
+    hasActiveCrm: true,
+    formBackground: "/backgrounds/skn_dzieci_i_mlodziezy.webp"
   }
 ];
 

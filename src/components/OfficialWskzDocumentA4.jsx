@@ -11,6 +11,7 @@ import {
   Building2,
 } from 'lucide-react';
 import { getOrgMetadata, getActiveSupervisors, formatSupervisorName, formatPolishDate, formatOrgGenitive } from './DocumentTemplates';
+import GoogleDriveExportButton from './GoogleDriveExportButton';
 
 /**
  * Usuwa początkowy numer porządkowy z nazwy koła (np. "10 SKN Seksuologii" -> "SKN Seksuologii")
@@ -432,7 +433,18 @@ export default function OfficialWskzDocumentA4({
             </a>
           )}
 
-          {/* 4. Drukuj / Zapisz PDF */}
+          {/* 4. Wyślij na Dysk Google (PDF A4) */}
+          <GoogleDriveExportButton
+            getTargetElement={() => document.querySelector('#skn-a4-modal-backdrop #skn-a4-print-area')}
+            title={title}
+            docNumber={docNumber || documentCode || ''}
+            docDate={docDate}
+            org={org}
+            isMultiPage={isMultiPage}
+            compact
+          />
+
+          {/* 5. Drukuj / Zapisz PDF */}
           <button
             type="button"
             onClick={handlePrint}
