@@ -192,7 +192,13 @@ export const TENANT_THEMES = {
 
     backdropGradientClass: 'from-slate-50 via-amber-50/40 to-orange-50/50',
     backdropStyle: {
-      background: 'linear-gradient(135deg, #fffdf7 0%, #fffbeb 45%, #fef3c7 100%)',
+      backgroundColor: '#fffbeb',
+      backgroundImage:
+        'linear-gradient(135deg, rgba(255, 253, 247, 0.32) 0%, rgba(255, 251, 235, 0.24) 45%, rgba(254, 243, 199, 0.32) 100%), url("/backgrounds/skn_dzieci_i_mlodziezy.webp")',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center center',
+      backgroundAttachment: 'fixed',
+      backgroundRepeat: 'no-repeat',
     },
 
     headerBadgeGradient: 'bg-gradient-to-br from-amber-600 via-orange-600 to-amber-700 shadow-amber-500/25',
