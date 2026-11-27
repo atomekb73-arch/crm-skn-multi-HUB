@@ -52,6 +52,7 @@ export const DEFAULT_TABLE_COLUMNS = {
     { key: 'status', label: 'Status', default: true },
   ],
   membership: [
+    { key: 'cert_activity_section', label: 'Ocena i aktywność merytoryczna', default: true },
     { key: 'cert_freq', label: 'Sekcja Frekwencji', default: true },
     { key: 'cert_points', label: 'Sekcja Punktów i Oceny', default: true },
   ],

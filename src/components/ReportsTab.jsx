@@ -796,9 +796,17 @@ export default function ReportsTab({
     return generateDocumentNumber(pfx, selectedMember?.index || selectedMember?.indexNumber || '00000', academicYear, orgTag);
   }, [selectedDocType, selectedMember, academicYear, currentOrg]);
 
+  const includeActivitySection = columnVisibility.cert_activity_section !== false;
+  const memberHasZeroActivity = (memberFreqData?.present || 0) === 0 && (memberPoints || 0) === 0;
+  const isBlockedByEmptyYear =
+    !hasDataForYear &&
+    (selectedDocType === 'members_registry' ||
+      selectedDocType === 'meetings_summary' ||
+      (selectedDocType === 'membership' && includeActivitySection));
+
   const handlePrint = () => {
-    // Walidacja braku danych dla lat przyszłych i przeszłych
-    if (!hasDataForYear && (selectedDocType === 'members_registry' || selectedDocType === 'meetings_summary' || selectedDocType === 'membership')) {
+    // Walidacja braku danych dla lat przyszłych i przeszłych (nie blokuje czystego zaświadczenia o członkostwie)
+    if (isBlockedByEmptyYear) {
       alert(`W roku akademickim ${academicYear} nie zarejestrowano żadnych spotkań ani obecności członków Koła. Wystawianie oficjalnych pism z zerowymi/pustymi wartościami zostało wstrzymane.`);
       return;
     }
@@ -819,7 +827,9 @@ export default function ReportsTab({
     if (selectedDocType === 'speaker') {
       detailsText = `Referat: ${presentationTopic || '—'}`;
     } else if (selectedDocType === 'membership') {
-      detailsText = `Frekwencja: ${memberFreqData.displayPercentage || `${memberFreqData.freq}%`}, Punkty: ${memberPoints} pkt`;
+      detailsText = includeActivitySection
+        ? `Frekwencja: ${memberFreqData.displayPercentage || `${memberFreqData.freq}%`}, Punkty: ${memberPoints} pkt`
+        : 'Potwierdzenie członkostwa (bez oceny aktywności)';
     } else if (selectedDocType === 'board') {
       const roleObj = BOARD_ROLES.find(r => r.id === boardRole);
       detailsText = `Funkcja: ${roleObj?.label || boardRole}`;
@@ -1408,13 +1418,57 @@ export default function ReportsTab({
                   </div>
                 )}
 
-                {/* Przełączniki widoczności dla Zaświadczenia (Frekwencja & Ocena Aktywności) */}
+                {/* Przełączniki widoczności dla Zaświadczenia (Ocena i aktywność, Frekwencja & Ranga) */}
                 <div className="pt-2 border-t border-slate-200/80 space-y-2">
                   <span className="text-[11px] font-bold text-slate-700 block">Opcje Zaświadczenia:</span>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+
+                  {/* Główny przełącznik: Uwzględnij ocenę i aktywność merytoryczną */}
+                  <button
+                    type="button"
+                    onClick={() => handleColumnVisibilityChange('cert_activity_section', !includeActivitySection)}
+                    className={`w-full p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-between gap-2 transition cursor-pointer select-none ${
+                      includeActivitySection
+                        ? 'bg-sky-50/80 border-sky-300 text-sky-950 shadow-2xs'
+                        : 'bg-slate-50 border-slate-300 text-slate-600'
+                    }`}
+                    title="Wyłącz, aby wystawić czyste zaświadczenie o samej przynależności do koła (bez oceny aktywności i sekcji aktywności merytorycznej)"
+                  >
+                    <div className="flex items-center gap-2 text-left">
+                      {includeActivitySection ? (
+                        <CheckSquare size={15} className="text-sky-700 shrink-0" />
+                      ) : (
+                        <Square size={15} className="text-slate-400 shrink-0" />
+                      )}
+                      <span className="text-[11px] leading-tight">Uwzględnij ocenę i aktywność merytoryczną</span>
+                    </div>
+                    <span className={`text-[9.5px] px-1.5 py-0.5 rounded font-mono shrink-0 ${
+                      includeActivitySection ? 'bg-sky-100 text-sky-800' : 'bg-slate-200 text-slate-600'
+                    }`}>
+                      {includeActivitySection ? 'Włączona' : 'Ukryta'}
+                    </span>
+                  </button>
+
+                  {/* Subtelna podpowiedź przy 0 obecności i 0 punktów */}
+                  {selectedMember && memberHasZeroActivity && includeActivitySection && (
+                    <div className="px-2.5 py-2 rounded-xl bg-amber-50/90 border border-amber-200/90 flex items-center justify-between gap-2 text-[10.5px] text-amber-900">
+                      <span className="leading-snug">
+                        Brak odnotowanej aktywności (0 obecności, 0 pkt) — zalecane wyłączenie sekcji.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleColumnVisibilityChange('cert_activity_section', false)}
+                        className="px-2 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-[10px] shrink-0 transition cursor-pointer"
+                      >
+                        Wyłącz
+                      </button>
+                    </div>
+                  )}
+
+                  <div className={`grid grid-cols-1 sm:grid-cols-2 gap-2 transition-opacity ${!includeActivitySection ? 'opacity-45 pointer-events-none' : ''}`}>
                     {/* Przełącznik Frekwencji */}
                     <button
                       type="button"
+                      disabled={!includeActivitySection}
                       onClick={() => handleColumnVisibilityChange('cert_freq', columnVisibility.cert_freq === false)}
                       className={`p-2 rounded-xl border text-xs font-semibold flex items-center justify-between gap-2 transition cursor-pointer select-none ${
                         columnVisibility.cert_freq !== false
@@ -1441,6 +1495,7 @@ export default function ReportsTab({
                     {/* Przełącznik Szczegółowej Oceny Aktywności */}
                     <button
                       type="button"
+                      disabled={!includeActivitySection}
                       onClick={() => handleColumnVisibilityChange('cert_detailed_rating', columnVisibility.cert_detailed_rating === false)}
                       className={`p-2 rounded-xl border text-xs font-semibold flex items-center justify-between gap-2 transition cursor-pointer select-none ${
                         columnVisibility.cert_detailed_rating !== false
@@ -1915,20 +1970,20 @@ export default function ReportsTab({
                 docDate={docDate}
                 org={currentOrg}
                 isMultiPage={isMultiPageDoc}
-                disabled={!hasDataForYear && (selectedDocType === 'members_registry' || selectedDocType === 'meetings_summary' || selectedDocType === 'membership')}
+                disabled={isBlockedByEmptyYear}
               />
 
               {/* 6. Drukuj dokument (PDF) */}
               <button
                 type="button"
                 onClick={handlePrint}
-                disabled={!hasDataForYear && (selectedDocType === 'members_registry' || selectedDocType === 'meetings_summary' || selectedDocType === 'membership')}
+                disabled={isBlockedByEmptyYear}
                 className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 shadow-sm transition-all ${
-                  !hasDataForYear && (selectedDocType === 'members_registry' || selectedDocType === 'meetings_summary' || selectedDocType === 'membership')
+                  isBlockedByEmptyYear
                     ? 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-75'
                     : 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
                 }`}
-                title={!hasDataForYear && (selectedDocType === 'members_registry' || selectedDocType === 'meetings_summary' || selectedDocType === 'membership') ? `Brak danych w roku ${academicYear} - drukowanie zablokowane` : 'Drukuj dokument (PDF)'}
+                title={isBlockedByEmptyYear ? `Brak danych w roku ${academicYear} - drukowanie zablokowane` : 'Drukuj dokument (PDF)'}
               >
                 <Printer size={18} strokeWidth={2.2} className="w-[18px] h-[18px] text-white shrink-0" />
                 <span>Drukuj dokument (PDF)</span>
@@ -1947,7 +2002,7 @@ export default function ReportsTab({
           )}
 
           {/* Informacyjny banner walidacji braku danych dla roku */}
-          {!hasDataForYear && (selectedDocType === 'members_registry' || selectedDocType === 'meetings_summary' || selectedDocType === 'membership') && (
+          {isBlockedByEmptyYear && (
             <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-xl flex items-center justify-between gap-3 text-xs mb-3 print:hidden shadow-2xs">
               <div className="flex items-center gap-2 font-semibold">
                 <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
@@ -2134,33 +2189,50 @@ export default function ReportsTab({
         docxUrl="/szablon-pisma-wskz.docx"
         extraActions={
           selectedDocType === 'membership' ? (
-            <div className="flex items-center gap-1.5 mr-1">
+            <div className="flex items-center gap-1.5 mr-1 flex-wrap">
               <button
                 type="button"
-                onClick={() => handleColumnVisibilityChange('cert_freq', columnVisibility.cert_freq === false)}
+                onClick={() => handleColumnVisibilityChange('cert_activity_section', !includeActivitySection)}
                 className={`px-2 py-1 rounded-lg border text-[11px] font-semibold transition cursor-pointer select-none flex items-center gap-1.5 ${
-                  columnVisibility.cert_freq !== false
-                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                  includeActivitySection
+                    ? 'bg-sky-50 text-sky-900 border-sky-300'
                     : 'bg-slate-100 text-slate-500 border-slate-300'
                 }`}
-                title="Włącz/wyłącz sekcję frekwencji w zaświadczeniu"
+                title="Uwzględnij ocenę i aktywność merytoryczną (wyłącz, aby wystawić czyste zaświadczenie o członkostwie)"
               >
-                {columnVisibility.cert_freq !== false ? <CheckSquare size={13} className="text-emerald-700" /> : <Square size={13} />}
-                <span>Frekwencja: {columnVisibility.cert_freq !== false ? 'Wł.' : 'Wył.'}</span>
+                {includeActivitySection ? <CheckSquare size={13} className="text-sky-700" /> : <Square size={13} />}
+                <span>Ocena i aktywność: {includeActivitySection ? 'Wł.' : 'Wył.'}</span>
               </button>
-              <button
-                type="button"
-                onClick={() => handleColumnVisibilityChange('cert_detailed_rating', columnVisibility.cert_detailed_rating === false)}
-                className={`px-2 py-1 rounded-lg border text-[11px] font-semibold transition cursor-pointer select-none flex items-center gap-1.5 ${
-                  columnVisibility.cert_detailed_rating !== false
-                    ? 'bg-indigo-50 text-indigo-800 border-indigo-300'
-                    : 'bg-slate-100 text-slate-500 border-slate-300'
-                }`}
-                title="Przełącz szczegółową ocenę aktywności (ranga / aktywny członek)"
-              >
-                {columnVisibility.cert_detailed_rating !== false ? <CheckSquare size={13} className="text-indigo-700" /> : <Square size={13} />}
-                <span>Ocena: {columnVisibility.cert_detailed_rating !== false ? 'Ranga' : 'Prosta'}</span>
-              </button>
+              {includeActivitySection && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleColumnVisibilityChange('cert_freq', columnVisibility.cert_freq === false)}
+                    className={`px-2 py-1 rounded-lg border text-[11px] font-semibold transition cursor-pointer select-none flex items-center gap-1.5 ${
+                      columnVisibility.cert_freq !== false
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                        : 'bg-slate-100 text-slate-500 border-slate-300'
+                    }`}
+                    title="Włącz/wyłącz sekcję frekwencji w zaświadczeniu"
+                  >
+                    {columnVisibility.cert_freq !== false ? <CheckSquare size={13} className="text-emerald-700" /> : <Square size={13} />}
+                    <span>Frekwencja: {columnVisibility.cert_freq !== false ? 'Wł.' : 'Wył.'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleColumnVisibilityChange('cert_detailed_rating', columnVisibility.cert_detailed_rating === false)}
+                    className={`px-2 py-1 rounded-lg border text-[11px] font-semibold transition cursor-pointer select-none flex items-center gap-1.5 ${
+                      columnVisibility.cert_detailed_rating !== false
+                        ? 'bg-indigo-50 text-indigo-800 border-indigo-300'
+                        : 'bg-slate-100 text-slate-500 border-slate-300'
+                    }`}
+                    title="Przełącz szczegółową ocenę aktywności (ranga / aktywny członek)"
+                  >
+                    {columnVisibility.cert_detailed_rating !== false ? <CheckSquare size={13} className="text-indigo-700" /> : <Square size={13} />}
+                    <span>Ocena: {columnVisibility.cert_detailed_rating !== false ? 'Ranga' : 'Prosta'}</span>
+                  </button>
+                </>
+              )}
             </div>
           ) : null
         }

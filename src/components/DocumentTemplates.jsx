@@ -622,11 +622,12 @@ export function MembershipCertificateTemplate({
   const hasDataForYear = totalMeetings > 0 || safePresent > 0 || safePoints > 0;
 
   // Visibility toggles for certificate sections (controlled via DocumentCustomizer & edit toggles)
-  const showFreqSection = columnVisibility.cert_freq !== false;
-  const showPointsSection = columnVisibility.cert_points !== false;
+  const includeActivitySection = columnVisibility.cert_activity_section !== false;
+  const showFreqSection = includeActivitySection && columnVisibility.cert_freq !== false;
+  const showPointsSection = includeActivitySection && columnVisibility.cert_points !== false;
   const showDetailedActivityRating = columnVisibility.cert_detailed_rating !== false;
   // Compute number of visible metric columns to adjust grid dynamically
-  const visibleMetricCols = [showFreqSection, showPointsSection, true].filter(Boolean).length; // "Ocena" always shown
+  const visibleMetricCols = [showFreqSection, showPointsSection, true].filter(Boolean).length; // "Ocena" always shown when activity section is enabled
 
   const docNumber = generateDocumentNumber('CERT', member?.index || member?.indexNumber || '00000', academicYear, orgTag);
   const activeSupervisors = getActiveSupervisors(supervisors, org);
@@ -638,9 +639,9 @@ export function MembershipCertificateTemplate({
   const yearLabel = member?.year ? `rok ${member.year}` : 'jednolite studia magisterskie';
 
   // Dynamiczny nagłówek dokumentu:
-  // Domyślnie (gdy frekwencja jest włączona): ZAŚWIADCZENIE O CZŁONKOSTWIE I FREKWENCJI
-  // Gdy wyłączono opcję pokazywania frekwencji: ZAŚWIADCZENIE O CZŁONKOSTWIE
-  const certificateTitle = showFreqSection
+  // Domyślnie (gdy sekcja aktywności i frekwencja są włączone): ZAŚWIADCZENIE O CZŁONKOSTWIE I FREKWENCJI
+  // Gdy wyłączono frekwencję lub całą sekcję oceny i aktywności: ZAŚWIADCZENIE O CZŁONKOSTWIE
+  const certificateTitle = includeActivitySection && showFreqSection
     ? 'Zaświadczenie o Członkostwie i Frekwencji'
     : 'Zaświadczenie o Członkostwie';
 
@@ -669,19 +670,36 @@ export function MembershipCertificateTemplate({
         </div>
 
         {/* Formuła Wstępna */}
-        <p className="text-[11px] sm:text-[11.5px] leading-relaxed text-slate-700 text-justify [text-justify:inter-word] [text-wrap:pretty] indent-4 font-normal">
-          Niniejszym zaświadcza się, że {isFemale ? 'Pani' : 'Pan'}{' '}
-          <strong className="text-slate-800 font-semibold border-b border-slate-300 pb-0.5 px-1">{studentName}</strong>,{' '}
-          {isFemale ? 'legitymująca się' : 'legitymujący się'} numerem indeksu: <strong className="font-mono text-slate-800 font-semibold">{indexNumber}</strong>,{' '}
-          {isFemale ? 'będąca studentką' : 'będący studentem'} kierunku: <strong className="font-semibold text-slate-800">{fieldName}</strong> ({yearLabel}), w&nbsp;roku akademickim{' '}
-          <strong className="font-semibold text-slate-800">{academicYear}</strong> {isFemale ? 'brała' : 'brał'} aktywny udział w&nbsp;działalności naukowo-badawczej i&nbsp;spotkaniach Koła:{' '}
-          <strong className="text-slate-800 font-semibold">{orgName}</strong> przy&nbsp;{orgUnit}.
-        </p>
+        {includeActivitySection ? (
+          <p className="text-[11px] sm:text-[11.5px] leading-relaxed text-slate-700 text-justify [text-justify:inter-word] [text-wrap:pretty] indent-4 font-normal">
+            Niniejszym zaświadcza się, że {isFemale ? 'Pani' : 'Pan'}{' '}
+            <strong className="text-slate-800 font-semibold border-b border-slate-300 pb-0.5 px-1">{studentName}</strong>,{' '}
+            {isFemale ? 'legitymująca się' : 'legitymujący się'} numerem indeksu: <strong className="font-mono text-slate-800 font-semibold">{indexNumber}</strong>,{' '}
+            {isFemale ? 'będąca studentką' : 'będący studentem'} kierunku: <strong className="font-semibold text-slate-800">{fieldName}</strong> ({yearLabel}), w&nbsp;roku akademickim{' '}
+            <strong className="font-semibold text-slate-800">{academicYear}</strong> {isFemale ? 'brała' : 'brał'} aktywny udział w&nbsp;działalności naukowo-badawczej i&nbsp;spotkaniach Koła:{' '}
+            <strong className="text-slate-800 font-semibold">{orgName}</strong> przy&nbsp;{orgUnit}.
+          </p>
+        ) : (
+          <div className="space-y-3 pt-2">
+            <p className="text-[11.5px] sm:text-[12px] leading-relaxed text-slate-700 text-justify [text-justify:inter-word] [text-wrap:pretty] indent-4 font-normal">
+              Niniejszym zaświadcza się, że {isFemale ? 'Pani' : 'Pan'}{' '}
+              <strong className="text-slate-800 font-semibold border-b border-slate-300 pb-0.5 px-1">{studentName}</strong>,{' '}
+              {isFemale ? 'legitymująca się' : 'legitymujący się'} numerem albumu: <strong className="font-mono text-slate-800 font-semibold">{indexNumber}</strong>,{' '}
+              {isFemale ? 'będąca studentką' : 'będący studentem'} kierunku: <strong className="font-semibold text-slate-800">{fieldName}</strong> ({yearLabel}), jest w&nbsp;roku akademickim{' '}
+              <strong className="font-semibold text-slate-800">{academicYear}</strong> {isFemale ? 'członkinią' : 'członkiem'}{' '}
+              <strong className="text-slate-800 font-semibold">{orgGenitive}</strong> działającego przy&nbsp;{orgUnit}.
+            </p>
+            <p className="text-[11px] sm:text-[11.5px] leading-relaxed text-slate-600 text-justify [text-justify:inter-word] [text-wrap:pretty] indent-4 font-normal">
+              Przynależność do&nbsp;Koła Naukowego została potwierdzona na&nbsp;podstawie aktualnej ewidencji członkowskiej prowadzonej przez&nbsp;Zarząd Koła.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* ── STREFA 2 (ŚRODKOWA): Kluczowe Dane, Metryki i Wyszczególnienie Aktywności ── */}
       <div className="relative z-10 flex-grow flex flex-col justify-center mt-1 sm:mt-1.5 mb-2 space-y-2 sm:space-y-2.5">
-        {!hasDataForYear ? (
+        {includeActivitySection && (
+          !hasDataForYear ? (
           <div className="my-2 p-4 bg-amber-50/90 border-2 border-dashed border-amber-300 rounded-xl text-center">
             <div className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-amber-100 text-amber-700 mb-1.5">
               <AlertTriangle className="w-4 h-4" />
@@ -770,7 +788,7 @@ export function MembershipCertificateTemplate({
               )}
             </div>
           </>
-        )}
+        ))}
 
         <p className="text-[9px] sm:text-[9.5px] text-slate-500 italic leading-snug text-center px-2 mt-0.5 mb-0.5">
           Zaświadczenie wydaje się na wniosek studenta celem przedłożenia w&nbsp;Dziekanacie Uczelni, do&nbsp;stypendium Rektora, 
