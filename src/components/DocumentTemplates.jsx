@@ -602,6 +602,8 @@ export function MembershipCertificateTemplate({
   isEditing = false,
   customText = null,
   onUpdateCustomText = () => {},
+  closingText = null,
+  onUpdateClosingText = () => {},
   org = null,
   columnVisibility = {},
   yearOverride = null,
@@ -819,10 +821,40 @@ export function MembershipCertificateTemplate({
           )
         )}
 
-        <p className="text-[9px] sm:text-[9.5px] text-slate-500 italic leading-snug text-center px-2 mt-0.5 mb-0.5">
-          Zaświadczenie wydaje się {forms.naWniosek} w&nbsp;celu przedłożenia w&nbsp;Dziekanacie Uczelni, w&nbsp;postępowaniu o&nbsp;stypendium Rektora,
-          do&nbsp;wpisu w&nbsp;suplemencie do&nbsp;dyplomu lub do&nbsp;portfolio osiągnięć naukowych.
-        </p>
+        {(() => {
+          const defaultPurpose =
+            'w\u00A0Dziekanacie Uczelni, w\u00A0postępowaniu o\u00A0stypendium Rektora, do\u00A0wpisu w\u00A0suplemencie do\u00A0dyplomu lub do\u00A0portfolio osiągnięć naukowych.';
+          const rawCustom = String(closingText || '').trim();
+          const fullSentence = rawCustom
+            ? /^zaświadczenie\s+wydaje/i.test(rawCustom)
+              ? rawCustom
+              : `Zaświadczenie wydaje się ${forms.naWniosek} w\u00A0celu przedłożenia ${rawCustom.replace(/^w\s+celu\s+przedłożenia\s+/i, '').replace(/\.?$/, '.')}`
+            : `Zaświadczenie wydaje się ${forms.naWniosek} w\u00A0celu przedłożenia ${defaultPurpose}`;
+
+          if (isEditing) {
+            return (
+              <div className="px-2 mt-1 mb-0.5 print:hidden space-y-1">
+                <div className="text-[9px] text-slate-500 text-center italic">
+                  Stały początek (odmieniany automatycznie):{' '}
+                  <strong className="text-slate-700">Zaświadczenie wydaje się {forms.naWniosek} w celu przedłożenia</strong>
+                </div>
+                <textarea
+                  rows={2}
+                  value={closingText ?? ''}
+                  onChange={(e) => onUpdateClosingText(e.target.value)}
+                  className="w-full p-2 bg-white border border-indigo-300 rounded-lg text-[9.5px] italic text-slate-700 text-center focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  placeholder="np. organizatorom konferencji seksuologicznej"
+                />
+              </div>
+            );
+          }
+
+          return (
+            <p className="text-[9px] sm:text-[9.5px] text-slate-500 italic leading-snug text-center px-2 mt-0.5 mb-0.5">
+              {fullSentence}
+            </p>
+          );
+        })()}
       </div>
 
       {/* ── STREFA 3 (DOLNA): Podpisy i Stopka WSKZ ── */}

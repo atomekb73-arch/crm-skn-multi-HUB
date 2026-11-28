@@ -77,7 +77,7 @@ import { getMeetingType, calculateMemberStats, calculateMemberYearStats, isMeeti
 import { deduplicateBoard } from '../services/settingsService';
 import { updateMemberAcademicProgressInSupabase } from '../services/googleSheets';
 import { calculateAcademicProgress } from '../utils/academicProgress';
-import { detectFieldOfStudyTypo } from '../utils/plGrammar';
+import { detectFieldOfStudyTypo, detectGender, getGenderedForms } from '../utils/plGrammar';
 import {
   getIssuedDocumentsRegistry,
   addIssuedDocument,
@@ -818,6 +818,7 @@ export default function ReportsTab({
   const [certShowSemester, setCertShowSemester] = useState(true);
   const [certProgressDirty, setCertProgressDirty] = useState(false);
   const [certFieldOverride, setCertFieldOverride] = useState(null);
+  const [membershipClosingText, setMembershipClosingText] = useState('');
   const [certTenseOverride, setCertTenseOverride] = useState(
     getAcademicYearTimeStatus(academicYear) === 'PAST' ? 'past' : 'current'
   );
@@ -1599,6 +1600,49 @@ export default function ReportsTab({
                       </span>
                     </button>
                   </div>
+
+                  {/* Edytowalne zdanie końcowe / cel wydania zaświadczenia (z automatyczną odmianą studentki/studenta) */}
+                  <div className="pt-2 border-t border-slate-200/70 space-y-1.5">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <label htmlFor="cert-closing-text" className="text-[11px] font-bold text-slate-700">
+                        W celu przedłożenia (edytowalne):
+                      </label>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setMembershipClosingText('organizatorom konferencji seksuologicznej')}
+                          className="px-2 py-0.5 rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 text-[10px] font-semibold transition cursor-pointer"
+                          title="Wstaw cel dla konferencji seksuologicznej (odmiana studentki/studenta zostaje automatyczna)"
+                        >
+                          Konferencja
+                        </button>
+                        {membershipClosingText && (
+                          <button
+                            type="button"
+                            onClick={() => setMembershipClosingText('')}
+                            className="px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 text-[10px] font-semibold transition cursor-pointer"
+                            title="Przywróć domyślny cel wydania"
+                          >
+                            Domyślny
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-slate-500 leading-snug">
+                      Początek zdania odmienia się automatycznie:{' '}
+                      <span className="font-semibold text-slate-700">
+                        „Zaświadczenie wydaje się {getGenderedForms(detectGender(selectedMember)).naWniosek} w celu przedłożenia…”
+                      </span>
+                    </p>
+                    <textarea
+                      id="cert-closing-text"
+                      rows={2}
+                      value={membershipClosingText}
+                      onChange={(e) => setMembershipClosingText(e.target.value)}
+                      placeholder="np. organizatorom konferencji seksuologicznej (puste = domyślny tekst dla Dziekanatu/Stypendium)"
+                      className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-800 focus:bg-white focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 resize-y leading-snug"
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -2242,6 +2286,8 @@ export default function ReportsTab({
                         isEditing={isEditing}
                         customText={membershipCustomText}
                         onUpdateCustomText={setMembershipCustomText}
+                        closingText={membershipClosingText}
+                        onUpdateClosingText={setMembershipClosingText}
                         org={currentOrg}
                         columnVisibility={columnVisibility}
                         yearOverride={certYearOverride}
@@ -2494,6 +2540,8 @@ export default function ReportsTab({
                 isEditing={isEditing}
                 customText={membershipCustomText}
                 onUpdateCustomText={setMembershipCustomText}
+                closingText={membershipClosingText}
+                onUpdateClosingText={setMembershipClosingText}
                 org={currentOrg}
                 columnVisibility={columnVisibility}
                 yearOverride={certYearOverride}
