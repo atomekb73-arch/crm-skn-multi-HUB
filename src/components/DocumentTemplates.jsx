@@ -800,13 +800,13 @@ export function MembershipCertificateTemplate({
                 {isEditing ? (
                   <textarea
                     rows={3}
-                    value={customText || `• Udział w comiesięcznych spotkaniach merytorycznych, seminaryjnych oraz warsztatowych Koła.\n• Wystąpienia prelekcyjne, udział w sesjach Journal Club i dyskusjach klinicznych.\n• Praca nad materiałami edukacyjnymi, analizami piśmiennictwa i projektami badawczymi Koła.`}
+                    value={customText || `• Udział w comiesięcznych spotkaniach merytorycznych, seminaryjnych oraz warsztatowych Koła.\n• Wygłaszanie prelekcji, udział w sesjach Journal Clubu i dyskusjach klinicznych.\n• Praca nad materiałami edukacyjnymi, analizami piśmiennictwa i projektami badawczymi Koła.`}
                     onChange={(e) => onUpdateCustomText(e.target.value)}
                     className="w-full p-2 bg-white border border-indigo-300 rounded-lg text-[10px] font-sans text-slate-800 focus:outline-none"
                   />
                 ) : (
                   <ul className="list-disc list-inside space-y-1 text-[9.5px] sm:text-[10px] text-slate-700 pl-1 leading-snug">
-                    {(customText || `Udział w comiesięcznych spotkaniach merytorycznych, seminaryjnych oraz warsztatowych Koła.\nWystąpienia prelekcyjne, udział w sesjach Journal Club i dyskusjach klinicznych.\nPraca nad materiałami edukacyjnymi, analizami piśmiennictwa i projektami badawczymi Koła.`)
+                    {(customText || `Udział w comiesięcznych spotkaniach merytorycznych, seminaryjnych oraz warsztatowych Koła.\nWygłaszanie prelekcji, udział w sesjach Journal Clubu i dyskusjach klinicznych.\nPraca nad materiałami edukacyjnymi, analizami piśmiennictwa i projektami badawczymi Koła.`)
                       .split('\n')
                       .filter(Boolean)
                       .map((line, idx) => (
@@ -820,8 +820,8 @@ export function MembershipCertificateTemplate({
         )}
 
         <p className="text-[9px] sm:text-[9.5px] text-slate-500 italic leading-snug text-center px-2 mt-0.5 mb-0.5">
-          Zaświadczenie wydaje się {forms.naWniosek} celem przedłożenia w&nbsp;Dziekanacie Uczelni, do&nbsp;stypendium Rektora,
-          do&nbsp;suplementu do&nbsp;dyplomu lub do&nbsp;portfolio osiągnięć naukowych.
+          Zaświadczenie wydaje się {forms.naWniosek} w&nbsp;celu przedłożenia w&nbsp;Dziekanacie Uczelni, w&nbsp;postępowaniu o&nbsp;stypendium Rektora,
+          do&nbsp;wpisu w&nbsp;suplemencie do&nbsp;dyplomu lub do&nbsp;portfolio osiągnięć naukowych.
         </p>
       </div>
 

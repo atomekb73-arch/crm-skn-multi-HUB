@@ -133,9 +133,9 @@ export function getCertificateVerbPhrase({
 }
 
 /**
- * Konwertuje numer roku studiów (1..5) na liczbę rzymską (I..V).
+ * Konwertuje liczbę (1..12) na zapis rzymski (I..XII) — spójny zapis roku i semestru.
  */
-export function toRomanYear(yearNum: number): string {
+export function toRoman(num: number): string {
   const map: Record<number, string> = {
     1: 'I',
     2: 'II',
@@ -143,25 +143,38 @@ export function toRomanYear(yearNum: number): string {
     4: 'IV',
     5: 'V',
     6: 'VI',
+    7: 'VII',
+    8: 'VIII',
+    9: 'IX',
+    10: 'X',
+    11: 'XI',
+    12: 'XII',
   };
-  const n = Math.max(1, Math.floor(Number(yearNum) || 1));
+  const n = Math.max(1, Math.floor(Number(num) || 1));
   return map[n] || String(n);
 }
 
 /**
- * Formatuje rok i semestr czysto, bez duplikatów "(rok Rok 1)":
- * np. "II rok, 4 semestr" lub "II rok" (gdy showSemester = false lub brak semestru).
+ * Konwertuje numer roku studiów (1..5) na liczbę rzymską (I..V).
+ */
+export function toRomanYear(yearNum: number): string {
+  return toRoman(yearNum);
+}
+
+/**
+ * Formatuje rok i semestr spójnym zapisem rzymskim, bez duplikatów "(rok Rok 1)":
+ * np. "II rok, IV semestr" lub "II rok" (gdy showSemester = false lub brak semestru).
  */
 export function formatStudyYearAndSemester(
   yearNum: number | null | undefined,
   semesterNum?: number | null,
   showSemester = true
 ): string {
-  const roman = toRomanYear(Number(yearNum) || 1);
+  const romanYear = toRoman(Number(yearNum) || 1);
   if (showSemester && semesterNum && Number(semesterNum) >= 1) {
-    return `${roman} rok, ${Math.floor(Number(semesterNum))} semestr`;
+    return `${romanYear} rok, ${toRoman(Number(semesterNum))} semestr`;
   }
-  return `${roman} rok`;
+  return `${romanYear} rok`;
 }
 
 /**
