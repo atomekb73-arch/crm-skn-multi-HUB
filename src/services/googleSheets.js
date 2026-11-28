@@ -109,11 +109,16 @@ export async function fetchGasData(orgId = 'skn_seksuologii') {
       telefon: m.phone || '',
       kierunek: m.field_of_study || 'Psychologia',
       rokStudiow: m.study_year || 'Rok 1',
+      semester: m.semester ?? m.custom_fields?.semester ?? null,
+      study_status_updated_at: m.study_status_updated_at || m.custom_fields?.study_status_updated_at || null,
+      joined_at: m.joined_date || m.created_at || '',
+      created_at: m.created_at || '',
       zgodaMailing: Boolean(m.mailing_consent),
       statusWeryfikacji: m.activity_status === 'Archiwum' ? 'Archiwum' : 'Zatwierdzony',
       dataWeryfikacji: m.verification_date || '',
       aliasy: m.custom_fields?.aliasy || '',
       contactChannels: Array.isArray(m.custom_fields?.contact_channels) ? m.custom_fields.contact_channels : [],
+      custom_fields: m.custom_fields || {},
       dataAktualizacji: m.custom_fields?.dataAktualizacji || ''
     }));
 
@@ -762,6 +767,91 @@ export async function editMemberInGAS({ nrIndeksu, imieNazwisko, email, telefon,
   }
   await q;
   return { status: 'success' };
+}
+
+/**
+ * Zapisuje ręcznie zweryfikowany rok i semestr (oraz opcjonalnie poprawiony kierunek)
+ * w profilu członka w Supabase wraz ze znacznikiem study_status_updated_at.
+ * Odporne na brak kolumn migracyjnych (automatyczny fallback do custom_fields).
+ */
+export async function updateMemberAcademicProgressInSupabase({
+  indexNumber,
+  memberId = null,
+  orgId = null,
+  year,
+  semester,
+  fieldOfStudy = null,
+}) {
+  const cleanIdx = String(indexNumber || '').replace(/\D/g, '').trim();
+  const cleanOrg = orgId
+    ? normalizeOrg(orgId)
+    : (typeof window !== 'undefined' ? localStorage.getItem('crm_active_org_id') : null);
+  const nowIso = new Date().toISOString();
+  const numYear = Math.max(1, Math.min(6, Number(year) || 1));
+  const numSem = Math.max(1, Math.min(12, Number(semester) || (numYear * 2 - 1)));
+  const formattedStudyYear = `Rok ${numYear}, Semestr ${numSem}`;
+
+  let existingQ = supabase.from('members').select('id, custom_fields');
+  if (memberId && /^[0-9a-f-]{36}$/i.test(String(memberId))) {
+    existingQ = existingQ.eq('id', memberId);
+  } else if (cleanIdx) {
+    existingQ = existingQ.eq('index_number', cleanIdx);
+  } else {
+    return { status: 'error', message: 'Brak identyfikatora członka.' };
+  }
+  if (cleanOrg) {
+    existingQ = existingQ.eq('organization_id', cleanOrg);
+  }
+
+  const { data: rows } = await existingQ.limit(1);
+  const target = rows?.[0];
+  if (!target) {
+    return { status: 'error', message: 'Nie znaleziono członka w bazie Supabase.' };
+  }
+
+  const nextCustomFields = {
+    ...(target.custom_fields || {}),
+    semester: numSem,
+    study_status_updated_at: nowIso,
+    dataAktualizacji: nowIso,
+  };
+
+  const fullPatch = {
+    study_year: formattedStudyYear,
+    semester: numSem,
+    study_status_updated_at: nowIso,
+    custom_fields: nextCustomFields,
+    ...(fieldOfStudy ? { field_of_study: fieldOfStudy } : {}),
+  };
+
+  const { error: firstErr } = await supabase
+    .from('members')
+    .update(fullPatch)
+    .eq('id', target.id);
+
+  if (firstErr) {
+    // Fallback, jeśli migracja kolumn semester/study_status_updated_at nie została jeszcze uruchomiona
+    const fallbackPatch = {
+      study_year: formattedStudyYear,
+      custom_fields: nextCustomFields,
+      ...(fieldOfStudy ? { field_of_study: fieldOfStudy } : {}),
+    };
+    const { error: fallbackErr } = await supabase
+      .from('members')
+      .update(fallbackPatch)
+      .eq('id', target.id);
+    if (fallbackErr) {
+      throw fallbackErr;
+    }
+  }
+
+  return {
+    status: 'success',
+    year: numYear,
+    semester: numSem,
+    study_year: formattedStudyYear,
+    study_status_updated_at: nowIso,
+  };
 }
 
 /**

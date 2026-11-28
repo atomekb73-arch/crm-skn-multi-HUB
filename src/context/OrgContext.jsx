@@ -32,6 +32,9 @@ export const DEFAULT_ORGS = [
   {
     id: 'skn_seksuologii',
     name: 'Studenckie Koło Naukowe Seksuologii WSKZ',
+    nameGenitive: 'Studenckiego Koła Naukowego Seksuologii',
+    facultyLocative: 'przy Wydziale Psychologii WSKZ',
+    boardSignatureTitle: 'Zarząd SKN Seksuologii',
     shortName: 'SKN Seksuologii',
     tag: 'SKN-SEKS',
     faculty: 'Wydział Psychologii WSKZ',
@@ -53,6 +56,9 @@ export const DEFAULT_ORGS = [
   {
     id: 'uzaleznienia',
     name: 'Studenckie Koło Naukowe Zachowań Ryzykowych i Uzależnień',
+    nameGenitive: 'Studenckiego Koła Naukowego Zachowań Ryzykownych i Uzależnień',
+    facultyLocative: 'przy Wydziale Psychologii WSKZ',
+    boardSignatureTitle: 'Zarząd SKN Uzależnień',
     shortName: 'SKN Uzależnień',
     tag: 'SKN-UZAL',
     faculty: 'Wydział Psychologii WSKZ',
@@ -74,6 +80,9 @@ export const DEFAULT_ORGS = [
   {
     id: 'psychoonkologia',
     name: 'Studenckie Koło Naukowe Psychoonkologii WSKZ',
+    nameGenitive: 'Studenckiego Koła Naukowego Psychoonkologii',
+    facultyLocative: 'przy Wydziale Psychologii WSKZ',
+    boardSignatureTitle: 'Zarząd SKN Psychoonkologii',
     shortName: 'SKN Psychoonkologii',
     tag: 'SKN-ONKO',
     badgeText: 'ONKO',
@@ -96,6 +105,9 @@ export const DEFAULT_ORGS = [
   {
     id: 'skn_dzieci_i_mlodziezy',
     name: 'Studenckie Koło Naukowe Psychologii Dzieci i Młodzieży',
+    nameGenitive: 'Studenckiego Koła Naukowego Psychologii Dzieci i Młodzieży',
+    facultyLocative: 'przy Wydziale Psychologii WSKZ',
+    boardSignatureTitle: 'Zarząd SKN Psychologii Dzieci i Młodzieży',
     shortName: 'SKN Psychologii Dzieci i Młodzieży',
     tag: 'SKN PDiM',
     badgeText: 'PDiM',

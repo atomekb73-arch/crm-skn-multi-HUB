@@ -43,6 +43,7 @@ import { getEngagementScaleLevel, useSettings } from '../context/SettingsContext
 import { useOrg } from '../context/OrgContext';
 import { useAcademicYear } from '../context/AcademicYearContext';
 import { calculateMemberSemesterProgress, STUDY_CYCLES } from '../utils/academicYear';
+import { calculateAcademicProgress, parseExplicitSemester } from '../utils/academicProgress';
 import { getTenureMonthsInScope, isMeetingInAcademicScope, getAcademicScope } from '../utils/academicScope';
 import { getOrgKey, getMeetingAttendanceStorageKeys } from '../utils/storage';
 import { supabase, isValidUUID } from '../supabaseClient';
@@ -65,6 +66,7 @@ export default function EditMemberModal({
   const [phone, setPhone] = useState('');
   const [field, setField] = useState('');
   const [year, setYear] = useState('');
+  const [currentSemesterExplicit, setCurrentSemesterExplicit] = useState('');
   const [startYear, setStartYear] = useState('');
   const [startSemester, setStartSemester] = useState(1);
   const [studyCycle, setStudyCycle] = useState('licencjat');
@@ -99,6 +101,10 @@ export default function EditMemberModal({
       setPhone(String(member.phone || member.telefon || ''));
       setField(String(member.field || member.kierunek || ''));
       setYear(String(member.year || ''));
+
+      const explicitSem = parseExplicitSemester(member);
+      const calcProg = calculateAcademicProgress(member);
+      setCurrentSemesterExplicit(String(explicitSem || calcProg.currentSemester || 1));
 
       const custom = member.custom_fields || {};
       const sYear = member.startYear || member.start_year || custom.startYear || custom.start_year || '';
@@ -581,6 +587,8 @@ export default function EditMemberModal({
         field: cleanFieldVal,
         kierunek: cleanFieldVal,
         year: cleanYearVal,
+        semester: Number(currentSemesterExplicit) || null,
+        study_status_updated_at: new Date().toISOString(),
         startYear: cleanStartYear,
         start_year: cleanStartYear,
         startSemester: cleanStartSemester,
@@ -932,6 +940,30 @@ export default function EditMemberModal({
                     >
                       <option value={1}>Semestr 1 (Zimowy - październik)</option>
                       <option value={2}>Semestr 2 (Letni - marzec)</option>
+                    </select>
+                  </div>
+
+                  {/* Aktualny semestr (1-10) */}
+                  <div>
+                    <label htmlFor="edit-member-current-sem" className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      Aktualny semestr (1–10):
+                    </label>
+                    <select
+                      id="edit-member-current-sem"
+                      name="currentSemesterExplicit"
+                      value={currentSemesterExplicit}
+                      onChange={e => {
+                        const semNum = Number(e.target.value) || 1;
+                        setCurrentSemesterExplicit(String(semNum));
+                        setYear(`Rok ${Math.ceil(semNum / 2)}, Semestr ${semNum}`);
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-medium focus:ring-2 focus:ring-indigo-300 outline-none"
+                    >
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((s) => (
+                        <option key={s} value={s}>
+                          Semestr {s} (Rok {Math.ceil(s / 2)})
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>

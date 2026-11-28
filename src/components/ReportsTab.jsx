@@ -75,6 +75,9 @@ import { getOfficialMemberRecord, getMemberStats } from '../utils/activityRegist
 import { CANONICAL_MEETINGS_2025_2026, filterLegitimateMeetings, getCanonicalMeetingsForOrg } from '../utils/canonicalMeetings';
 import { getMeetingType, calculateMemberStats, calculateMemberYearStats, isMeetingEligibleForDenominator } from '../utils/meetingTypes';
 import { deduplicateBoard } from '../services/settingsService';
+import { updateMemberAcademicProgressInSupabase } from '../services/googleSheets';
+import { calculateAcademicProgress } from '../utils/academicProgress';
+import { detectFieldOfStudyTypo } from '../utils/plGrammar';
 import {
   getIssuedDocumentsRegistry,
   addIssuedDocument,
@@ -803,6 +806,83 @@ export default function ReportsTab({
     (selectedDocType === 'members_registry' ||
       selectedDocType === 'meetings_summary' ||
       (selectedDocType === 'membership' && includeActivitySection));
+
+  // Automatyczne przeliczanie aktualnego roku studiów i semestru + szybka korekta w oknie zaświadczenia
+  const memberAcademicProgress = useMemo(
+    () => calculateAcademicProgress(selectedMember, docDate),
+    [selectedMember, docDate]
+  );
+
+  const [certYearOverride, setCertYearOverride] = useState(memberAcademicProgress.currentYear);
+  const [certSemesterOverride, setCertSemesterOverride] = useState(memberAcademicProgress.currentSemester);
+  const [certShowSemester, setCertShowSemester] = useState(true);
+  const [certProgressDirty, setCertProgressDirty] = useState(false);
+  const [certFieldOverride, setCertFieldOverride] = useState(null);
+  const [certTenseOverride, setCertTenseOverride] = useState(
+    getAcademicYearTimeStatus(academicYear) === 'PAST' ? 'past' : 'current'
+  );
+  const [isSavingProgress, setIsSavingProgress] = useState(false);
+
+  useEffect(() => {
+    setCertYearOverride(memberAcademicProgress.currentYear);
+    setCertSemesterOverride(memberAcademicProgress.currentSemester);
+    setCertProgressDirty(false);
+    setCertFieldOverride(null);
+  }, [selectedMember?.id, selectedMember?.index, docDate, memberAcademicProgress.currentYear, memberAcademicProgress.currentSemester]);
+
+  useEffect(() => {
+    setCertTenseOverride(getAcademicYearTimeStatus(academicYear) === 'PAST' ? 'past' : 'current');
+  }, [academicYear]);
+
+  const fieldTypoAlert = useMemo(() => {
+    if (selectedDocType !== 'membership' || !selectedMember) return null;
+    const activeField = certFieldOverride || selectedMember.field || selectedMember.kierunek || '';
+    return detectFieldOfStudyTypo(activeField);
+  }, [selectedDocType, selectedMember, certFieldOverride]);
+
+  const handleSaveAcademicProgressToProfile = async () => {
+    if (!selectedMember || isSavingProgress) return;
+    setIsSavingProgress(true);
+    try {
+      const res = await updateMemberAcademicProgressInSupabase({
+        indexNumber: selectedMember.index || selectedMember.indexNumber || selectedMember.nrIndeksu,
+        memberId: selectedMember.id,
+        orgId: currentOrg?.id,
+        year: certYearOverride,
+        semester: certSemesterOverride,
+        fieldOfStudy: certFieldOverride || null,
+      });
+      if (res?.status === 'success') {
+        setCertProgressDirty(false);
+        showToast(`Zapisano w profilu: Rok ${res.year}, Semestr ${res.semester}`, 'success');
+      } else {
+        showToast(res?.message || 'Nie udało się zapisać zmian w profilu członka.', 'error');
+      }
+    } catch (err) {
+      console.error('[ReportsTab] Błąd zapisu roku/semestru:', err);
+      showToast('Błąd zapisu roku i semestru w bazie Supabase.', 'error');
+    } finally {
+      setIsSavingProgress(false);
+    }
+  };
+
+  const handleQuickFixFieldTypo = async (suggestion) => {
+    setCertFieldOverride(suggestion);
+    if (!selectedMember) return;
+    try {
+      await updateMemberAcademicProgressInSupabase({
+        indexNumber: selectedMember.index || selectedMember.indexNumber || selectedMember.nrIndeksu,
+        memberId: selectedMember.id,
+        orgId: currentOrg?.id,
+        year: certYearOverride,
+        semester: certSemesterOverride,
+        fieldOfStudy: suggestion,
+      });
+      showToast(`Poprawiono kierunek studiów na „${suggestion}” w podglądzie i profilu członka.`, 'success');
+    } catch {
+      showToast(`Poprawiono kierunek na „${suggestion}” w podglądzie zaświadczenia.`, 'success');
+    }
+  };
 
   const handlePrint = () => {
     // Walidacja braku danych dla lat przyszłych i przeszłych (nie blokuje czystego zaświadczenia o członkostwie)
@@ -2001,6 +2081,118 @@ export default function ReportsTab({
             />
           )}
 
+          {/* Alerty walidacyjne zaświadczenia (literówka w kierunku / szacowany semestr / możliwe ukończenie studiów) */}
+          {selectedDocType === 'membership' && selectedMember && (
+            <div className="space-y-2 print:hidden">
+              {fieldTypoAlert && (
+                <div className="bg-amber-50 border border-amber-300 text-amber-950 px-4 py-2.5 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs shadow-2xs">
+                  <div className="flex items-center gap-2 font-semibold">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>
+                      Wykryto prawdopodobną literówkę w nazwie kierunku: <strong className="font-mono text-rose-700">„{fieldTypoAlert.original}”</strong> (zamiast <strong className="text-emerald-800">„{fieldTypoAlert.suggestion}”</strong>).
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleQuickFixFieldTypo(fieldTypoAlert.suggestion)}
+                    className="px-3 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold transition cursor-pointer shrink-0"
+                  >
+                    Popraw na „{fieldTypoAlert.suggestion}”
+                  </button>
+                </div>
+              )}
+
+              {memberAcademicProgress.possibleGraduation && (
+                <div className="bg-amber-50 border border-amber-300 text-amber-950 px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-semibold shadow-2xs">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>{memberAcademicProgress.warningMessage}</span>
+                </div>
+              )}
+
+              {/* Kompaktowy pasek szybkiej korekty Roku, Semestru i Czasu czasownika */}
+              <div className="bg-white border border-slate-200 px-3.5 py-2.5 rounded-xl flex flex-wrap items-center justify-between gap-2.5 text-xs shadow-2xs">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] font-bold text-slate-600">Status studiów:</span>
+                  <label className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-700">
+                    <span>Rok</span>
+                    <select
+                      value={certYearOverride}
+                      onChange={(e) => {
+                        const y = Number(e.target.value) || 1;
+                        setCertYearOverride(y);
+                        setCertProgressDirty(true);
+                      }}
+                      className="px-2 py-1 rounded-lg border border-slate-300 bg-slate-50 text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-500"
+                    >
+                      {[1, 2, 3, 4, 5].map((y) => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-700">
+                    <span>Semestr</span>
+                    <select
+                      value={certSemesterOverride}
+                      onChange={(e) => {
+                        const s = Number(e.target.value) || 1;
+                        setCertSemesterOverride(s);
+                        setCertYearOverride(Math.ceil(s / 2));
+                        setCertProgressDirty(true);
+                      }}
+                      className="px-2 py-1 rounded-lg border border-slate-300 bg-slate-50 text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-500"
+                    >
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setCertShowSemester((v) => !v)}
+                    className={`px-2 py-1 rounded-lg border text-[11px] font-semibold transition cursor-pointer ${
+                      certShowSemester
+                        ? 'bg-indigo-50 border-indigo-200 text-indigo-800'
+                        : 'bg-slate-50 border-slate-200 text-slate-500'
+                    }`}
+                    title="Pokaż lub ukryj numer semestru w nawiasie zaświadczenia"
+                  >
+                    {certShowSemester ? 'Semestr: Wł.' : 'Semestr: Ukryty'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCertTenseOverride((t) => (t === 'current' ? 'past' : 'current'))}
+                    className={`px-2 py-1 rounded-lg border text-[11px] font-semibold transition cursor-pointer ${
+                      certTenseOverride === 'current'
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                        : 'bg-slate-100 border-slate-300 text-slate-700'
+                    }`}
+                    title="Przełącz czas czasownika w treści zaświadczenia (bieżący: bierze udział / jest; archiwalny: brał(a) / był(a))"
+                  >
+                    Czas: {certTenseOverride === 'current' ? 'Bieżący' : 'Archiwalny'}
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  {certProgressDirty ? (
+                    <button
+                      type="button"
+                      onClick={handleSaveAcademicProgressToProfile}
+                      disabled={isSavingProgress}
+                      className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold flex items-center gap-1.5 shadow-xs transition cursor-pointer disabled:opacity-60"
+                    >
+                      {isSavingProgress ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                      <span>Zapisz w profilu członka</span>
+                    </button>
+                  ) : memberAcademicProgress.isEstimated ? (
+                    <span className="text-[10.5px] text-amber-800 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg">
+                      {memberAcademicProgress.estimationNote}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Informacyjny banner walidacji braku danych dla roku */}
           {isBlockedByEmptyYear && (
             <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-xl flex items-center justify-between gap-3 text-xs mb-3 print:hidden shadow-2xs">
@@ -2052,6 +2244,11 @@ export default function ReportsTab({
                         onUpdateCustomText={setMembershipCustomText}
                         org={currentOrg}
                         columnVisibility={columnVisibility}
+                        yearOverride={certYearOverride}
+                        semesterOverride={certSemesterOverride}
+                        showSemester={certShowSemester}
+                        fieldOverride={certFieldOverride}
+                        tenseOverride={certTenseOverride}
                       />
                     )}
 
@@ -2203,6 +2400,43 @@ export default function ReportsTab({
                 {includeActivitySection ? <CheckSquare size={13} className="text-sky-700" /> : <Square size={13} />}
                 <span>Ocena i aktywność: {includeActivitySection ? 'Wł.' : 'Wył.'}</span>
               </button>
+              <div className="inline-flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-1.5 py-0.5 text-[11px]">
+                <span className="text-slate-500 font-semibold">Rok:</span>
+                <select
+                  value={certYearOverride}
+                  onChange={(e) => {
+                    setCertYearOverride(Number(e.target.value) || 1);
+                    setCertProgressDirty(true);
+                  }}
+                  className="bg-transparent font-bold text-slate-900 focus:outline-none cursor-pointer"
+                >
+                  {[1, 2, 3, 4, 5].map((y) => <option key={y} value={y}>{y}</option>)}
+                </select>
+                <span className="text-slate-400">Sem:</span>
+                <select
+                  value={certSemesterOverride}
+                  onChange={(e) => {
+                    const s = Number(e.target.value) || 1;
+                    setCertSemesterOverride(s);
+                    setCertYearOverride(Math.ceil(s / 2));
+                    setCertProgressDirty(true);
+                  }}
+                  className="bg-transparent font-bold text-slate-900 focus:outline-none cursor-pointer"
+                >
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+                {certProgressDirty && (
+                  <button
+                    type="button"
+                    onClick={handleSaveAcademicProgressToProfile}
+                    disabled={isSavingProgress}
+                    className="ml-1 px-1.5 py-0.5 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold cursor-pointer"
+                    title="Zapisz rok i semestr w profilu członka"
+                  >
+                    Zapisz
+                  </button>
+                )}
+              </div>
               {includeActivitySection && (
                 <>
                   <button
@@ -2262,6 +2496,11 @@ export default function ReportsTab({
                 onUpdateCustomText={setMembershipCustomText}
                 org={currentOrg}
                 columnVisibility={columnVisibility}
+                yearOverride={certYearOverride}
+                semesterOverride={certSemesterOverride}
+                showSemester={certShowSemester}
+                fieldOverride={certFieldOverride}
+                tenseOverride={certTenseOverride}
               />
             )}
 

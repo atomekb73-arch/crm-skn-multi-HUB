@@ -747,6 +747,11 @@ export default function SknApplicationForm({ orgId: propOrgId = null }) {
         baseCustomFields.contact_channels_raw = selectedChannels.join(', ');
       }
 
+      const semMatch = String(formData.study_year || '').match(/semestr\s*(\d{1,2})/i);
+      const parsedSemester = semMatch?.[1] ? parseInt(semMatch[1], 10) : 1;
+      baseCustomFields.semester = parsedSemester;
+      baseCustomFields.study_status_updated_at = new Date().toISOString();
+
       const payload = {
         organization_id: targetOrgId,
         submission_date: new Date().toISOString(),

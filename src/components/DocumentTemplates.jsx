@@ -34,6 +34,19 @@ import {
 import { calculateMemberStats, hasMeetingAttendanceLogs } from '../utils/meetingTypes';
 import { DEFAULT_FACULTY_SUPERVISORS } from '../utils/specialRoles';
 import { getOrgKey, getMeetingAttendanceStorageKeys } from '../utils/storage';
+import { calculateAcademicProgress } from '../utils/academicProgress';
+import {
+  detectGender,
+  getGenderedForms,
+  formatGenderedActivityRank,
+  getCertificateVerbPhrase,
+  formatStudyYearAndSemester,
+  formatFacultyLocative,
+  formatOrgNameGenitive,
+  formatBoardSignatureTitle,
+  formatOfficialPolishDate,
+  sanitizeOfficialText,
+} from '../utils/plGrammar';
 
 export function getAcademicYearShortSlug(academicYear = getCurrentAcademicYear()) {
   const str = String(academicYear || '');
@@ -233,7 +246,7 @@ export function DocumentStandardHeader({
   docDate = new Date(),
   docLabel = 'Nr dokumentu',
   subtitle = null,
-  dateLabel = 'Wrocław, dn.',
+  dateLabel = 'Wrocław,',
   className = '',
   borderBottom = true,
   rightCustom = null,
@@ -322,7 +335,7 @@ export function DocumentStandardFooter({
         </div>
         <div className="text-right shrink-0 space-y-0.5 font-sans">
           {pageNumberText && <p className="font-semibold text-slate-600 text-[8pt]">{pageNumberText}</p>}
-          <p className="text-[8pt] text-slate-500">Wrocław, dn. {formatPolishDate(docDate)}</p>
+          <p className="text-[8pt] text-slate-500">Wrocław, {formatPolishDate(docDate)}</p>
           {docNumber && <p className="font-mono text-[8pt] text-slate-600 font-medium">Nr ref.: {docNumber}</p>}
         </div>
       </div>
@@ -372,7 +385,7 @@ export function MultipageClosingBlock({
           <p className="text-[7.5pt] text-slate-400 leading-none">Wygenerowano w systemie CRM SKN WSKZ</p>
         </div>
         <div className="text-right shrink-0 space-y-0.5 font-sans">
-          <p className="text-[8pt] text-slate-500">Wrocław, dn. {formatPolishDate(docDate || new Date())}</p>
+          <p className="text-[8pt] text-slate-500">Wrocław, {formatPolishDate(docDate || new Date())}</p>
           {docNumber && <p className="font-mono text-[8pt] text-slate-700 font-medium">Nr ref.: {docNumber}</p>}
         </div>
       </div>
@@ -429,15 +442,9 @@ export function generateDocumentNumber(prefix, indexNumber, seed = getCurrentAca
 
 export function formatPolishDate(date = new Date()) {
   try {
-    const d = date ? new Date(date) : new Date();
-    if (isNaN(d.getTime())) return new Date().toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
-    return d.toLocaleDateString('pl-PL', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
+    return formatOfficialPolishDate(date);
   } catch (_e) {
-    return new Date().toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
+    return formatOfficialPolishDate(new Date());
   }
 }
 
@@ -597,14 +604,21 @@ export function MembershipCertificateTemplate({
   onUpdateCustomText = () => {},
   org = null,
   columnVisibility = {},
+  yearOverride = null,
+  semesterOverride = null,
+  showSemester = true,
+  fieldOverride = null,
+  tenseOverride = null,
 }) {
-  const { id: orgId, name: orgName, shortName: orgShortName, tag: orgTag, unit: orgUnit } = getOrgMetadata(org);
-  const orgGenitive = formatOrgGenitive(orgName);
+  const { id: orgId, name: orgName, shortName: orgShortName, tag: orgTag, unit: orgUnit, resolvedOrg } = getOrgMetadata(org);
+  const nameGenitive = formatOrgNameGenitive(resolvedOrg || org || orgName);
+  const facultyLocative = formatFacultyLocative(resolvedOrg || org || orgUnit);
+  const boardSignatureTitle = formatBoardSignatureTitle(resolvedOrg || org || orgShortName);
 
   const timeStatus = getAcademicYearTimeStatus(academicYear);
-  const isPastYear = timeStatus === 'PAST';
+  const isPastYear = tenseOverride ? tenseOverride === 'past' : timeStatus === 'PAST';
   const isFutureYear = timeStatus === 'FUTURE';
-  const isCurrentYear = timeStatus === 'CURRENT';
+  const effectiveTense = tenseOverride || (isPastYear ? 'past' : 'current');
 
   const totalMeetings = freqData?.baseDenominator || freqData?.mandatoryTotal || 0;
   const safeFreqData = freqData || { freq: 0, present: 0, absent: 0 };
@@ -626,21 +640,36 @@ export function MembershipCertificateTemplate({
   const showFreqSection = includeActivitySection && columnVisibility.cert_freq !== false;
   const showPointsSection = includeActivitySection && columnVisibility.cert_points !== false;
   const showDetailedActivityRating = columnVisibility.cert_detailed_rating !== false;
-  // Compute number of visible metric columns to adjust grid dynamically
-  const visibleMetricCols = [showFreqSection, showPointsSection, true].filter(Boolean).length; // "Ocena" always shown when activity section is enabled
+  const visibleMetricCols = [showFreqSection, showPointsSection, true].filter(Boolean).length;
 
   const docNumber = generateDocumentNumber('CERT', member?.index || member?.indexNumber || '00000', academicYear, orgTag);
   const activeSupervisors = getActiveSupervisors(supervisors, org);
 
-  const studentName = member?.fullName || `${member?.firstName || ''} ${member?.lastName || ''}`.trim() || 'Imię i Nazwisko Studenta';
-  const isFemale = detectPolishGender(member?.firstName || studentName) === 'female';
-  const indexNumber = member?.index || member?.indexNumber || '—';
-  const fieldName = member?.field || 'Psychologia';
-  const yearLabel = member?.year ? `rok ${member.year}` : 'jednolite studia magisterskie';
+  const studentName = sanitizeOfficialText(
+    member?.fullName || `${member?.firstName || ''} ${member?.lastName || ''}`.trim() || 'Imię i Nazwisko Studenta'
+  );
+  const gender = detectGender(member || studentName);
+  const forms = getGenderedForms(gender);
+  const indexNumber = String(member?.index || member?.indexNumber || '—').trim();
+  const fieldName = sanitizeOfficialText(fieldOverride || member?.field || member?.kierunek || 'Psychologia');
+
+  // Automatyczne wyliczanie roku i semestru z uwzględnieniem ewentualnej ręcznej korekty
+  const computedProgress = calculateAcademicProgress(member, docDate);
+  const effectiveYear = yearOverride !== null && yearOverride !== undefined && yearOverride !== ''
+    ? Number(yearOverride)
+    : computedProgress.currentYear;
+  const effectiveSemester = semesterOverride !== null && semesterOverride !== undefined && semesterOverride !== ''
+    ? Number(semesterOverride)
+    : computedProgress.currentSemester;
+  const formattedStudyProgress = formatStudyYearAndSemester(effectiveYear, effectiveSemester, showSemester);
+
+  const verbPhrase = getCertificateVerbPhrase({
+    gender,
+    tense: effectiveTense,
+    includeActivitySection,
+  });
 
   // Dynamiczny nagłówek dokumentu:
-  // Domyślnie (gdy sekcja aktywności i frekwencja są włączone): ZAŚWIADCZENIE O CZŁONKOSTWIE I FREKWENCJI
-  // Gdy wyłączono frekwencję lub całą sekcję oceny i aktywności: ZAŚWIADCZENIE O CZŁONKOSTWIE
   const certificateTitle = includeActivitySection && showFreqSection
     ? 'Zaświadczenie o Członkostwie i Frekwencji'
     : 'Zaświadczenie o Członkostwie';
@@ -649,12 +678,11 @@ export function MembershipCertificateTemplate({
     <div className="w-full flex-1 flex flex-col justify-between bg-white text-slate-900 font-sans select-text relative">
       {/* ── STREFA 1 (GÓRNA): Nagłówek Uczelni, Sygnatura, Tytuł i Formuła Wstępna ── */}
       <div className="relative z-10 space-y-2.5">
-        {/* Globalny Ujednolicony Nagłówek Uczelniany WSKZ i Koła (bez duplikatu numeru i bez ucinania ...) */}
         <DocumentStandardHeader
           org={org}
           docDate={docDate}
           hideDocNumber={true}
-          dateLabel="Wrocław, dn."
+          dateLabel="Wrocław,"
           borderBottom={true}
           className="border-indigo-900"
         />
@@ -669,25 +697,25 @@ export function MembershipCertificateTemplate({
           </p>
         </div>
 
-        {/* Formuła Wstępna */}
+        {/* Formuła Wstępna (Wariant A: z aktywnością vs Wariant B: czyste członkostwo) */}
         {includeActivitySection ? (
           <p className="text-[11px] sm:text-[11.5px] leading-relaxed text-slate-700 text-justify [text-justify:inter-word] [text-wrap:pretty] indent-4 font-normal">
-            Niniejszym zaświadcza się, że {isFemale ? 'Pani' : 'Pan'}{' '}
+            Niniejszym zaświadcza się, że {forms.honorific}{' '}
             <strong className="text-slate-800 font-semibold border-b border-slate-300 pb-0.5 px-1">{studentName}</strong>,{' '}
-            {isFemale ? 'legitymująca się' : 'legitymujący się'} numerem indeksu: <strong className="font-mono text-slate-800 font-semibold">{indexNumber}</strong>,{' '}
-            {isFemale ? 'będąca studentką' : 'będący studentem'} kierunku: <strong className="font-semibold text-slate-800">{fieldName}</strong> ({yearLabel}), w&nbsp;roku akademickim{' '}
-            <strong className="font-semibold text-slate-800">{academicYear}</strong> {isFemale ? 'brała' : 'brał'} aktywny udział w&nbsp;działalności naukowo-badawczej i&nbsp;spotkaniach Koła:{' '}
-            <strong className="text-slate-800 font-semibold">{orgName}</strong> przy&nbsp;{orgUnit}.
+            {forms.legitymujacy} numerem albumu <strong className="font-mono text-slate-800 font-semibold">{indexNumber}</strong>,{' '}
+            {forms.studentStatus} kierunku <strong className="font-semibold text-slate-800">{fieldName}</strong> ({formattedStudyProgress}), w&nbsp;roku akademickim{' '}
+            <strong className="font-semibold text-slate-800">{academicYear}</strong> {verbPhrase} w&nbsp;działalności naukowo-badawczej i&nbsp;spotkaniach{' '}
+            <strong className="text-slate-800 font-semibold">{nameGenitive}</strong>, działającego {facultyLocative}.
           </p>
         ) : (
           <div className="space-y-3 pt-2">
             <p className="text-[11.5px] sm:text-[12px] leading-relaxed text-slate-700 text-justify [text-justify:inter-word] [text-wrap:pretty] indent-4 font-normal">
-              Niniejszym zaświadcza się, że {isFemale ? 'Pani' : 'Pan'}{' '}
+              Niniejszym zaświadcza się, że {forms.honorific}{' '}
               <strong className="text-slate-800 font-semibold border-b border-slate-300 pb-0.5 px-1">{studentName}</strong>,{' '}
-              {isFemale ? 'legitymująca się' : 'legitymujący się'} numerem albumu: <strong className="font-mono text-slate-800 font-semibold">{indexNumber}</strong>,{' '}
-              {isFemale ? 'będąca studentką' : 'będący studentem'} kierunku: <strong className="font-semibold text-slate-800">{fieldName}</strong> ({yearLabel}), jest w&nbsp;roku akademickim{' '}
-              <strong className="font-semibold text-slate-800">{academicYear}</strong> {isFemale ? 'członkinią' : 'członkiem'}{' '}
-              <strong className="text-slate-800 font-semibold">{orgGenitive}</strong> działającego przy&nbsp;{orgUnit}.
+              {forms.legitymujacy} numerem albumu <strong className="font-mono text-slate-800 font-semibold">{indexNumber}</strong>,{' '}
+              {forms.studentStatus} kierunku <strong className="font-semibold text-slate-800">{fieldName}</strong> ({formattedStudyProgress}), w&nbsp;roku akademickim{' '}
+              <strong className="font-semibold text-slate-800">{academicYear}</strong> {verbPhrase}{' '}
+              <strong className="text-slate-800 font-semibold">{nameGenitive}</strong>, działającego {facultyLocative}.
             </p>
             <p className="text-[11px] sm:text-[11.5px] leading-relaxed text-slate-600 text-justify [text-justify:inter-word] [text-wrap:pretty] indent-4 font-normal">
               Przynależność do&nbsp;Koła Naukowego została potwierdzona na&nbsp;podstawie aktualnej ewidencji członkowskiej prowadzonej przez&nbsp;Zarząd Koła.
@@ -700,112 +728,112 @@ export function MembershipCertificateTemplate({
       <div className="relative z-10 flex-grow flex flex-col justify-center mt-1 sm:mt-1.5 mb-2 space-y-2 sm:space-y-2.5">
         {includeActivitySection && (
           !hasDataForYear ? (
-          <div className="my-2 p-4 bg-amber-50/90 border-2 border-dashed border-amber-300 rounded-xl text-center">
-            <div className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-amber-100 text-amber-700 mb-1.5">
-              <AlertTriangle className="w-4 h-4" />
-            </div>
-            <h3 className="text-xs font-semibold text-slate-900 uppercase tracking-tight">
-              Brak zarejestrowanej działalności w roku {academicYear}
-            </h3>
-            <p className="text-[10px] text-slate-600 mt-0.5 max-w-md mx-auto leading-relaxed font-normal">
-              Dla roku akademickiego <strong className="font-semibold text-slate-800">{academicYear}</strong> nie zarejestrowano spotkań ani obecności studenta <strong className="font-semibold text-slate-800">{studentName}</strong>. Wystawienie oficjalnego zaświadczenia z zerowymi wartościami zostało wstrzymane.
-            </p>
-            <div className="mt-1.5 inline-block bg-white px-2 py-0.5 rounded-md border border-amber-200 text-[8.5px] text-slate-500 font-mono">
-              Status: {isFutureYear ? 'Okres planowany' : (isPastYear ? 'Brak wpisów archiwalnych' : 'Brak danych w roku bieżącym')}
-            </div>
-          </div>
-        ) : (
-          <>
-            {/* ── Metryka Osiągnięć i Frekwencji (podniesiona i odchudzona pionowo o 12px) ── */}
-            <div
-              className="metric-box-container w-full grid gap-2 px-3 py-2 sm:py-2.5 bg-slate-50/90 rounded-xl border border-slate-200/90 text-center shadow-2xs box-border"
-              style={{ gridTemplateColumns: `repeat(${visibleMetricCols}, minmax(0, 1fr))`, width: '100%' }}
-            >
-              {showFreqSection && (
-                <div className="py-1 px-1.5 border-r border-slate-200 min-w-0">
-                  <span className="text-[8.5px] uppercase font-medium text-slate-500 tracking-wider block truncate">Łączna Frekwencja</span>
-                  <span className="text-xl sm:text-2xl font-normal text-emerald-700 font-mono leading-none my-0.5 block">{safeFreq}%</span>
-                  <span className="text-[8.5px] text-slate-500 block truncate">
-                    {safeFreqData?.displayRatio || `${safePresent} / ${totalMeetings}`} spotkań{bonusCount > 0 ? ` (+${bonusCount})` : ''}
-                  </span>
-                </div>
-              )}
-              {showPointsSection && (
-                <div className="py-1 px-1.5 border-r border-slate-200 min-w-0">
-                  <span className="text-[8.5px] uppercase font-medium text-slate-500 tracking-wider block truncate">Punkty Aktywności</span>
-                  <span className="text-xl sm:text-2xl font-normal text-purple-700 font-mono leading-none my-0.5 block">{safePoints} pkt</span>
-                  <span className="text-[8.5px] text-slate-500 block truncate">Wykaz aktywności</span>
-                </div>
-              )}
-              <div className="py-1 px-1.5 min-w-0 flex flex-col justify-center">
-                <span className="text-[8.5px] uppercase font-medium text-slate-500 tracking-wider block truncate">Ocena Aktywności</span>
-                {showDetailedActivityRating ? (
-                  <>
-                    <span className="text-xs font-normal text-indigo-950 block leading-tight mt-0.5 truncate">
-                      {safeFreq >= 90 ? 'Lider Koła' : safeFreq >= 75 ? 'Bardzo Aktywny' : (safeFreq >= 50 ? 'Aktywny Członek' : (isPastYear ? 'Brak zaliczenia' : 'W trakcie realizacji'))}
-                    </span>
-                    <span className={`text-[8.5px] font-medium flex items-center justify-center gap-0.5 mt-0.5 ${
-                      safeFreq >= 50 ? 'text-emerald-600' : (isPastYear ? 'text-rose-600' : 'text-slate-500')
-                    }`}>
-                      {safeFreq >= 50 ? (
-                        <><CheckCircle2 size={10} /> Kryteria spełnione</>
-                      ) : isPastYear ? (
-                        <><AlertTriangle size={10} /> Kryteria niespełnione</>
-                      ) : (
-                        <><Clock size={10} /> Aktywność w toku</>
-                      )}
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-xs font-bold text-indigo-950 block leading-tight mt-0.5">
-                    Aktywny członek koła naukowego
-                  </span>
-                )}
+            <div className="my-2 p-4 bg-amber-50/90 border-2 border-dashed border-amber-300 rounded-xl text-center">
+              <div className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-amber-100 text-amber-700 mb-1.5">
+                <AlertTriangle className="w-4 h-4" />
+              </div>
+              <h3 className="text-xs font-semibold text-slate-900 uppercase tracking-tight">
+                Brak zarejestrowanej działalności w roku {academicYear}
+              </h3>
+              <p className="text-[10px] text-slate-600 mt-0.5 max-w-md mx-auto leading-relaxed font-normal">
+                Dla roku akademickiego <strong className="font-semibold text-slate-800">{academicYear}</strong> nie zarejestrowano spotkań ani obecności {gender === 'F' ? 'studentki' : 'studenta'} <strong className="font-semibold text-slate-800">{studentName}</strong>. Wystawienie oficjalnego zaświadczenia z zerowymi wartościami zostało wstrzymane.
+              </p>
+              <div className="mt-1.5 inline-block bg-white px-2 py-0.5 rounded-md border border-amber-200 text-[8.5px] text-slate-500 font-mono">
+                Status: {isFutureYear ? 'Okres planowany' : (isPastYear ? 'Brak wpisów archiwalnych' : 'Brak danych w roku bieżącym')}
               </div>
             </div>
+          ) : (
+            <>
+              {/* ── Metryka Osiągnięć i Frekwencji ── */}
+              <div
+                className="metric-box-container w-full grid gap-2 px-3 py-2 sm:py-2.5 bg-slate-50/90 rounded-xl border border-slate-200/90 text-center shadow-2xs box-border"
+                style={{ gridTemplateColumns: `repeat(${visibleMetricCols}, minmax(0, 1fr))`, width: '100%' }}
+              >
+                {showFreqSection && (
+                  <div className="py-1 px-1.5 border-r border-slate-200 min-w-0">
+                    <span className="text-[8.5px] uppercase font-medium text-slate-500 tracking-wider block truncate">Łączna Frekwencja</span>
+                    <span className="text-xl sm:text-2xl font-normal text-emerald-700 font-mono leading-none my-0.5 block">{safeFreq}%</span>
+                    <span className="text-[8.5px] text-slate-500 block truncate">
+                      {safeFreqData?.displayRatio || `${safePresent} / ${totalMeetings}`} spotkań{bonusCount > 0 ? ` (+${bonusCount})` : ''}
+                    </span>
+                  </div>
+                )}
+                {showPointsSection && (
+                  <div className="py-1 px-1.5 border-r border-slate-200 min-w-0">
+                    <span className="text-[8.5px] uppercase font-medium text-slate-500 tracking-wider block truncate">Punkty Aktywności</span>
+                    <span className="text-xl sm:text-2xl font-normal text-purple-700 font-mono leading-none my-0.5 block">{safePoints} pkt</span>
+                    <span className="text-[8.5px] text-slate-500 block truncate">Wykaz aktywności</span>
+                  </div>
+                )}
+                <div className="py-1 px-1.5 min-w-0 flex flex-col justify-center">
+                  <span className="text-[8.5px] uppercase font-medium text-slate-500 tracking-wider block truncate">Ocena Aktywności</span>
+                  {showDetailedActivityRating ? (
+                    <>
+                      <span className="text-xs font-normal text-indigo-950 block leading-tight mt-0.5 truncate">
+                        {formatGenderedActivityRank(safeFreq, gender, isPastYear)}
+                      </span>
+                      <span className={`text-[8.5px] font-medium flex items-center justify-center gap-0.5 mt-0.5 ${
+                        safeFreq >= 50 ? 'text-emerald-600' : (isPastYear ? 'text-rose-600' : 'text-slate-500')
+                      }`}>
+                        {safeFreq >= 50 ? (
+                          <><CheckCircle2 size={10} /> Kryteria spełnione</>
+                        ) : isPastYear ? (
+                          <><AlertTriangle size={10} /> Kryteria niespełnione</>
+                        ) : (
+                          <><Clock size={10} /> Aktywność w toku</>
+                        )}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-xs font-bold text-indigo-950 block leading-tight mt-0.5">
+                      {forms.activeMemberTitle} Koła Naukowego
+                    </span>
+                  )}
+                </div>
+              </div>
 
-            {/* ── Wyszczególnienie aktywności merytorycznej (podniesione i zoptymalizowane) ── */}
-            <div className="text-[10px] sm:text-[10.5px] text-slate-700 space-y-1.5 bg-indigo-50/40 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl border border-indigo-100/90 shadow-2xs font-normal">
-              <p className="font-semibold text-indigo-950 text-[10px] sm:text-[10.5px] uppercase tracking-wide">
-                Wyszczególnienie aktywności merytorycznej:
-              </p>
-              {isEditing ? (
-                <textarea
-                  rows={3}
-                  value={customText || `• Udział w comiesięcznych spotkaniach merytorycznych, seminaryjnych oraz warsztatowych Koła.\n• Wystąpienia prelekcyjne, udział w sesjach Journal Club i dyskusjach klinicznych.\n• Praca nad materiałami edukacyjnymi, analizami piśmiennictwa i projektami badawczymi Koła.`}
-                  onChange={(e) => onUpdateCustomText(e.target.value)}
-                  className="w-full p-2 bg-white border border-indigo-300 rounded-lg text-[10px] font-sans text-slate-800 focus:outline-none"
-                />
-              ) : (
-                <ul className="list-disc list-inside space-y-1 text-[9.5px] sm:text-[10px] text-slate-700 pl-1 leading-snug">
-                  {(customText || `Udział w comiesięcznych spotkaniach merytorycznych, seminaryjnych oraz warsztatowych Koła.\nWystąpienia prelekcyjne, udział w sesjach Journal Club i dyskusjach klinicznych.\nPraca nad materiałami edukacyjnymi, analizami piśmiennictwa i projektami badawczymi Koła.`)
-                    .split('\n')
-                    .filter(Boolean)
-                    .map((line, idx) => (
-                      <li key={idx} className="leading-snug">{line.replace(/^[•\-\*]\s*/, '')}</li>
-                    ))}
-                </ul>
-              )}
-            </div>
-          </>
-        ))}
+              {/* ── Wyszczególnienie aktywności merytorycznej ── */}
+              <div className="text-[10px] sm:text-[10.5px] text-slate-700 space-y-1.5 bg-indigo-50/40 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl border border-indigo-100/90 shadow-2xs font-normal">
+                <p className="font-semibold text-indigo-950 text-[10px] sm:text-[10.5px] uppercase tracking-wide">
+                  Wyszczególnienie aktywności merytorycznej:
+                </p>
+                {isEditing ? (
+                  <textarea
+                    rows={3}
+                    value={customText || `• Udział w comiesięcznych spotkaniach merytorycznych, seminaryjnych oraz warsztatowych Koła.\n• Wystąpienia prelekcyjne, udział w sesjach Journal Club i dyskusjach klinicznych.\n• Praca nad materiałami edukacyjnymi, analizami piśmiennictwa i projektami badawczymi Koła.`}
+                    onChange={(e) => onUpdateCustomText(e.target.value)}
+                    className="w-full p-2 bg-white border border-indigo-300 rounded-lg text-[10px] font-sans text-slate-800 focus:outline-none"
+                  />
+                ) : (
+                  <ul className="list-disc list-inside space-y-1 text-[9.5px] sm:text-[10px] text-slate-700 pl-1 leading-snug">
+                    {(customText || `Udział w comiesięcznych spotkaniach merytorycznych, seminaryjnych oraz warsztatowych Koła.\nWystąpienia prelekcyjne, udział w sesjach Journal Club i dyskusjach klinicznych.\nPraca nad materiałami edukacyjnymi, analizami piśmiennictwa i projektami badawczymi Koła.`)
+                      .split('\n')
+                      .filter(Boolean)
+                      .map((line, idx) => (
+                        <li key={idx} className="leading-snug">{line.replace(/^[•\-\*]\s*/, '')}</li>
+                      ))}
+                  </ul>
+                )}
+              </div>
+            </>
+          )
+        )}
 
         <p className="text-[9px] sm:text-[9.5px] text-slate-500 italic leading-snug text-center px-2 mt-0.5 mb-0.5">
-          Zaświadczenie wydaje się na wniosek studenta celem przedłożenia w&nbsp;Dziekanacie Uczelni, do&nbsp;stypendium Rektora, 
+          Zaświadczenie wydaje się {forms.naWniosek} celem przedłożenia w&nbsp;Dziekanacie Uczelni, do&nbsp;stypendium Rektora,
           do&nbsp;suplementu do&nbsp;dyplomu lub do&nbsp;portfolio osiągnięć naukowych.
         </p>
       </div>
 
       {/* ── STREFA 3 (DOLNA): Podpisy i Stopka WSKZ ── */}
       <div className="relative z-10 mt-auto pt-1 space-y-1">
-        {/* Dynamiczny Blok Podpisów */}
         <DocumentSignaturesBlock
           activeSupervisors={activeSupervisors}
           orgShortName={orgShortName}
           orgName={orgName}
           orgUnit={orgUnit}
-          chairpersonTitle="Zarząd Koła Naukowego"
-          chairpersonSub={orgShortName}
+          chairpersonTitle={boardSignatureTitle}
+          chairpersonSub={false}
           className="pt-1.5 sm:pt-2"
         />
       </div>

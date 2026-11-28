@@ -42,8 +42,9 @@ export function OfficialWskzDocumentSheet({
       style={{
         fontFamily: 'Arial, Helvetica, sans-serif',
         width: '210mm',
-        minHeight: isMultiPage ? 'auto' : '297mm',
-        height: isMultiPage ? 'auto' : '297mm',
+        minHeight: isMultiPage ? 'auto' : '296.5mm',
+        height: isMultiPage ? 'auto' : '296.5mm',
+        maxHeight: isMultiPage ? 'none' : '296.5mm',
         display: isMultiPage ? 'block' : 'flex',
         flexDirection: isMultiPage ? undefined : 'column',
         justifyContent: isMultiPage ? undefined : 'space-between',
@@ -51,18 +52,21 @@ export function OfficialWskzDocumentSheet({
         margin: '0 auto',
         background: '#ffffff',
         boxSizing: 'border-box',
+        overflow: isMultiPage ? 'visible' : 'hidden',
+        pageBreakAfter: isMultiPage ? 'auto' : 'avoid',
+        breakAfter: isMultiPage ? 'auto' : 'avoid',
         ...style,
       }}
       className={`w-full max-w-[210mm] shrink-0 bg-white text-slate-900 rounded-xs shadow-2xl border border-slate-300 relative select-text mb-8 print:mb-0 print:border-none print:shadow-none ${
-        isMultiPage ? 'min-h-auto h-auto' : 'h-[297mm] min-h-[297mm] max-h-[297mm] overflow-hidden'
+        isMultiPage ? 'min-h-auto h-auto' : 'h-[296.5mm] min-h-[296.5mm] max-h-[296.5mm] overflow-hidden'
       } ${className}`}
     >
-      {/* ── STREFA GÓRNA: Padding 15mm 20mm 0 20mm + Oficjalny Nagłówek WSKZ ── */}
+      {/* ── STREFA GÓRNA: Padding 12mm 20mm 0 20mm + Oficjalny Nagłówek WSKZ ── */}
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
-          padding: '15mm 20mm 0 20mm',
+          padding: '12mm 20mm 0 20mm',
           width: '100%',
           boxSizing: 'border-box',
         }}
@@ -101,7 +105,7 @@ export function OfficialWskzDocumentSheet({
               <p className="text-[7.5pt] text-slate-400 leading-none">Wygenerowano w systemie CRM SKN WSKZ</p>
             </div>
             <div className="text-right shrink-0 space-y-0.5 font-sans">
-              <p className="text-[8pt] text-slate-500">Wrocław, dn. {formatPolishDate(docDate || new Date())}</p>
+              <p className="text-[8pt] text-slate-500">Wrocław, {formatPolishDate(docDate || new Date())}</p>
               {docNumber && <p className="font-mono text-[8pt] text-slate-700 font-medium">Nr ref.: {docNumber}</p>}
             </div>
           </div>
@@ -173,8 +177,9 @@ export default function OfficialWskzDocumentA4({
             margin: 0 !important;
             padding: 0 !important;
             width: ${isMultiPage ? '100%' : '210mm'} !important;
+            ${isMultiPage ? '' : 'height: 296.5mm !important; max-height: 296.5mm !important; overflow: hidden !important;'}
             background: #ffffff !important;
-            overflow: visible !important;
+            ${isMultiPage ? 'overflow: visible !important;' : ''}
           }
           #root,
           #skn-a4-top-bar {
@@ -184,9 +189,9 @@ export default function OfficialWskzDocumentA4({
             position: static !important;
             display: block !important;
             visibility: visible !important;
-            overflow: visible !important;
+            overflow: ${isMultiPage ? 'visible' : 'hidden'} !important;
             width: ${isMultiPage ? '100%' : '210mm'} !important;
-            min-height: auto !important;
+            ${isMultiPage ? 'min-height: auto !important;' : 'height: 296.5mm !important; max-height: 296.5mm !important;'}
             background: transparent !important;
             backdrop-filter: none !important;
             -webkit-backdrop-filter: none !important;
@@ -198,11 +203,11 @@ export default function OfficialWskzDocumentA4({
           }
           #skn-a4-print-area {
             position: static !important;
-            width: 100% !important;
+            width: ${isMultiPage ? '100%' : '210mm'} !important;
             max-width: ${isMultiPage ? '100%' : '210mm'} !important;
-            min-height: ${isMultiPage ? 'auto' : '297mm'} !important;
-            height: ${isMultiPage ? 'auto' : '297mm'} !important;
-            max-height: ${isMultiPage ? 'none' : '297mm'} !important;
+            min-height: ${isMultiPage ? 'auto' : '296.5mm'} !important;
+            height: ${isMultiPage ? 'auto' : '296.5mm'} !important;
+            max-height: ${isMultiPage ? 'none' : '296.5mm'} !important;
             margin: 0 auto !important;
             padding: 0 !important;
             box-sizing: border-box !important;
